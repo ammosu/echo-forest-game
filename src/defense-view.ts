@@ -1,8 +1,20 @@
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { BrightnessContrastShader } from "three/examples/jsm/shaders/BrightnessContrastShader.js";
+import { ColorCorrectionShader } from "three/examples/jsm/shaders/ColorCorrectionShader.js";
+import { HorizontalTiltShiftShader } from "three/examples/jsm/shaders/HorizontalTiltShiftShader.js";
+import { HueSaturationShader } from "three/examples/jsm/shaders/HueSaturationShader.js";
+import { VerticalTiltShiftShader } from "three/examples/jsm/shaders/VerticalTiltShiftShader.js";
+import { VignetteShader } from "three/examples/jsm/shaders/VignetteShader.js";
 import { DefenseEngine, seeds, type PlantKind } from "./defense-engine";
-import anboUrl from "../assets/sprites/1x/anbo.png";
 
 type Cell = { x: number; y: number };
+/** Scene labels live on their own layer so HD-2D post effects skip them. */
+const LABEL_LAYER = 1;
 type Entity = Cell & {
   kind?: PlantKind | number;
   hp?: number;
@@ -25,7 +37,14 @@ export class DefenseView {
   private extras: THREE.Material[] = [];
   private entities = new Map<Entity, { group: THREE.Group; type: string }>();
   private player = new THREE.Group();
-  private playerSprite: THREE.Sprite;
+  private anbo = new THREE.Group();
+  private anboTail = new THREE.Group();
+  private anboHead = new THREE.Group();
+  private anboLegs: THREE.Group[] = [];
+  private anboArms: THREE.Group[] = [];
+  private idle = 0;
+  private facing = Math.PI / 4;
+  private lastFrame = performance.now();
   private lifeCrown: THREE.Mesh;
   private hoverTile: THREE.Mesh;
   private dangerTiles: THREE.Mesh[] = [];
@@ -34,8 +53,21 @@ export class DefenseView {
   private width = 0;
   private height = 0;
   private reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  /** HD-2D look: diorama tilt-shift, bloom, grading, vignette and light motes. */
+  private composer?: EffectComposer;
+  private tiltShift: ShaderPass[] = [];
+  private motes?: THREE.Points;
+  private moteSeeds: number[] = [];
+  private shafts: THREE.Mesh[] = [];
+  private glow?: THREE.PointLight;
+  private sun: THREE.DirectionalLight;
+  private sky: THREE.HemisphereLight;
+  look: "standard" | "hd2d" = "standard";
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    look: "standard" | "hd2d" = "standard",
+  ) {
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
@@ -47,12 +79,13 @@ export class DefenseView {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.35;
-    this.scene.background = new THREE.Color("#284d43");
+    this.scene.background = new THREE.Color();
     this.camera.position.set(7.2, 12.8, 15.8);
     this.camera.lookAt(-0.35, 0, 0);
     this.camera.updateMatrixWorld();
-    this.scene.add(new THREE.HemisphereLight("#edf5dd", "#526948", 2.5));
-    const sun = new THREE.DirectionalLight("#ffe2a1", 3.2);
+    this.sky = new THREE.HemisphereLight("#edf5dd", "#526948", 2.5);
+    this.scene.add(this.sky);
+    const sun = (this.sun = new THREE.DirectionalLight("#ffe2a1", 3.2));
     sun.position.set(-5, 10, 5);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
@@ -67,6 +100,7 @@ export class DefenseView {
     sun.shadow.bias = -0.001;
     sun.shadow.normalBias = 0.035;
     this.scene.add(sun);
+    this.setLook(look);
     this.buildGrove();
     this.batchScenery();
     this.lifeCrown = this.ball(this.scene, -5.65, 1.9, -0.2, 0.9, "#82aa56");
@@ -112,23 +146,9 @@ export class DefenseView {
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.11;
     this.player.add(ring);
-    const texture = new THREE.TextureLoader().load(anboUrl);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
-    this.textures.push(texture);
-    const material = new THREE.SpriteMaterial({
-      map: texture,
-      depthTest: false,
-      toneMapped: false,
-    });
-    this.extras.push(material);
-    this.playerSprite = new THREE.Sprite(material);
-    this.playerSprite.scale.set(0.66, 0.8, 1);
-    this.playerSprite.position.y = 0.56;
-    this.playerSprite.renderOrder = 5;
-    this.player.add(this.playerSprite);
-    this.label("Anbo", 0, 1.15, 0, 0.65, this.player);
+    this.buildAnbo();
+    this.player.add(this.anbo);
+    this.label("Anbo", 0, 1.42, 0, 0.65, this.player);
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(canvas);
     this.resize();
@@ -228,6 +248,277 @@ export class DefenseView {
     mesh.scale.set(r, h, r);
     return mesh;
   }
+  /** One Anbo part: cached geometry, flat-shaded colour, transform in model space. */
+  private part(
+    parent: THREE.Object3D,
+    key: string,
+    create: () => THREE.BufferGeometry,
+    color: string,
+    [x, y, z]: number[],
+    [sx, sy, sz]: number[],
+    [rx, ry, rz]: number[] = [0, 0, 0],
+  ) {
+    const mesh = this.mesh(parent, this.geometry(key, create), color, x, y, z);
+    mesh.scale.set(sx, sy, sz);
+    mesh.rotation.set(rx, ry, rz);
+    return mesh;
+  }
+  /**
+   * Chibi Anbo modelled after the cover art, facing +z: big-eared fox head,
+   * open charcoal jacket over a cream shirt, belt, mustard trousers, boots
+   * and a fluffy white-tipped tail. Limbs hang from pivots for the walk cycle.
+   */
+  private buildAnbo() {
+    const a = this.anbo,
+      fur = "#e57a2e",
+      furDark = "#c45f22",
+      cream = "#f6ead6",
+      jacket = "#3b403d",
+      lapel = "#4a514c",
+      ink = "#1c1a1a",
+      ball = () => new THREE.IcosahedronGeometry(1, 1),
+      orb = () => new THREE.IcosahedronGeometry(1, 2),
+      cube = () => new THREE.BoxGeometry(1, 1, 1),
+      pyramid = () => new THREE.ConeGeometry(1, 1, 4),
+      cone = () => new THREE.ConeGeometry(1, 1, 7),
+      tube = () => new THREE.CylinderGeometry(1, 1, 1, 8),
+      torso = () => new THREE.CylinderGeometry(0.8, 1, 1, 8),
+      smile = () => new THREE.TorusGeometry(1, 0.22, 4, 8, Math.PI);
+    // Legs: trousers, rolled cuffs and boots on hip pivots.
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Group();
+      leg.position.set(side * 0.075, 0.2, 0);
+      a.add(leg);
+      this.anboLegs.push(leg);
+      this.part(
+        leg,
+        "a-tube",
+        tube,
+        "#c9942e",
+        [0, -0.07, 0],
+        [0.065, 0.14, 0.065],
+      );
+      this.part(
+        leg,
+        "a-tube",
+        tube,
+        "#b5832a",
+        [0, -0.135, 0],
+        [0.072, 0.03, 0.072],
+      );
+      this.part(
+        leg,
+        "a-orb",
+        orb,
+        "#5b3a22",
+        [0, -0.17, 0.025],
+        [0.07, 0.045, 0.1],
+      );
+    }
+    // Torso: jacket, shirt front, lapels, belt and buckle.
+    this.part(a, "a-torso", torso, jacket, [0, 0.32, 0], [0.155, 0.22, 0.12]);
+    this.part(a, "a-cube", cube, cream, [0, 0.335, 0.098], [0.085, 0.17, 0.03]);
+    for (const side of [-1, 1]) {
+      this.part(
+        a,
+        "a-cube",
+        cube,
+        lapel,
+        [side * 0.055, 0.37, 0.104],
+        [0.035, 0.12, 0.02],
+        [0, 0, side * 0.35],
+      );
+      this.part(
+        a,
+        "a-cube",
+        cube,
+        jacket,
+        [side * 0.075, 0.27, 0.1],
+        [0.05, 0.11, 0.025],
+      );
+    }
+    this.part(
+      a,
+      "a-tube",
+      tube,
+      "#6e4a2a",
+      [0, 0.235, 0],
+      [0.152, 0.035, 0.122],
+    );
+    this.part(
+      a,
+      "a-cube",
+      cube,
+      "#e8c35c",
+      [0, 0.235, 0.122],
+      [0.045, 0.035, 0.015],
+    );
+    // Arms: sleeves with orange paws on shoulder pivots.
+    for (const side of [-1, 1]) {
+      const arm = new THREE.Group();
+      arm.position.set(side * 0.16, 0.4, 0);
+      arm.rotation.z = side * 0.18;
+      a.add(arm);
+      this.anboArms.push(arm);
+      this.part(
+        arm,
+        "a-tube",
+        tube,
+        jacket,
+        [0, -0.07, 0],
+        [0.045, 0.15, 0.045],
+      );
+      this.part(
+        arm,
+        "a-ball",
+        ball,
+        fur,
+        [0, -0.16, 0.01],
+        [0.045, 0.045, 0.045],
+      );
+    }
+    // Head: wide cheeks, cream muzzle, snout, nose, eyes, smile.
+    const head = this.anboHead;
+    head.position.set(0, 0.6, 0);
+    a.add(head);
+    this.part(head, "a-orb", orb, fur, [0, 0, 0], [0.2, 0.175, 0.18]);
+    this.part(
+      head,
+      "a-orb",
+      orb,
+      furDark,
+      [0, 0.02, -0.04],
+      [0.17, 0.16, 0.16],
+    );
+    for (const side of [-1, 1]) {
+      this.part(
+        head,
+        "a-pyramid",
+        pyramid,
+        cream,
+        [side * 0.19, -0.05, 0.03],
+        [0.07, 0.11, 0.05],
+        [0, 0, side * 1.9],
+      );
+      this.part(
+        head,
+        "a-orb",
+        orb,
+        ink,
+        [side * 0.075, 0.025, 0.155],
+        [0.032, 0.04, 0.02],
+      );
+      this.part(
+        head,
+        "a-ball",
+        ball,
+        "#ffffff",
+        [side * 0.065, 0.04, 0.172],
+        [0.01, 0.01, 0.006],
+      );
+      this.part(
+        head,
+        "a-cube",
+        cube,
+        furDark,
+        [side * 0.078, 0.092, 0.148],
+        [0.04, 0.01, 0.02],
+        [0, 0, side * 0.2],
+      );
+      // Ears: orange pyramid with cream inner face, dark tip.
+      const ear = new THREE.Group();
+      ear.position.set(side * 0.115, 0.13, -0.01);
+      ear.rotation.set(-0.08, 0, side * -0.32);
+      head.add(ear);
+      this.part(
+        ear,
+        "a-pyramid",
+        pyramid,
+        fur,
+        [0, 0.11, 0],
+        [0.11, 0.21, 0.07],
+        [0, Math.PI / 4, 0],
+      );
+      this.part(
+        ear,
+        "a-pyramid",
+        pyramid,
+        cream,
+        [0, 0.095, 0.02],
+        [0.07, 0.15, 0.03],
+        [0, Math.PI / 4, 0],
+      );
+      this.part(
+        ear,
+        "a-pyramid",
+        pyramid,
+        ink,
+        [0, 0.2, 0],
+        [0.04, 0.05, 0.03],
+        [0, Math.PI / 4, 0],
+      );
+    }
+    this.part(head, "a-orb", orb, cream, [0, -0.07, 0.1], [0.13, 0.085, 0.1]);
+    this.part(
+      head,
+      "a-cone",
+      cone,
+      cream,
+      [0, -0.045, 0.2],
+      [0.06, 0.1, 0.05],
+      [Math.PI / 2, 0, 0],
+    );
+    this.part(
+      head,
+      "a-orb",
+      orb,
+      ink,
+      [0, -0.035, 0.25],
+      [0.028, 0.022, 0.022],
+    );
+    this.part(
+      head,
+      "a-smile",
+      smile,
+      ink,
+      [0, -0.085, 0.192],
+      [0.022, 0.016, 0.02],
+      [0, 0, Math.PI],
+    );
+    // Tail: three fluffy segments curling up behind, big cream tip.
+    const tail = this.anboTail;
+    tail.position.set(0, 0.24, -0.11);
+    a.add(tail);
+    this.part(
+      tail,
+      "a-orb",
+      orb,
+      fur,
+      [0, 0.02, -0.09],
+      [0.08, 0.075, 0.11],
+      [0.5, 0, 0],
+    );
+    this.part(
+      tail,
+      "a-orb",
+      orb,
+      fur,
+      [0, 0.12, -0.18],
+      [0.1, 0.1, 0.11],
+      [0.9, 0, 0],
+    );
+    this.part(
+      tail,
+      "a-orb",
+      orb,
+      cream,
+      [0, 0.25, -0.2],
+      [0.085, 0.1, 0.085],
+      [1.2, 0, 0],
+    );
+    a.scale.setScalar(1.15);
+    a.rotation.y = this.facing;
+  }
   private label(
     text: string,
     x: number,
@@ -259,6 +550,7 @@ export class DefenseView {
     const sprite = new THREE.Sprite(material);
     sprite.position.set(x, y, z);
     sprite.scale.set(width, width / 4, 1);
+    sprite.layers.set(LABEL_LAYER);
     parent.add(sprite);
   }
 
@@ -531,6 +823,19 @@ export class DefenseView {
     return group;
   }
 
+  private sizeComposer() {
+    if (!this.composer || !this.width) return;
+    this.composer.setSize(this.width, this.height);
+    const [horizontal, vertical] = this.tiltShift;
+    // Gentle tilt-shift: enough for the diorama feel, labels stay sharp anyway.
+    horizontal.uniforms.h.value = 2 / this.width;
+    vertical.uniforms.v.value = 2 / this.height;
+    // Motes are screen-sized under the orthographic camera; scale with the board.
+    if (this.motes)
+      (this.motes.material as THREE.PointsMaterial).size =
+        THREE.MathUtils.clamp(this.width / 160, 2.5, 6);
+  }
+
   private resize() {
     const { width, height } = this.canvas.getBoundingClientRect();
     if (!width || !height || (width === this.width && height === this.height))
@@ -538,6 +843,7 @@ export class DefenseView {
     this.width = width;
     this.height = height;
     this.renderer.setSize(width, height, false);
+    this.sizeComposer();
     const aspect = width / height;
     const halfWidth = Math.max(7.25, 4.75 * aspect);
     this.camera.left = -halfWidth;
@@ -628,8 +934,8 @@ export class DefenseView {
         this.scene.remove(group);
         this.entities.delete(entity);
       }
-    this.player.position.set(game.player.x - 4, 0, game.player.y - 2);
-    this.playerSprite.visible =
+    this.animateAnbo(game);
+    this.anbo.visible =
       game.player.invincible <= 0 ||
       Math.floor(game.player.invincible * 10) % 2 === 0;
     this.lifeCrown.material = this.material(
@@ -670,12 +976,231 @@ export class DefenseView {
     }
     for (let i = count; i < this.dangerTiles.length; i++)
       this.dangerTiles[i].visible = false;
-    this.renderer.render(this.scene, this.camera);
+    if (this.look === "hd2d" && this.composer) {
+      this.animateAmbience();
+      this.camera.layers.set(0);
+      this.composer.render();
+      // Labels skip bloom, grading and tilt-shift so text stays readable.
+      this.camera.layers.set(LABEL_LAYER);
+      const background = this.scene.background;
+      this.scene.background = null;
+      this.renderer.autoClear = false;
+      this.renderer.clearDepth();
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.autoClear = true;
+      this.scene.background = background;
+      this.camera.layers.enable(0);
+    } else {
+      this.camera.layers.enable(LABEL_LAYER);
+      this.renderer.render(this.scene, this.camera);
+    }
+  }
+
+  /**
+   * Octopath-style diorama: warm low sun and deeper shadows, sun shafts and
+   * drifting motes in the scene, then bloom, grading, tilt-shift and vignette.
+   */
+  /** Switch between the standard grove and the HD-2D diorama at runtime. */
+  setLook(look: "standard" | "hd2d") {
+    const hd = look === "hd2d";
+    this.look = look;
+    if (hd && !this.composer) this.buildHd2d();
+    this.renderer.toneMappingExposure = hd ? 1.4 : 1.35;
+    (this.scene.background as THREE.Color).set(hd ? "#173a33" : "#284d43");
+    this.sun.color.set(hd ? "#ffd28a" : "#ffe2a1");
+    this.sun.intensity = hd ? 4.6 : 3.2;
+    this.sun.position.set(hd ? -7 : -5, hd ? 9 : 10, hd ? 3 : 5);
+    this.sky.intensity = hd ? 2.1 : 2.5;
+    for (const extra of [this.glow, this.motes, ...this.shafts])
+      if (extra) extra.visible = hd;
+  }
+
+  private buildHd2d() {
+    const glow = (this.glow = new THREE.PointLight("#ffcf7a", 6, 6, 1.6));
+    glow.position.set(-5.4, 1.4, 0.4);
+    this.scene.add(glow);
+    // Soft round sprite shared by the motes.
+    const dot = document.createElement("canvas");
+    dot.width = dot.height = 32;
+    const g = dot.getContext("2d")!,
+      fade = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+    fade.addColorStop(0, "#fff8dc");
+    fade.addColorStop(0.35, "#ffe9a8aa");
+    fade.addColorStop(1, "#ffe9a800");
+    g.fillStyle = fade;
+    g.fillRect(0, 0, 32, 32);
+    const dotTexture = new THREE.CanvasTexture(dot);
+    this.textures.push(dotTexture);
+    const count = 70,
+      positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions.set(
+        [
+          Math.random() * 13 - 6.5,
+          0.3 + Math.random() * 2.6,
+          Math.random() * 7 - 3.5,
+        ],
+        i * 3,
+      );
+      this.moteSeeds.push(Math.random() * Math.PI * 2);
+    }
+    const motesGeometry = new THREE.BufferGeometry();
+    motesGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(positions, 3),
+    );
+    const motesMaterial = new THREE.PointsMaterial({
+      map: dotTexture,
+      size: 6,
+      sizeAttenuation: false,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      fog: false,
+    });
+    this.extras.push(motesMaterial);
+    this.motes = new THREE.Points(motesGeometry, motesMaterial);
+    this.scene.add(this.motes);
+    // Sun shafts: tall additive planes slanting in from the top-left.
+    const shaft = document.createElement("canvas");
+    shaft.width = 4;
+    shaft.height = 128;
+    const s = shaft.getContext("2d")!,
+      beam = s.createLinearGradient(0, 0, 0, 128);
+    beam.addColorStop(0, "#fff1c400");
+    beam.addColorStop(0.3, "#fff1c455");
+    beam.addColorStop(1, "#fff1c400");
+    s.fillStyle = beam;
+    s.fillRect(0, 0, 4, 128);
+    const shaftTexture = new THREE.CanvasTexture(shaft);
+    this.textures.push(shaftTexture);
+    for (const [x, z, w] of [
+      [-3.2, -1.2, 1.1],
+      [-0.6, 0.4, 0.7],
+      [1.8, -0.8, 0.9],
+    ]) {
+      const material = new THREE.MeshBasicMaterial({
+        map: shaftTexture,
+        transparent: true,
+        opacity: 0.14,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        fog: false,
+      });
+      this.extras.push(material);
+      const mesh = new THREE.Mesh(
+        this.geometry("shaft", () => new THREE.PlaneGeometry(1, 1)),
+        material,
+      );
+      mesh.scale.set(w, 7, 1);
+      mesh.position.set(x, 2.6, z);
+      mesh.rotation.set(0, 0.6, 0.55);
+      this.scene.add(mesh);
+      this.shafts.push(mesh);
+    }
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.composer.addPass(
+      new UnrealBloomPass(new THREE.Vector2(512, 512), 0.32, 0.55, 0.86),
+    );
+    // Grade, blur and vignette after tone mapping, in display colour space.
+    this.composer.addPass(new OutputPass());
+    const warm = new ShaderPass(ColorCorrectionShader);
+    warm.uniforms.mulRGB.value.set(1.06, 1.01, 0.9);
+    warm.uniforms.powRGB.value.set(1.1, 1.05, 1.0);
+    this.composer.addPass(warm);
+    const grade = new ShaderPass(HueSaturationShader);
+    grade.uniforms.saturation.value = 0.16;
+    this.composer.addPass(grade);
+    const contrast = new ShaderPass(BrightnessContrastShader);
+    contrast.uniforms.contrast.value = 0.07;
+    this.composer.addPass(contrast);
+    // Focus band sits on the middle rows; foreground and backdrop soften.
+    for (const shader of [HorizontalTiltShiftShader, VerticalTiltShiftShader]) {
+      const pass = new ShaderPass(shader);
+      pass.uniforms.r.value = 0.48;
+      this.composer.addPass(pass);
+      this.tiltShift.push(pass);
+    }
+    const vignette = new ShaderPass(VignetteShader);
+    vignette.uniforms.offset.value = 0.95;
+    vignette.uniforms.darkness.value = 1.1;
+    this.composer.addPass(vignette);
+    this.sizeComposer();
+  }
+
+  private animateAmbience() {
+    if (!this.motes || this.reducedMotion.matches) return;
+    const t = performance.now() / 1000,
+      position = this.motes.geometry.getAttribute(
+        "position",
+      ) as THREE.BufferAttribute;
+    for (let i = 0; i < position.count; i++) {
+      const seed = this.moteSeeds[i];
+      let y = position.getY(i) + 0.0035;
+      if (y > 3.1) y = 0.3;
+      position.setXYZ(
+        i,
+        position.getX(i) + Math.sin(t * 0.6 + seed) * 0.003,
+        y,
+        position.getZ(i) + Math.cos(t * 0.5 + seed) * 0.003,
+      );
+    }
+    position.needsUpdate = true;
+    this.shafts.forEach((shaft, i) => {
+      (shaft.material as THREE.MeshBasicMaterial).opacity =
+        0.12 + Math.sin(t * 0.7 + i * 2) * 0.04;
+    });
+  }
+
+  /** Glide between grid cells, turn toward travel and hop while walking. */
+  private animateAnbo(game: DefenseEngine) {
+    const now = performance.now(),
+      dt = Math.min((now - this.lastFrame) / 1000, 0.05);
+    this.lastFrame = now;
+    const p = this.player.position,
+      dx = game.player.x - 4 - p.x,
+      dz = game.player.y - 2 - p.z,
+      distance = Math.hypot(dx, dz);
+    const teleport = distance > 1.5;
+    if (teleport) p.set(game.player.x - 4, 0, game.player.y - 2);
+    else {
+      const k = 1 - Math.exp(-dt * 18);
+      p.x += dx * k;
+      p.z += dz * k;
+    }
+    const moving = !teleport && distance > 0.03;
+    this.idle = moving ? 0 : this.idle + dt;
+    // Face travel; after a short rest, turn back toward the camera.
+    if (moving) this.facing = Math.atan2(dx, dz);
+    else if (this.idle > 1.4) this.facing = 0.45;
+    let turn = this.facing - this.anbo.rotation.y;
+    turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+    this.anbo.rotation.y += turn * (1 - Math.exp(-dt * 12));
+    const still = this.reducedMotion.matches,
+      stride = still || !moving ? 0 : Math.sin(now / 55);
+    this.anboLegs.forEach(
+      (leg, i) => (leg.rotation.x = stride * (i ? -0.6 : 0.6)),
+    );
+    this.anboArms.forEach(
+      (arm, i) => (arm.rotation.x = stride * (i ? 0.5 : -0.5)),
+    );
+    this.anbo.position.y = still
+      ? 0
+      : moving
+        ? Math.abs(stride) * 0.05
+        : Math.sin(now / 420) * 0.008;
+    this.anboHead.rotation.z = still || moving ? 0 : Math.sin(now / 900) * 0.06;
+    this.anboTail.rotation.y = still
+      ? 0
+      : Math.sin(now / (moving ? 90 : 300)) * 0.35;
   }
 
   diagnostics() {
     return {
       renderer: "three.js",
+      look: this.look,
       calls: this.renderer.info.render.calls,
       triangles: this.renderer.info.render.triangles,
       geometries: this.renderer.info.memory.geometries,
@@ -702,6 +1227,8 @@ export class DefenseView {
     this.scene.traverse((object) => {
       if (object instanceof THREE.InstancedMesh) object.dispose();
     });
+    this.composer?.dispose();
+    this.motes?.geometry.dispose();
     this.renderer.dispose();
     this.entities.clear();
   }

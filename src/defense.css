@@ -1244,3 +1244,29 @@ img.seed-art {
     padding: 5px 4px 7px;
   }
 }
+.defense-toolbar button {
+  white-space: nowrap;
+}
+#look[aria-pressed="true"] {
+  border-color: #c9b06a;
+  color: #f4e3a8;
+  background: #3d5a3c;
+}
+@media (max-width: 700px) {
+  .defense-toolbar {
+    gap: 8px;
+  }
+  .defense-toolbar > strong {
+    font-size: 12px;
+    min-width: 0;
+  }
+  .defense-toolbar > div {
+    gap: 5px;
+  }
+  .defense-toolbar button {
+    padding: 6px 9px;
+  }
+  .look-prefix {
+    display: none;
+  }
+}
