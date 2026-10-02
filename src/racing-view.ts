@@ -91,6 +91,8 @@ export class RacingView {
   private reduced = matchMedia("(prefers-reduced-motion: reduce)");
   private width = 0;
   private height = 0;
+  /** HUD drawing space is 640 units wide; its height follows the stage aspect. */
+  private hudH = 400;
   private lastState?: RaceSnapshot;
   private renderKey = "";
   private pickupSerial = 0;
@@ -834,14 +836,9 @@ export class RacingView {
     this.camera.updateProjectionMatrix();
     this.hud.width = Math.round(width * Math.min(devicePixelRatio, 1.5));
     this.hud.height = Math.round(height * Math.min(devicePixelRatio, 1.5));
-    this.ctx.setTransform(
-      this.hud.width / 640,
-      0,
-      0,
-      this.hud.height / 400,
-      0,
-      0,
-    );
+    this.hudH = (640 * height) / width;
+    const scale = this.hud.width / 640;
+    this.ctx.setTransform(scale, 0, 0, scale, 0, 0);
   }
   render(
     s: RaceSnapshot,
@@ -875,10 +872,13 @@ export class RacingView {
     const player = raceFrame(s.distance, s.x);
     const cameraPosition = player.position
       .clone()
-      .addScaledVector(player.tangent, -11.5)
-      .add(new THREE.Vector3(0, 6.4, 0));
-    const target = raceFrame(s.distance + 950, s.x * 0.3).position.add(
-      new THREE.Vector3(0, 1.2, 0),
+      .addScaledVector(player.tangent, -12.5)
+      .add(new THREE.Vector3(0, 6.6, 0));
+    // Aim below the horizon so the whole player kart stays in frame; narrow
+    // portrait stages need a steeper tilt to lift the kart above the HUD.
+    const tilt = this.camera.aspect < 1 ? -4.2 : -3.2;
+    const target = raceFrame(s.distance + 850, s.x * 0.3).position.add(
+      new THREE.Vector3(0, tilt, 0),
     );
     if (
       !this.cameraReady ||
@@ -1008,10 +1008,18 @@ export class RacingView {
   }
   private drawHUD(s: RaceSnapshot) {
     const c = this.ctx;
-    c.clearRect(0, 0, 640, 400);
+    const h = this.hudH,
+      mapTop = h - 125;
+    c.clearRect(0, 0, 640, h);
+    // Portrait stages are narrow, so grow the minimap from its bottom-right corner.
+    const mapScale = h > 520 ? 1.5 : 1;
+    c.save();
+    c.translate(629, h - 13);
+    c.scale(mapScale, mapScale);
+    c.translate(-629, -(h - 13));
     c.fillStyle = "#173b32b8";
     c.beginPath();
-    c.roundRect(504, 275, 125, 112, 8);
+    c.roundRect(504, mapTop, 125, 112, 8);
     c.fill();
     c.strokeStyle = "#d8dba2";
     c.lineWidth = 3;
@@ -1019,7 +1027,7 @@ export class RacingView {
     c.beginPath();
     track.forEach((p, i) => {
       const x = 536 + p.mapX * 0.24,
-        y = 330 + p.mapY * 0.2;
+        y = mapTop + 55 + p.mapY * 0.2;
       if (!i) c.moveTo(x, y);
       else c.lineTo(x, y);
     });
@@ -1033,7 +1041,7 @@ export class RacingView {
       c.beginPath();
       c.arc(
         536 + (f.x / SCALE) * 0.24,
-        330 + (f.z / SCALE) * 0.2,
+        mapTop + 55 + (f.z / SCALE) * 0.2,
         radius,
         0,
         Math.PI * 2,
@@ -1048,17 +1056,18 @@ export class RacingView {
     c.font = "10px sans-serif";
     c.textAlign = "left";
     c.fillStyle = "#fff0c9";
-    c.fillText(s.zone, 513, 289);
+    c.fillText(s.zone, 513, mapTop + 14);
+    c.restore();
     if (s.phase === "countdown" && !s.paused) {
       c.textAlign = "center";
       c.font = "bold 76px sans-serif";
       c.lineWidth = 6;
       c.strokeStyle = "#214738";
       c.fillStyle = "#ffe6a1";
-      c.strokeText(String(Math.ceil(s.countdown)), 320, 205);
-      c.fillText(String(Math.ceil(s.countdown)), 320, 205);
+      c.strokeText(String(Math.ceil(s.countdown)), 320, h * 0.51);
+      c.fillText(String(Math.ceil(s.countdown)), 320, h * 0.51);
       c.font = "14px sans-serif";
-      c.fillText("準備出發", 320, 236);
+      c.fillText("準備出發", 320, h * 0.51 + 31);
     }
     if (s.stun > 0 && s.phase === "racing") {
       c.textAlign = "center";
@@ -1067,8 +1076,8 @@ export class RacingView {
       c.strokeStyle = "#483b29";
       c.lineWidth = 4;
       const label = `撞暈中… ${s.stun.toFixed(1)} 秒`;
-      c.strokeText(label, 320, 270);
-      c.fillText(label, 320, 270);
+      c.strokeText(label, 320, h * 0.675);
+      c.fillText(label, 320, h * 0.675);
     }
     if (s.offroad && s.stun <= 0 && s.phase === "racing") {
       c.textAlign = "center";
@@ -1076,8 +1085,8 @@ export class RacingView {
       c.strokeStyle = "#294735";
       c.lineWidth = 3;
       c.fillStyle = "#fff0b1";
-      c.strokeText("草地會減速，轉回賽道！", 320, 290);
-      c.fillText("草地會減速，轉回賽道！", 320, 290);
+      c.strokeText("草地會減速，轉回賽道！", 320, h * 0.725);
+      c.fillText("草地會減速，轉回賽道！", 320, h * 0.725);
     }
   }
   private diagnostics() {

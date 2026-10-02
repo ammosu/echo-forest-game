@@ -975,3 +975,397 @@
 .race-error p {
   line-height: 1.8;
 }
+
+/* UI polish: HUD plates, welcome card, taller portrait stage. */
+.race-position,
+.race-progress,
+.race-speed {
+  background: #173b32b8;
+  border: 1px solid #d8dba233;
+  border-radius: 8px;
+  padding: 10px 14px 12px;
+  backdrop-filter: blur(3px);
+}
+.race-position > span,
+.race-progress > span {
+  color: #d9dfb8;
+}
+.race-speed {
+  width: auto;
+  min-width: 190px;
+}
+.race-speed > small {
+  display: block;
+  font-size: 10px;
+  color: #d6ddb4;
+}
+.race-speed em {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #244837;
+}
+.race-speed.boosting em {
+  background: #f1d780;
+  color: #243f2d;
+  text-shadow: none;
+}
+.drift-meter {
+  border-radius: 3px;
+  overflow: hidden;
+  width: 100%;
+}
+.race-item {
+  border-radius: 8px;
+  border-style: dashed;
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.race-item.has-item {
+  border-style: solid;
+  animation: item-ready 1.2s ease-in-out infinite;
+}
+@keyframes item-ready {
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 28px #f5df9d99;
+  }
+}
+.race-notice {
+  border-radius: 999px;
+  padding: 7px 18px;
+  font-size: 12px;
+}
+.race-welcome {
+  max-width: 440px;
+  padding: 26px 30px;
+  background: #143a2ed9;
+  border: 1px solid #d8dba244;
+  border-radius: 12px;
+  box-shadow: 0 18px 40px #0b221b66;
+  backdrop-filter: blur(4px);
+}
+.race-welcome h2 {
+  margin-top: 6px;
+}
+.race-result {
+  border-radius: 12px;
+  box-shadow: 0 18px 40px #0b221b88;
+}
+.race-result .finish-place {
+  font-weight: 700;
+}
+@media (prefers-reduced-motion: reduce) {
+  .race-item.has-item {
+    animation: none;
+  }
+}
+@media (max-width: 650px) {
+  .race-stage {
+    aspect-ratio: 4/5;
+  }
+  .race-overlay {
+    align-items: flex-end;
+    padding: 4%;
+    background: linear-gradient(180deg, #23493410, #10392bee 55%);
+  }
+  .race-welcome {
+    max-width: none;
+    width: 100%;
+    padding: 18px;
+  }
+  .race-welcome > p:not(.welcome-label) {
+    font-size: 12px;
+  }
+  .race-start-meta {
+    font-size: 10px;
+  }
+  .race-position,
+  .race-progress,
+  .race-speed {
+    padding: 6px 9px 7px;
+  }
+  .race-speed {
+    min-width: 128px;
+  }
+  .race-speed > small {
+    font-size: 9px;
+  }
+  .race-item {
+    top: 92px;
+  }
+  .race-result {
+    align-self: center;
+    padding: 16px 18px;
+  }
+  .race-result h2 {
+    font-size: 22px;
+  }
+  .lap-splits span,
+  .finish-standings {
+    font-size: 10px;
+  }
+}
+@media (max-width: 650px) {
+  .race-notice {
+    top: 74px;
+    max-width: 62%;
+    font-size: 11px;
+  }
+}
+
+/* Generated pixel icons for HUD, item and finish badge. */
+.race-position > span img,
+.race-progress > span img,
+.race-progress strong img {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+  margin-right: 5px;
+  image-rendering: pixelated;
+}
+.race-progress strong img {
+  width: 18px;
+  height: 18px;
+}
+.race-speed > div:first-child > img {
+  width: 22px;
+  height: 22px;
+  align-self: center;
+  image-rendering: pixelated;
+}
+#item-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+}
+#item-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) brightness(0.8) opacity(0.45);
+  transition: filter 0.2s;
+}
+.race-item.has-item #item-icon img {
+  filter: drop-shadow(0 0 6px #fff4b0);
+}
+.race-touch .item-touch img {
+  width: 20px;
+  height: 20px;
+  vertical-align: -5px;
+  margin-right: 3px;
+  filter: grayscale(1) opacity(0.5);
+}
+.race-touch .item-touch.ready img {
+  filter: none;
+}
+.finish-badge {
+  display: block;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 6px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.finish-badge.is-champion {
+  width: 92px;
+  height: 92px;
+  filter: drop-shadow(0 6px 14px #f1d78066);
+}
+@media (max-width: 650px) {
+  #item-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .race-position > span img,
+  .race-progress > span img,
+  .race-progress strong img {
+    width: 12px;
+    height: 12px;
+    margin-right: 3px;
+  }
+  .race-speed > div:first-child > img {
+    width: 16px;
+    height: 16px;
+  }
+  .finish-badge {
+    width: 30px;
+    height: 30px;
+  }
+  .finish-badge.is-champion {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+/* Result and pause cards dim the whole stage evenly. */
+.race-overlay:has(.race-result:not([hidden])) {
+  justify-content: center;
+  background: #0f2e25b8;
+  backdrop-filter: blur(2px);
+}
+
+/* Touch control states: idle, held, ready and locked read differently. */
+@media (pointer: coarse), (max-width: 900px) {
+  .race-touch button {
+    border-radius: 8px;
+    transition:
+      opacity 0.15s,
+      background 0.1s;
+  }
+  .race-touch .drift-touch {
+    background: #3c593c;
+    color: #f4d480;
+    border: 2px solid #e4cc7f;
+  }
+  .race-touch .drift-touch.held {
+    background: #e4cc7f;
+    color: #29432e;
+  }
+  .race-touch button.held {
+    box-shadow: 0 1px #152e22;
+  }
+  .race-touch .item-touch:disabled {
+    opacity: 1;
+    cursor: default;
+    color: #a7b796;
+    border-style: dashed;
+    background: #2c4632;
+  }
+  .race-touch .item-touch.ready {
+    background: #e9d07f;
+    border-color: #fff0ad;
+    color: #243f2d;
+    box-shadow:
+      0 3px #967b43,
+      0 0 14px #f5df9d88;
+  }
+  .race-shell.is-locked .race-touch {
+    opacity: 0.35;
+    pointer-events: none;
+    filter: saturate(0.4);
+  }
+  .race-shell.is-finished .race-touch {
+    visibility: hidden;
+  }
+}
+
+/* Readable minimums for secondary text. */
+.race-shell .game-toolbar,
+.race-shell .trail-en,
+.race-shell .toolbar-actions button span,
+.race-caption,
+.race-caption kbd {
+  font-size: 12px;
+}
+.race-caption label span,
+.race-caption {
+  color: #c6d3b4;
+}
+.race-item > span:nth-child(2),
+.race-item kbd,
+.race-speed > small,
+.race-entry small,
+.race-tips p,
+.race-record small,
+.race-intro-badge small,
+.race-start-meta,
+.finish-summary > div > span,
+.lap-splits span {
+  font-size: 11px;
+}
+.race-welcome > p:not(.welcome-label) {
+  font-size: 13px;
+}
+.race-tips strong,
+.finish-standings {
+  font-size: 12px;
+}
+@media (max-width: 650px) {
+  .race-caption,
+  .race-caption label span {
+    font-size: 13px;
+  }
+  .race-item > span:nth-child(2) {
+    font-size: 9px;
+  }
+  .race-speed > small {
+    font-size: 10px;
+  }
+  .race-tips p,
+  .race-entry small {
+    font-size: 12px;
+  }
+}
+@media (max-width: 650px) {
+  .finish-badge.is-champion {
+    width: 46px;
+    height: 46px;
+    margin-bottom: 2px;
+  }
+  .race-result .chapter {
+    margin-bottom: 2px;
+  }
+  .lap-splits {
+    padding: 6px 0;
+    margin-top: 6px;
+  }
+  .finish-standings li {
+    padding: 1px 2px;
+  }
+  .race-result .primary {
+    margin-top: 6px;
+  }
+  .race-result .text-button {
+    margin-top: 8px;
+  }
+}
+
+/* Round 3: keep the mobile road clear and quiet the finished state. */
+.race-shell.is-finished .race-caption {
+  display: none;
+}
+@media (pointer: coarse), (max-width: 900px) {
+  .race-shell.is-finished .race-touch {
+    display: none;
+  }
+  .race-touch .drift-touch {
+    color: #e9dcae;
+    border: 1px solid #b9ae78;
+  }
+  .race-touch .drift-touch.held {
+    border-color: #fff0ad;
+    box-shadow: inset 0 2px 4px #8d7440;
+  }
+}
+@media (max-width: 650px) {
+  .race-speed {
+    min-width: 0;
+    width: 104px;
+    padding: 5px 8px 6px;
+  }
+  .race-speed > div:first-child {
+    gap: 3px;
+  }
+  .race-speed em,
+  .race-speed > small {
+    display: none;
+  }
+  .race-speed.boosting {
+    border-color: #f1d780;
+  }
+  .drift-meter {
+    margin: 4px 0 0;
+    height: 4px;
+  }
+  .race-notice {
+    top: 12px;
+    max-width: 34%;
+    text-wrap: balance;
+    padding: 5px 9px;
+    font-size: 10px;
+    line-height: 1.35;
+    border-radius: 10px;
+  }
+}
