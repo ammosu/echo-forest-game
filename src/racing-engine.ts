@@ -1,7 +1,15 @@
-import kartUrl from "../assets/generated/anbo-kart-eight-directions.png?url";
-import rivalsUrl from "../assets/generated/forest-rival-karts.png?url";
-import forestUrl from "../assets/generated/forest-background.png?url";
-import propsUrl from "../assets/generated/forest-race-props.png?url";
+import {
+  sweepContact,
+  wallLimit,
+  collisionImpulse,
+  WORLD_PER_DISTANCE,
+  ROAD_HALF_WIDTH,
+  kartBounds,
+  shapes,
+  signedGap,
+  type RacePoint,
+} from "./racing-collision";
+import { RacingView } from "./racing-view";
 import {
   entries,
   vehicles,
@@ -33,7 +41,24 @@ export interface RaceResult {
   lapTimes: number[];
   standings: { name: string; time: number | null; finished: boolean }[];
 }
-export interface RaceSnapshot {
+export interface ImpactState {
+  stun: number;
+  lateralVelocity: number;
+  impact: number;
+  impactTime: number;
+  impactSide: number;
+  impactKind: "wall" | "car" | "stump" | null;
+}
+type ImpactBody = ImpactState & { distance: number; x: number; speed: number };
+const freshImpact = (): ImpactState => ({
+  stun: 0,
+  lateralVelocity: 0,
+  impact: 0,
+  impactTime: -10,
+  impactSide: 0,
+  impactKind: null,
+});
+export interface RaceSnapshot extends ImpactState {
   phase: RacePhase;
   paused: boolean;
   distance: number;
@@ -54,10 +79,17 @@ export interface RaceSnapshot {
   offroad: boolean;
   boostsUsed: number;
   driftBoosts: number;
-  opponents: { name: string; distance: number; x: number; finished: boolean }[];
+  opponents: (ImpactState & {
+    name: string;
+    distance: number;
+    x: number;
+    speed: number;
+    finished: boolean;
+  })[];
   autoGas: boolean;
   zone: string;
   checkpoints: number;
+  pickupSerial: number;
 }
 export type RaceEvent =
   | { type: "ready" }
@@ -65,54 +97,13 @@ export type RaceEvent =
   | { type: "state"; state: RaceSnapshot }
   | { type: "notice"; message: string }
   | { type: "finish"; result: RaceResult };
-interface Opponent {
+interface Opponent extends ImpactState {
   entry: (typeof entries)[number];
   distance: number;
   x: number;
   speed: number;
   finishTime: number | null;
 }
-interface Projection {
-  x: number;
-  y: number;
-  w: number;
-  scale: number;
-  index: number;
-  distance: number;
-}
-const W = 640,
-  H = 400,
-  HORIZON = 115,
-  ROAD_WIDTH = 950,
-  CAMERA_HEIGHT = 880,
-  CAMERA_DEPTH = 0.92,
-  CAMERA_BACK = 950;
-const colors = [
-  {
-    grass: "#5c8c55",
-    grassAlt: "#628f54",
-    road: "#a89468",
-    roadAlt: "#ad996e",
-    edge: "#eee0ad",
-    stripe: "#8b6c48",
-  },
-  {
-    grass: "#3e7a63",
-    grassAlt: "#458069",
-    road: "#8f987a",
-    roadAlt: "#949d80",
-    edge: "#d6dfb9",
-    stripe: "#536e5e",
-  },
-  {
-    grass: "#8eab59",
-    grassAlt: "#94b161",
-    road: "#bd9d68",
-    roadAlt: "#c3a46e",
-    edge: "#f6e0a2",
-    stripe: "#9a6947",
-  },
-];
 export class RacingEngine {
   phase: RacePhase = "loading";
   paused = false;
@@ -131,6 +122,14 @@ export class RacingEngine {
   collisions = 0;
   boostsUsed = 0;
   driftBoosts = 0;
+  pickupSerial = 0;
+  stun = 0;
+  lateralVelocity = 0;
+  impact = 0;
+  impactTime = -10;
+  impactSide = 0;
+  impactKind: ImpactState["impactKind"] = null;
+  private pairContacts = new Map<string, number>();
   controls: Record<Control, boolean> = {
     left: false,
     right: false,
@@ -140,13 +139,7 @@ export class RacingEngine {
     item: false,
   };
   opponents: Opponent[] = [];
-  readonly reducedMotion = matchMedia("(prefers-reduced-motion: reduce)")
-    .matches;
-  private ctx: CanvasRenderingContext2D;
-  private kart = new Image();
-  private rivals = new Image();
-  private forest = new Image();
-  private props = new Image();
+  private view?: RacingView;
   private previous = 0;
   private accumulator = 0;
   private frameId = 0;
@@ -172,42 +165,40 @@ export class RacingEngine {
   private onVisibility = () => {
     if (document.hidden) this.onBlur();
   };
+  private onContextLost = (event: Event) => {
+    event.preventDefault();
+    this.fail("繪圖環境已中斷，比賽已停止。請重新載入賽道。");
+  };
+  private fail(message: string) {
+    this.paused = true;
+    this.release();
+    this.phase = "error";
+    this.audioVolume();
+    this.sendState();
+    this.emit({ type: "error", message });
+  }
   constructor(
     public canvas: HTMLCanvasElement,
     private emit: (event: RaceEvent) => void,
   ) {
-    canvas.width = W;
-    canvas.height = H;
-    this.ctx = canvas.getContext("2d", { alpha: false })!;
-    this.ctx.imageSmoothingEnabled = false;
     this.opponents = this.freshOpponents();
-    this.readyPromise = Promise.all(
-      [
-        [this.kart, kartUrl],
-        [this.rivals, rivalsUrl],
-        [this.forest, forestUrl],
-        [this.props, propsUrl],
-      ].map(
-        ([image, url]) =>
-          new Promise<void>((resolve, reject) => {
-            const img = image as HTMLImageElement;
-            img.onload = () => resolve();
-            img.onerror = () =>
-              reject(new Error("賽車素材載入失敗，請重新整理。"));
-            img.src = url as string;
-          }),
-      ),
-    )
-      .then(() => {
+    this.readyPromise = Promise.resolve()
+      .then(async () => {
         if (this.destroyed) return;
+        this.view = new RacingView(canvas);
+        await this.view.ready;
+        if (this.destroyed || this.phase === "error") return;
         this.phase = "ready";
         this.emit({ type: "ready" });
         this.sendState();
       })
-      .catch((e) => {
-        this.phase = "error";
-        this.emit({ type: "error", message: String(e.message) });
+      .catch(() => {
+        if (this.destroyed) return;
+        this.fail(
+          "無法建立立體賽道。請確認瀏覽器支援 WebGL 2、開啟硬體加速，然後重新載入。",
+        );
       });
+    canvas.addEventListener("webglcontextlost", this.onContextLost);
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
     window.addEventListener("blur", this.onBlur);
@@ -222,15 +213,14 @@ export class RacingEngine {
     return this.phase === "countdown" || this.phase === "racing";
   }
   private freshOpponents(): Opponent[] {
-    return entries
-      .slice(1)
-      .map((entry, i) => ({
-        entry,
-        distance: 250 + i * 320,
-        x: [-0.48, 0.46, 0][i],
-        speed: 0,
-        finishTime: null,
-      }));
+    return entries.slice(1).map((entry, i) => ({
+      entry,
+      ...freshImpact(),
+      distance: 250 + i * 320,
+      x: [-0.48, 0.46, 0][i],
+      speed: 0,
+      finishTime: null,
+    }));
   }
   async start() {
     await this.readyPromise;
@@ -251,6 +241,9 @@ export class RacingEngine {
     this.collisions = 0;
     this.boostsUsed = 0;
     this.driftBoosts = 0;
+    this.pickupSerial = 0;
+    Object.assign(this, freshImpact());
+    this.pairContacts.clear();
     this.hitCooldown = 0;
     this.itemQueued = false;
     this.previousCount = 4;
@@ -276,7 +269,8 @@ export class RacingEngine {
       value &&
       !this.controls.item &&
       this.phase === "racing" &&
-      !this.paused
+      !this.paused &&
+      this.stun <= 0
     )
       this.itemQueued = true;
     this.controls[control] = value;
@@ -335,7 +329,14 @@ export class RacingEngine {
         this.accumulator -= 1 / 120;
       }
     }
-    this.draw();
+    if (this.phase !== "error")
+      this.view?.render(
+        this.snapshot(),
+        dt,
+        Number(this.controls.right) - Number(this.controls.left),
+        this.hitCooldown,
+        this.consumed,
+      );
     this.frameId = requestAnimationFrame(this.frame);
   };
   private update(dt: number) {
@@ -359,12 +360,29 @@ export class RacingEngine {
       return;
     }
     if (this.phase !== "racing") return;
+    const playerBefore = { distance: this.distance, x: this.x };
+    const opponentsBefore = this.opponents.map((o) => ({
+      distance: o.distance,
+      x: o.x,
+    }));
     this.seconds += dt;
+    for (const car of [this, ...this.opponents]) {
+      // Normalize fixture/old-state fields as well as new race entries.
+      car.stun = Math.max(0, (car.stun ?? 0) - dt);
+      car.lateralVelocity = (car.lateralVelocity ?? 0) * Math.exp(-5 * dt);
+      car.impact ??= 0;
+      car.impactTime ??= -10;
+      car.impactSide ??= 0;
+      car.impactKind ??= null;
+    }
     this.boost = Math.max(0, this.boost - dt);
     this.hitCooldown = Math.max(0, this.hitCooldown - dt);
     const ratio = this.speed / vehicles.moss.topSpeed,
       curve = curveAt(this.distance),
-      axis = Number(this.controls.right) - Number(this.controls.left);
+      axis =
+        this.stun > 0
+          ? 0
+          : Number(this.controls.right) - Number(this.controls.left);
     const wasDrifting = this.drifting;
     if (
       !this.controls.drift ||
@@ -373,8 +391,11 @@ export class RacingEngine {
       Math.abs(this.x) > 1.06
     ) {
       if (
-        wasDrifting && this.driftCharge >= 0.65 &&
-        this.speed >= 1100 && Math.abs(this.x) <= 1.06 && !this.controls.brake
+        wasDrifting &&
+        this.driftCharge >= 0.65 &&
+        this.speed >= 1100 &&
+        Math.abs(this.x) <= 1.06 &&
+        !this.controls.brake
       ) {
         this.boost = Math.max(
           this.boost,
@@ -408,7 +429,9 @@ export class RacingEngine {
       vehicles.moss.handling;
     const centrifugal =
       curve * 0.22 * ratio * ratio * (this.drifting ? 0.7 : 1);
-    this.x = clamp(this.x + (steer - centrifugal) * dt, -1.75, 1.75);
+    this.x += (steer - centrifugal + this.lateralVelocity) * dt;
+    const playerBounds = kartBounds(axis * (this.drifting ? 0.3 : 0.08));
+    this.resolveWall(this, playerBounds, (this.x - playerBefore.x) / dt);
     const offroad = Math.abs(this.x) > 1.05;
     let target = this.autoGas || this.controls.gas ? vehicles.moss.topSpeed : 0;
     if (this.boost > 0) target = vehicles.moss.topSpeed * 1.34;
@@ -426,7 +449,8 @@ export class RacingEngine {
       -acceleration * dt,
       acceleration * dt,
     );
-    if (this.itemQueued && this.item) {
+    if (this.stun > 0) this.speed = 0;
+    if (this.itemQueued && this.item && this.stun <= 0) {
       this.item = false;
       this.boost = 2.4;
       this.boostsUsed++;
@@ -436,49 +460,53 @@ export class RacingEngine {
     this.itemQueued = false;
     const before = this.distance;
     this.distance += this.speed * dt;
-    const crossed = (z: number) => {
-      const lap = Math.floor(before / TRACK_LENGTH);
-      return [lap, lap + 1].find(
-        (l) =>
-          before < l * TRACK_LENGTH + z &&
-          this.distance >= l * TRACK_LENGTH + z,
+    const hitProp = (
+      p: { z: number; x: number },
+      shape: typeof shapes.stump,
+    ) => {
+      const fixed = { distance: p.z, x: p.x };
+      return sweepContact(
+        playerBefore,
+        this,
+        fixed,
+        fixed,
+        playerBounds,
+        shape,
       );
     };
-    for (let i = 0; i < itemBoxes.length; i++) {
-      const p = itemBoxes[i],
-        lap = crossed(p.z);
-      if (lap !== undefined && Math.abs(this.x - p.x) < 0.32 && !this.item) {
-        const key = `item-${lap}-${i}`;
-        if (!this.consumed.has(key)) {
-          this.consumed.add(key);
-          this.item = true;
-          this.tone("item");
-          this.emit({
-            type: "notice",
-            message: "獲得回聲能量！按 E 或點道具按鈕加速。",
-          });
-        }
+    // Resolve solid obstacles before pickups/checkpoints so blocked travel earns no progress.
+    for (const p of obstacles) {
+      const contact = hitProp(p, shapes.stump);
+      if (!contact) continue;
+      this.hit("碰到樹樁！轉向繞過它再出發。");
+      if (contact.axis === "x") {
+        this.x = clamp(
+          p.x + contact.sign * (contact.extent.x + 0.001),
+          -1.75,
+          1.75,
+        );
+      } else if (contact.sign < 0) {
+        const z = playerBefore.distance - signedGap(playerBefore.distance, p.z);
+        this.distance = Math.max(
+          before,
+          Math.min(this.distance, z - contact.extent.z - 0.01),
+        );
+        this.speed = 0;
+      } else {
+        this.x = clamp(
+          p.x + Math.sign(this.x - p.x || 1) * (contact.extent.x + 0.001),
+          -1.75,
+          1.75,
+        );
       }
-    }
-    for (let i = 0; i < boostPads.length; i++) {
-      const p = boostPads[i],
-        lap = crossed(p.z);
-      if (lap !== undefined && Math.abs(this.x - p.x) < 0.4) {
-        this.boost = Math.max(this.boost, 1.1);
-        this.tone("boost");
-      }
-    }
-    for (let i = 0; i < obstacles.length; i++) {
-      const p = obstacles[i];
-      if (crossed(p.z) !== undefined && Math.abs(this.x - p.x) < 0.23)
-        this.hit("碰到樹樁！回到賽道繼續追。");
     }
     this.opponents.forEach((o, i) => {
       if (o.finishTime !== null) return;
       const vehicle = vehicles[o.entry.vehicleId];
       const c = curveAt(o.distance);
       const targetX = Math.sin(o.distance / 6500 + i * 2) * 0.53;
-      o.x += clamp(targetX - o.x, -dt * 0.65, dt * 0.65);
+      if (o.stun <= 0) o.x += clamp(targetX - o.x, -dt * 0.65, dt * 0.65);
+      o.x += o.lateralVelocity * dt;
       let top = vehicle.topSpeed * (1 - Math.min(Math.abs(c), 4) * 0.028);
       // Traffic avoidance alters opponent lanes; no teleporting or lap-based rubber band.
       const nearObstacle = obstacles.find(
@@ -488,32 +516,190 @@ export class RacingEngine {
       );
       if (nearObstacle) o.x += Math.sign(o.x - nearObstacle.x || 1) * dt * 0.8;
       if (
-        Math.abs(o.distance - this.distance) < 600 &&
+        Math.abs(signedGap(o.distance, this.distance)) < 600 &&
         Math.abs(o.x - this.x) < 0.3
       ) {
         o.x += Math.sign(o.x - this.x || i - 1 || 1) * dt * 0.5;
         top *= 0.96;
       }
-      o.x = clamp(o.x, -0.82, 0.82);
+      this.resolveWall(o, shapes.kart, (o.x - opponentsBefore[i].x) / dt);
       o.speed += clamp(top - o.speed, -3000 * dt, vehicle.acceleration * dt);
+      if (o.stun > 0) o.speed = 0;
       o.distance += o.speed * dt;
-      if (
-        Math.abs(o.distance - this.distance) < 145 &&
-        Math.abs(o.x - this.x) < 0.24 &&
-        this.speed > o.speed - 250
-      ) {
-        this.hit("擦到對手了，找機會再超車！");
-        this.x = clamp(
-          this.x + Math.sign(this.x - o.x || 1) * 0.15,
+      for (const p of obstacles) {
+        const fixed = { distance: p.z, x: p.x };
+        const contact = sweepContact(
+          opponentsBefore[i],
+          o,
+          fixed,
+          fixed,
+          shapes.kart,
+          shapes.stump,
+        );
+        if (!contact) continue;
+        // AI steers around solid props; it obeys the same body clearance as the player.
+        o.x = clamp(
+          p.x + Math.sign(o.x - p.x || 1) * (contact.extent.x + 0.001),
+          -0.82,
+          0.82,
+        );
+        o.speed *= 0.7;
+      }
+    });
+    // Physical proximity wraps around the circuit, independently of lap standings.
+    const contactPair = (
+      a: ImpactBody,
+      b: ImpactBody,
+      a0: RacePoint,
+      b0: RacePoint,
+      player: boolean,
+    ) => {
+      const contact = sweepContact(
+        a0,
+        a,
+        b0,
+        b,
+        player ? playerBounds : shapes.kart,
+        shapes.kart,
+      );
+      if (!contact) return;
+      if (player) {
+        this.boost = 0;
+        this.drifting = false;
+        this.driftCharge = 0;
+      }
+      const indexA = a === this ? -1 : this.opponents.indexOf(a as Opponent);
+      const indexB = this.opponents.indexOf(b as Opponent);
+      const pairKey = `${indexA}:${indexB}`;
+      if (this.seconds - (this.pairContacts.get(pairKey) ?? -10) > 0.18) {
+        const massA =
+          a === this
+            ? vehicles.moss.mass
+            : vehicles[(a as Opponent).entry.vehicleId].mass;
+        const massB = vehicles[(b as Opponent).entry.vehicleId].mass;
+        const va =
+          contact.axis === "z"
+            ? a.speed * WORLD_PER_DISTANCE
+            : ((a.x - a0.x) / dt) * ROAD_HALF_WIDTH;
+        const vb =
+          contact.axis === "z"
+            ? b.speed * WORLD_PER_DISTANCE
+            : ((b.x - b0.x) / dt) * ROAD_HALF_WIDTH;
+        const response = collisionImpulse(va, vb, contact.sign, massA, massB);
+        if (response.closing > 0.15) {
+          this.pairContacts.set(pairKey, this.seconds);
+          if (contact.axis === "z") {
+            a.speed = Math.max(0, response.a / WORLD_PER_DISTANCE);
+            b.speed = Math.max(0, response.b / WORLD_PER_DISTANCE);
+          } else {
+            a.lateralVelocity += (response.a - va) / ROAD_HALF_WIDTH;
+            b.lateralVelocity += (response.b - vb) / ROAD_HALF_WIDTH;
+          }
+          this.registerImpact(
+            a,
+            Math.min(1, Math.abs(response.a - va) / 18),
+            "car",
+            contact.axis === "x" ? contact.sign : 0,
+            contact.axis === "z" && response.a < va - 14,
+          );
+          this.registerImpact(
+            b,
+            Math.min(1, Math.abs(response.b - vb) / 18),
+            "car",
+            contact.axis === "x" ? -contact.sign : 0,
+            contact.axis === "z" && response.b < vb - 14,
+          );
+        }
+      }
+      const separateSide = (direction: number) => {
+        const half = (contact.extent.x + 0.002) / 2;
+        const center = clamp((a.x + b.x) / 2, -1.75 + half, 1.75 - half);
+        a.x = center + direction * half;
+        b.x = center - direction * half;
+      };
+      if (contact.axis === "x") {
+        separateSide(contact.sign);
+      } else if (contact.sign < 0) {
+        const bWorld = a.distance - signedGap(a.distance, b.distance);
+        const limit = bWorld - contact.extent.z - 0.01;
+        if (limit < a0.distance) separateSide(Math.sign(a.x - b.x) || 1);
+        a.distance = Math.max(a0.distance, Math.min(a.distance, limit));
+      } else {
+        const aWorld = b.distance - signedGap(b.distance, a.distance);
+        const limit = aWorld - contact.extent.z - 0.01;
+        if (limit < b0.distance) separateSide(Math.sign(a.x - b.x) || 1);
+        b.distance = Math.max(b0.distance, Math.min(b.distance, limit));
+      }
+    };
+    for (let pass = 0; pass < 3; pass++)
+      this.opponents.forEach((o, i) => {
+        if (o.finishTime === null)
+          contactPair(this, o, playerBefore, opponentsBefore[i], true);
+        for (let j = i + 1; j < this.opponents.length; j++) {
+          const b = this.opponents[j];
+          if (o.finishTime === null && b.finishTime === null)
+            contactPair(o, b, opponentsBefore[i], opponentsBefore[j], false);
+        }
+      });
+    for (const car of [this, ...this.opponents]) {
+      for (const p of obstacles) {
+        const fixed = { distance: p.z, x: p.x };
+        const overlap = sweepContact(
+          car,
+          car,
+          fixed,
+          fixed,
+          car === this ? playerBounds : shapes.kart,
+          shapes.stump,
+        );
+        if (!overlap) continue;
+        // A side impact from another car cannot push a vehicle inside a stump.
+        const direction = Math.sign(car.x - p.x) || (p.x > 0 ? -1 : 1);
+        car.x = clamp(
+          p.x + direction * (overlap.extent.x + 0.002),
           -1.75,
           1.75,
         );
       }
-      if (o.distance >= TRACK_LENGTH * LAPS) {
+    }
+    for (const car of [this, ...this.opponents])
+      this.resolveWall(
+        car,
+        car === this ? playerBounds : shapes.kart,
+        car.lateralVelocity,
+      );
+    for (const o of this.opponents) {
+      if (o.finishTime === null && o.distance >= TRACK_LENGTH * LAPS) {
         o.distance = TRACK_LENGTH * LAPS;
         o.finishTime = this.seconds;
       }
-    });
+    }
+    for (let i = 0; i < itemBoxes.length; i++) {
+      const p = itemBoxes[i];
+      const contact = hitProp(p, shapes.item);
+      const lap = Math.round((this.distance - p.z) / TRACK_LENGTH);
+      const key = `item-${lap}-${i}`;
+      if (contact && !this.item && !this.consumed.has(key)) {
+        this.consumed.add(key);
+        this.item = true;
+        this.pickupSerial++;
+        this.tone("item");
+        this.emit({
+          type: "notice",
+          message: "獲得回聲能量！按 E 或點道具按鈕加速。",
+        });
+      }
+    }
+    for (let i = 0; i < boostPads.length; i++) {
+      const p = boostPads[i],
+        lap = Math.round((this.distance - p.z) / TRACK_LENGTH),
+        key = `pad-${lap}-${i}`;
+      if (hitProp(p, shapes.pad) && !this.consumed.has(key)) {
+        this.consumed.add(key);
+        this.boost = Math.max(this.boost, 1.1);
+        this.tone("boost");
+      }
+    }
     // Sequential quarter checkpoints and forward-only distance prevent false laps.
     while (this.distance >= ((this.reachedQuarter + 1) * TRACK_LENGTH) / 4) {
       this.reachedQuarter++;
@@ -543,13 +729,75 @@ export class RacingEngine {
       this.stateClock = 0;
     }
   }
+  private resolveWall(
+    car: ImpactBody,
+    bounds: { width: number; length: number },
+    lateralSpeed: number,
+  ) {
+    const limit = wallLimit(bounds);
+    if (Math.abs(car.x) <= limit) return;
+    const side = Math.sign(car.x);
+    car.x = side * limit;
+    const closing = Math.max(0, lateralSpeed * side) * ROAD_HALF_WIDTH;
+    car.lateralVelocity =
+      -side * Math.min(1.2, Math.max(0.18, (closing / ROAD_HALF_WIDTH) * 0.55));
+    if (
+      closing > 0.65 &&
+      car.speed > 250 &&
+      this.seconds - car.impactTime > 0.8
+    ) {
+      const strength = clamp(
+        (closing + car.speed * WORLD_PER_DISTANCE * 0.18) / 16,
+        0.18,
+        1,
+      );
+      this.registerImpact(car, strength, "wall", -side, true);
+      car.speed = 0;
+    }
+  }
+  private registerImpact(
+    car: ImpactBody,
+    strength: number,
+    kind: ImpactState["impactKind"],
+    side: number,
+    stunned: boolean,
+  ) {
+    car.impact = Math.max(0.08, strength);
+    car.impactTime = this.seconds;
+    car.impactSide = side;
+    car.impactKind = kind;
+    if (stunned) {
+      car.stun = Math.max(car.stun, 0.28 + strength * 0.42);
+      car.speed = 0;
+    }
+    if (car === this) {
+      this.boost = 0;
+      this.drifting = false;
+      this.driftCharge = 0;
+      if (this.hitCooldown <= 0) {
+        this.collisions++;
+        this.hitCooldown = 0.55;
+        this.tone("hit");
+        this.emit({
+          type: "notice",
+          message:
+            kind === "wall"
+              ? "撞到護欄！暈了一下…"
+              : stunned
+                ? "重撞！暈了一下…"
+                : "碰撞推擠！穩住方向。",
+        });
+      }
+    }
+  }
   private hit(message: string) {
-    if (this.hitCooldown > 0) return;
-    this.speed *= 0.48;
-    this.hitCooldown = 1.5;
+    // Every physical contact interrupts boost/charge; cooldown only gates repeated penalties.
     this.boost = 0;
     this.drifting = false;
     this.driftCharge = 0;
+    if (this.hitCooldown > 0) return;
+    this.speed *= 0.48;
+    this.hitCooldown = 1.5;
     this.collisions++;
     this.tone("hit");
     this.emit({ type: "notice", message });
@@ -580,7 +828,10 @@ export class RacingEngine {
       })),
     ].sort((a, b) => {
       if (a.time !== null && b.time !== null)
-        return a.time - b.time || (a.name === "Anbo" ? 1 : b.name === "Anbo" ? -1 : 0);
+        return (
+          a.time - b.time ||
+          (a.name === "Anbo" ? 1 : b.name === "Anbo" ? -1 : 0)
+        );
       if (a.time !== null) return -1;
       if (b.time !== null) return 1;
       return (
@@ -610,6 +861,12 @@ export class RacingEngine {
   }
   snapshot(): RaceSnapshot {
     return {
+      stun: this.stun,
+      lateralVelocity: this.lateralVelocity,
+      impact: this.impact,
+      impactTime: this.impactTime,
+      impactSide: this.impactSide,
+      impactKind: this.impactKind,
       phase: this.phase,
       paused: this.paused,
       distance: this.distance,
@@ -632,6 +889,13 @@ export class RacingEngine {
       driftBoosts: this.driftBoosts,
       opponents: this.opponents.map((o) => ({
         name: o.entry.name,
+        stun: o.stun,
+        lateralVelocity: o.lateralVelocity,
+        impact: o.impact,
+        impactTime: o.impactTime,
+        impactSide: o.impactSide,
+        impactKind: o.impactKind,
+        speed: o.speed,
         distance: o.distance,
         x: o.x,
         finished: o.finishTime !== null,
@@ -642,435 +906,11 @@ export class RacingEngine {
           .zone
       ],
       checkpoints: this.reachedQuarter,
+      pickupSerial: this.pickupSerial,
     };
   }
   private sendState() {
     this.emit({ type: "state", state: this.snapshot() });
-  }
-  private polygon(points: number[], fill: string) {
-    const c = this.ctx;
-    c.fillStyle = fill;
-    c.beginPath();
-    c.moveTo(Math.round(points[0]), Math.round(points[1]));
-    for (let i = 2; i < points.length; i += 2)
-      c.lineTo(Math.round(points[i]), Math.round(points[i + 1]));
-    c.closePath();
-    c.fill();
-  }
-  private quad(a: Projection, b: Projection, extra: number, color: string) {
-    this.polygon(
-      [
-        a.x - a.w * extra,
-        a.y,
-        a.x + a.w * extra,
-        a.y,
-        b.x + b.w * extra,
-        b.y,
-        b.x - b.w * extra,
-        b.y,
-      ],
-      color,
-    );
-  }
-  private draw() {
-    const c = this.ctx;
-    c.imageSmoothingEnabled = false;
-    c.fillStyle = "#acd3b0";
-    c.fillRect(0, 0, W, H);
-    if (!this.forest.complete || !this.forest.naturalWidth) return;
-    // The large background is an asset; all road geometry and gameplay objects are live.
-    const bgX = -28 - this.x * 9 - Math.sin(this.distance / 14000) * 18;
-    c.drawImage(this.forest, bgX, -63, 704, 300);
-    const zone =
-        track[Math.floor(mod(this.distance, TRACK_LENGTH) / SEGMENT_LENGTH)]
-          .zone,
-      col = colors[zone];
-    c.fillStyle = col.grass;
-    c.fillRect(0, HORIZON, W, H - HORIZON);
-    const camera = this.distance - CAMERA_BACK,
-      base = Math.floor(camera / SEGMENT_LENGTH),
-      fraction = mod(camera, SEGMENT_LENGTH) / SEGMENT_LENGTH;
-    let lateral = 0,
-      dx = -track[mod(base, track.length)].curve * fraction;
-    const projections: Projection[] = [];
-    for (let n = 0; n < 105; n++) {
-      const idx = mod(base + n, track.length),
-        z = (n - fraction) * SEGMENT_LENGTH;
-      const scale = CAMERA_DEPTH / Math.max(1, z);
-      projections.push({
-        x: W / 2 + (scale * (lateral - this.x * ROAD_WIDTH) * W) / 2,
-        y: HORIZON + scale * CAMERA_HEIGHT * (H - HORIZON),
-        w: (scale * ROAD_WIDTH * W) / 2,
-        scale,
-        index: idx,
-        distance: camera + z,
-      });
-      lateral += dx;
-      dx += track[idx].curve;
-    }
-    for (let n = projections.length - 2; n >= 1; n--) {
-      const a = projections[n],
-        b = projections[n + 1];
-      if (a.y < 0 || b.y > H || a.y <= b.y) continue;
-      const palette = colors[track[a.index].zone];
-      c.fillStyle =
-        Math.floor(a.index / 3) % 2 ? palette.grass : palette.grassAlt;
-      c.fillRect(0, Math.round(b.y), W, Math.round(a.y) - Math.round(b.y));
-      this.quad(
-        a,
-        b,
-        1.13,
-        Math.floor(a.index / 3) % 2 ? palette.edge : palette.stripe,
-      );
-      this.quad(
-        a,
-        b,
-        1,
-        Math.floor(a.index / 3) % 2 ? palette.road : palette.roadAlt,
-      );
-      if (a.index % 6 < 3) {
-        for (const lane of [-1 / 3, 1 / 3])
-          this.polygon(
-            [
-              a.x + a.w * (lane - 0.009),
-              a.y,
-              a.x + a.w * (lane + 0.009),
-              a.y,
-              b.x + b.w * (lane + 0.009),
-              b.y,
-              b.x + b.w * (lane - 0.009),
-              b.y,
-            ],
-            palette.edge,
-          );
-      }
-      if (a.index < 3) {
-        for (let j = 0; j < 12; j++)
-          this.polygon(
-            [
-              a.x - a.w + (j * a.w) / 6,
-              a.y,
-              a.x - a.w + ((j + 1) * a.w) / 6,
-              a.y,
-              b.x - b.w + ((j + 1) * b.w) / 6,
-              b.y,
-              b.x - b.w + (j * b.w) / 6,
-              b.y,
-            ],
-            (j + a.index) % 2 ? "#eee8c9" : "#314638",
-          );
-      }
-    }
-    // Back-to-front billboard sprites use the same projection as the road.
-    for (let n = projections.length - 2; n >= 2; n--) {
-      const p = projections[n];
-      if (p.y > H + 90 || p.y < HORIZON || p.w < 1) continue;
-      if (p.index % 4 === 0) {
-        this.tree(
-          p.x - p.w * (1.35 + (p.index % 5) * 0.12),
-          p.y,
-          p.w * 0.54,
-          p.index % 3,
-          zone,
-        );
-        this.tree(
-          p.x + p.w * (1.5 + (p.index % 3) * 0.14),
-          p.y,
-          p.w * 0.6,
-          (p.index + 1) % 3,
-          zone,
-        );
-      }
-      if (p.index % 9 === 0)
-        this.flower(
-          p.x + p.w * (p.index % 2 ? -1.2 : 1.2),
-          p.y,
-          p.w * 0.08,
-          zone,
-        );
-      const z = p.index * SEGMENT_LENGTH;
-      for (const pad of boostPads)
-        if (Math.floor(pad.z / SEGMENT_LENGTH) === p.index) this.pad(p, pad.x);
-      for (let i = 0; i < itemBoxes.length; i++) {
-        const box = itemBoxes[i],
-          lap = Math.floor(p.distance / TRACK_LENGTH);
-        if (
-          Math.floor(box.z / SEGMENT_LENGTH) === p.index &&
-          !this.consumed.has(`item-${lap}-${i}`)
-        )
-          this.box(p.x + p.w * box.x, p.y, p.w * 0.16);
-      }
-      for (const obstacle of obstacles)
-        if (Math.floor(obstacle.z / SEGMENT_LENGTH) === p.index)
-          this.stump(p.x + p.w * obstacle.x, p.y, p.w * 0.2);
-      for (const opponent of this.opponents) {
-        const ahead = mod(opponent.distance - camera, TRACK_LENGTH);
-        if (ahead >= n * SEGMENT_LENGTH && ahead < (n + 1) * SEGMENT_LENGTH) {
-          const width = p.w * 0.43;
-          this.rival(opponent, p.x + p.w * opponent.x, p.y, width);
-        }
-      }
-      if (z === 0 && p.w > 15) this.finishArch(p);
-    }
-    if (this.phase !== "loading" && this.phase !== "error") {
-      const playerX = W / 2 + this.x * 20,
-        playerY = H - 20;
-      if (this.boost > 0 && !this.reducedMotion) {
-        c.strokeStyle = "#f8e4a177";
-        c.lineWidth = 2;
-        for (let i = 0; i < 12; i++) {
-          const x = (i * 79 + this.seconds * 800) % W;
-          c.beginPath();
-          c.moveTo(x, 240 + (i % 4) * 28);
-          c.lineTo(x + (x - W / 2) * 0.15, 265 + (i % 4) * 28);
-          c.stroke();
-        }
-      }
-      c.fillStyle = "#16392c66";
-      c.beginPath();
-      c.ellipse(playerX, playerY - 8, 42, 9, 0, 0, Math.PI * 2);
-      c.fill();
-      if (this.boost > 0) {
-        c.fillStyle = "#ffe291";
-        c.fillRect(
-          playerX - 18,
-          playerY - 5,
-          8,
-          10 + Math.sin(this.seconds * 40) * 4,
-        );
-        c.fillRect(
-          playerX + 10,
-          playerY - 5,
-          8,
-          10 + Math.cos(this.seconds * 40) * 4,
-        );
-      }
-      if (this.drifting && !this.reducedMotion) {
-        for (let i = 0; i < 5; i++) {
-          c.fillStyle = this.driftCharge > 0.65 ? "#8ee9ec" : "#ffd88e";
-          c.fillRect(
-            playerX - 38 - i * 4 * this.driftDirection,
-            playerY - 8 - i * 3,
-            3,
-            3,
-          );
-          c.fillRect(
-            playerX + 34 - i * 4 * this.driftDirection,
-            playerY - 8 - i * 3,
-            3,
-            3,
-          );
-        }
-      }
-      const cw = this.kart.width / 4,
-        ch = this.kart.height / 2,
-        frame = this.drifting ? (this.driftDirection > 0 ? 3 : 5) : 4;
-      c.save();
-      c.translate(playerX, playerY);
-      c.rotate(
-        this.reducedMotion
-          ? 0
-          : (Number(this.controls.right) - Number(this.controls.left)) * 0.025,
-      );
-      if (this.hitCooldown > 0.7 && Math.floor(this.seconds * 10) % 2)
-        c.globalAlpha = 0.55;
-      c.drawImage(
-        this.kart,
-        (frame % 4) * cw,
-        Math.floor(frame / 4) * ch,
-        cw,
-        ch,
-        -57,
-        -112 +
-          (this.reducedMotion
-            ? 0
-            : Math.sin(this.seconds * 25) * Math.min(1, this.speed / 3000)),
-        114,
-        114,
-      );
-      c.restore();
-    }
-    this.drawMap();
-    if (this.phase === "countdown" && !this.paused) {
-      const n = Math.ceil(this.countdown);
-      c.textAlign = "center";
-      c.font = "bold 76px Outfit, sans-serif";
-      c.lineWidth = 6;
-      c.strokeStyle = "#214738";
-      c.strokeText(String(n), W / 2, 210);
-      c.fillStyle = "#ffe6a1";
-      c.fillText(String(n), W / 2, 210);
-      c.font = "13px sans-serif";
-      c.fillStyle = "#fff4d4";
-      c.fillText("準備出發", W / 2, 237);
-    }
-    if (Math.abs(this.x) > 1.05 && this.phase === "racing") {
-      c.fillStyle = "#eccd8b";
-      c.textAlign = "center";
-      c.font = "bold 11px sans-serif";
-      c.fillText("草地會減速，轉回賽道！", W / 2, 290);
-    }
-  }
-  private tree(x: number, y: number, size: number, kind: number, zone: number) {
-    if (size < 3 || x + size < 0 || x - size > W) return;
-    const frame = zone === 2 ? 2 : zone === 1 ? 1 : kind % 2,
-      cw = this.props.width / 4;
-    this.ctx.drawImage(
-      this.props,
-      frame * cw,
-      0,
-      cw,
-      this.props.height,
-      Math.round(x - size * 0.76),
-      Math.round(y - size * 2.02),
-      Math.round(size * 1.52),
-      Math.round(size * 2.02),
-    );
-  }
-  private flower(x: number, y: number, s: number, zone: number) {
-    const c = this.ctx;
-    if (s < 2) return;
-    c.fillStyle = "#4d794a";
-    c.fillRect(x, y - s, s * 0.3, s);
-    c.fillStyle = zone === 2 ? "#ffe29a" : "#e8b29b";
-    c.fillRect(x - s * 0.5, y - s * 1.4, s * 1.2, s * 0.6);
-  }
-  private pad(p: Projection, x: number) {
-    const c = this.ctx,
-      w = p.w * 0.6,
-      h = Math.max(3, p.w * 0.12),
-      cx = p.x + p.w * x;
-    c.fillStyle = "#89c6ad";
-    c.fillRect(cx - w / 2, p.y - h, w, h);
-    c.strokeStyle = "#f6e7ac";
-    c.lineWidth = Math.max(1, p.w * 0.012);
-    for (let i = 0; i < 3; i++) {
-      c.beginPath();
-      c.moveTo(cx - w * 0.3 + i * w * 0.3, p.y - h * 0.2);
-      c.lineTo(cx - w * 0.15 + i * w * 0.3, p.y - h * 0.8);
-      c.lineTo(cx + i * w * 0.3, p.y - h * 0.2);
-      c.stroke();
-    }
-  }
-  private box(x: number, y: number, s: number) {
-    const c = this.ctx;
-    if (s < 2) return;
-    const bob = this.reducedMotion
-      ? 0
-      : Math.sin(this.seconds * 4 + x) * Math.min(s * 0.07, 3);
-    y -= s * 0.2 + bob;
-    c.fillStyle = "#214e40";
-    c.fillRect(x - s * 0.55, y - s * 1.1, s * 1.1, s * 1.1);
-    c.fillStyle = "#d5bd77";
-    c.fillRect(x - s * 0.48, y - s, s * 0.96, s * 0.96);
-    c.fillStyle = "#ffecac";
-    c.fillRect(x - s * 0.4, y - s * 0.94, s * 0.8, s * 0.12);
-    c.fillStyle = "#5f7650";
-    c.fillRect(x - s * 0.13, y - s * 0.72, s * 0.23, s * 0.25);
-    c.fillRect(x - s * 0.2, y - s * 0.31, s * 0.16, s * 0.15);
-    c.fillRect(x + s * 0.02, y - s * 0.62, s * 0.1, s * 0.23);
-  }
-  private stump(x: number, y: number, s: number) {
-    const cw = this.props.width / 4;
-    this.ctx.drawImage(
-      this.props,
-      cw * 3,
-      0,
-      cw,
-      this.props.height,
-      Math.round(x - s * 0.7),
-      Math.round(y - s * 1.87),
-      Math.round(s * 1.4),
-      Math.round(s * 1.87),
-    );
-  }
-  private rival(o: Opponent, x: number, y: number, w: number) {
-    const c = this.ctx;
-    if (w < 3 || w > 260) return;
-    const cell = this.rivals.width / 3;
-    c.fillStyle = "#14362966";
-    c.beginPath();
-    c.ellipse(x, y - 3, w * 0.36, w * 0.08, 0, 0, Math.PI * 2);
-    c.fill();
-    c.drawImage(
-      this.rivals,
-      cell * o.entry.spriteColumn,
-      0,
-      cell,
-      this.rivals.height,
-      x - w / 2,
-      y - w * 0.98,
-      w,
-      w,
-    );
-    if (w > 30) {
-      c.font = "bold 9px sans-serif";
-      c.textAlign = "center";
-      c.fillStyle = "#f3edcd";
-      c.fillText(o.entry.name, x, y - w * 0.9 - 4);
-    }
-  }
-  private finishArch(p: Projection) {
-    const c = this.ctx,
-      w = p.w * 2.15,
-      h = p.w * 0.95;
-    c.fillStyle = "#665737";
-    c.fillRect(p.x - w / 2, p.y - h, p.w * 0.06, h);
-    c.fillRect(p.x + w / 2, p.y - h, p.w * 0.06, h);
-    c.fillStyle = "#f1d487";
-    c.fillRect(p.x - w / 2, p.y - h, w, p.w * 0.15);
-    for (let i = 0; i < 12; i++) {
-      c.fillStyle = i % 2 ? "#234f3d" : "#eff0cb";
-      c.fillRect(p.x - w / 2 + (i * w) / 12, p.y - h, w / 12, p.w * 0.065);
-    }
-  }
-  private drawMap() {
-    const c = this.ctx,
-      ox = 539,
-      oy = 302;
-    c.fillStyle = "#173b3299";
-    c.fillRect(486, 249, 142, 135);
-    c.strokeStyle = "#d8dba2";
-    c.lineWidth = 5;
-    c.lineJoin = "round";
-    c.beginPath();
-    track.forEach((p, i) => {
-      const x = ox + p.mapX * 0.23,
-        y = oy + p.mapY * 0.23;
-      if (i === 0) c.moveTo(x, y);
-      else c.lineTo(x, y);
-    });
-    c.closePath();
-    c.stroke();
-    c.strokeStyle = "#536f51";
-    c.lineWidth = 2;
-    c.stroke();
-    const dot = (distance: number, color: string, r: number) => {
-      const p = track[Math.floor(mod(distance, TRACK_LENGTH) / SEGMENT_LENGTH)];
-      c.fillStyle = "#183b2e";
-      c.beginPath();
-      c.arc(ox + p.mapX * 0.23, oy + p.mapY * 0.23, r + 1, 0, Math.PI * 2);
-      c.fill();
-      c.fillStyle = color;
-      c.beginPath();
-      c.arc(ox + p.mapX * 0.23, oy + p.mapY * 0.23, r, 0, Math.PI * 2);
-      c.fill();
-    };
-    this.opponents.forEach((o) =>
-      dot(o.distance, vehicles[o.entry.vehicleId].color, 2.5),
-    );
-    dot(this.distance, "#ffe097", 4);
-    c.fillStyle = "#e2e5bc";
-    c.font = "9px sans-serif";
-    c.textAlign = "left";
-    c.fillText(
-      zoneNames[
-        track[Math.floor(mod(this.distance, TRACK_LENGTH) / SEGMENT_LENGTH)]
-          .zone
-      ],
-      494,
-      264,
-    );
   }
   toggleSound() {
     this.sound = !this.sound;
@@ -1145,6 +985,9 @@ export class RacingEngine {
     window.removeEventListener("keyup", this.onKeyUp);
     window.removeEventListener("blur", this.onBlur);
     document.removeEventListener("visibilitychange", this.onVisibility);
+    this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
+    this.view?.destroy();
+    if (import.meta.env.DEV) delete (window as any).__race;
     void this.audio?.close();
   }
 }

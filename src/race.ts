@@ -72,6 +72,8 @@ async function begin() {
   clearTimeout(noticeTimer);
   el("race-notice").classList.remove("visible");
   await race.start();
+  if (matchMedia("(max-width: 760px)").matches)
+    el("race-shell").scrollIntoView({ block: "start" });
   focus();
 }
 function notice(message: string) {
@@ -101,8 +103,23 @@ function onEvent(event: RaceEvent) {
     start.textContent = "上場比賽　→";
   }
   if (event.type === "error") {
-    start.textContent = "載入失敗，請重新整理";
-    notice(event.message);
+    start.disabled = true;
+    pause.disabled = true;
+    restart.disabled = true;
+    welcome.hidden = true;
+    result.classList.add("race-error");
+    result.replaceChildren();
+    const title = document.createElement("h2");
+    title.textContent = "賽道暫時無法顯示";
+    const message = document.createElement("p");
+    message.textContent = event.message;
+    const retry = document.createElement("button");
+    retry.className = "primary";
+    retry.textContent = "重新載入賽道";
+    retry.onclick = () => location.reload();
+    result.append(title, message, retry);
+    result.hidden = false;
+    overlay.hidden = false;
   }
   if (event.type === "notice") notice(event.message);
   if (event.type === "finish") finish(event.result);
@@ -120,17 +137,23 @@ function onEvent(event: RaceEvent) {
       : "彎道蓄力中…"
     : "按住空白鍵＋轉向甩尾";
   el("race-boost-status").textContent =
-    s.boost > 0 ? "加速中！" : s.offroad ? "草地減速" : "苔綠號";
+    s.stun > 0
+      ? "撞暈中…"
+      : s.boost > 0
+        ? "加速中！"
+        : s.offroad
+          ? "草地減速"
+          : "苔綠號";
   el("race-speed-panel").classList.toggle("boosting", s.boost > 0);
   const item = el<HTMLButtonElement>("race-item");
-  item.disabled = !s.item || s.paused || s.phase !== "racing";
+  item.disabled = !s.item || s.paused || s.stun > 0 || s.phase !== "racing";
   item.classList.toggle("has-item", s.item);
   el("item-icon").textContent = s.item ? "✦" : "◇";
   el("item-label").textContent = s.item ? "回聲能量" : "尋找道具箱";
   document
     .querySelectorAll<HTMLButtonElement>('[data-race-control="item"]')
     .forEach((b) => {
-      b.disabled = !s.item || s.paused || s.phase !== "racing";
+      b.disabled = !s.item || s.paused || s.stun > 0 || s.phase !== "racing";
       b.classList.toggle("ready", s.item);
     });
   if (s.phase === "racing" || s.phase === "countdown") {

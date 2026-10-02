@@ -1,6 +1,6 @@
 /** Character identity, vehicle tuning, and art bindings remain separate.
- * Current complete sprites bind supported pairs; a future layered renderer can
- * use the same race entries without changing physics or character metadata. */
+ * The Three.js view composes independent vehicle geometry and original driver sprites.
+ * Fixed entries can later support a picker without changing physics or character metadata. */
 export type CharacterId = "anbo" | "angoo" | "anmi" | "anje";
 export type VehicleId = "moss" | "ember" | "honey" | "breeze";
 export interface Vehicle {
@@ -9,11 +9,13 @@ export interface Vehicle {
   topSpeed: number;
   acceleration: number;
   handling: number;
+  mass: number;
   color: string;
 }
 export const vehicles: Record<VehicleId, Vehicle> = {
   moss: {
     id: "moss",
+    mass: 160,
     name: "苔綠號",
     topSpeed: 3600,
     acceleration: 2100,
@@ -22,6 +24,7 @@ export const vehicles: Record<VehicleId, Vehicle> = {
   },
   ember: {
     id: "ember",
+    mass: 195,
     name: "紅葉號",
     topSpeed: 3360,
     acceleration: 1800,
@@ -30,6 +33,7 @@ export const vehicles: Record<VehicleId, Vehicle> = {
   },
   honey: {
     id: "honey",
+    mass: 140,
     name: "蜂蜜號",
     topSpeed: 3200,
     acceleration: 2400,
@@ -38,6 +42,7 @@ export const vehicles: Record<VehicleId, Vehicle> = {
   },
   breeze: {
     id: "breeze",
+    mass: 115,
     name: "微風號",
     topSpeed: 3430,
     acceleration: 1850,

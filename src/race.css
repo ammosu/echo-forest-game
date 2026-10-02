@@ -43,7 +43,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  image-rendering: pixelated;
+  image-rendering: auto;
   touch-action: none;
 }
 .race-hud {
@@ -320,7 +320,7 @@
 .race-entry img {
   width: 40px;
   height: 48px;
-  image-rendering: pixelated;
+  image-rendering: auto;
 }
 .race-entry strong {
   font-size: 13px;
@@ -961,4 +961,17 @@
   .race-result .text-button {
     margin-top: 8px;
   }
+}
+
+.race-stage .race-canvas-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.race-error {
+  max-width: 440px;
+  color: #f6e7bc;
+}
+.race-error p {
+  line-height: 1.8;
 }

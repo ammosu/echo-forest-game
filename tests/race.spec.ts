@@ -1,3 +1,4 @@
+import { driveUntil } from "./race-driver";
 import { test, expect, type Page } from "@playwright/test";
 import type { RaceSnapshot } from "../src/racing-engine";
 const state = (page: Page): Promise<RaceSnapshot> =>
@@ -57,12 +58,8 @@ test("item pickup, real corner drift boost, offroad slowdown and braking", async
   page,
 }) => {
   await start(page);
-  await expect
-    .poll(async () => (await state(page)).item, { timeout: 8000 })
-    .toBe(true);
-  await expect
-    .poll(async () => (await state(page)).distance, { timeout: 6000 })
-    .toBeGreaterThan(8200);
+  await driveUntil(page, (s) => s.item);
+  await driveUntil(page, (s) => s.distance > 8200);
   await page.keyboard.down("ArrowRight");
   await page.keyboard.down("Space");
   await expect
