@@ -11,7 +11,7 @@ const directions = ['正面', '右前', '右側', '右後', '背面', '左後', 
 app.innerHTML = `
   <header class="site-header">
     <a class="brand" href="./" aria-label="Echo Forest 首頁"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a>
-    <nav aria-label="遊戲選單"><span class="nav-current">森林冒險</span><a class="nav-button" href="./race.html">森林賽車</a><button class="nav-button" id="open-kart">賽車工坊 <span aria-hidden="true">↗</span></button></nav>
+    <nav aria-label="遊戲選單"><span class="nav-current">森林冒險</span><a class="nav-button" href="./race.html">森林賽車</a><button class="nav-button" id="open-kart">賽車工坊 <span aria-hidden="true">↗</span></button><a class="nav-button" href="./defense.html">爆破保衛戰</a></nav>
     <span class="edition">一段小小的森林旅程</span>
   </header>
   <main>

@@ -1,0 +1,474 @@
+.defense-main {
+  max-width: 1280px;
+  margin: auto;
+  padding: 36px 44px;
+}
+.defense-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+.defense-intro h1 {
+  font-size: 36px;
+  letter-spacing: -1px;
+  margin: 8px 0 12px;
+  color: #f1e9c8;
+}
+.defense-intro p:not(.chapter) {
+  font-size: 13px;
+  color: #afc7ad;
+}
+.defense-record {
+  font-size: 11px;
+  color: #afc7ad;
+  text-align: right;
+}
+.defense-record strong {
+  display: block;
+  font-size: 30px;
+  color: #f4d480;
+  margin-top: 8px;
+}
+.defense-shell {
+  border: 1px solid #54725b;
+  background: #19392f;
+  padding: 12px;
+  box-shadow: 0 16px 60px #071b2440;
+}
+.defense-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 5px 12px;
+  font-size: 14px;
+}
+.defense-toolbar > div {
+  display: flex;
+  gap: 8px;
+}
+.defense-toolbar button,
+.next-button {
+  background: #294a3c;
+  color: #dce7c4;
+  border: 1px solid #58735c;
+  padding: 7px 13px;
+  border-radius: 4px;
+}
+.defense-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #102d25;
+  border-top: 1px solid #3e5d45;
+  padding: 14px 18px;
+  font-size: 12px;
+}
+.defense-hud b {
+  color: #f3d38b;
+  font-size: 18px;
+  margin-left: 6px;
+}
+.defense-hud small {
+  color: #8aa789;
+}
+.defense-hud #hearts {
+  color: #e6a180;
+  font-size: 14px;
+}
+.defense-hud #wave {
+  color: #d5e1b3;
+}
+.defense-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 215px;
+}
+.defense-field {
+  position: relative;
+  align-self: start;
+  background: #203f37;
+}
+#field {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: manipulation;
+  image-rendering: pixelated;
+}
+.defense-cover {
+  position: absolute;
+  inset: 0;
+  background: #102d25d9;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 20px;
+}
+.defense-cover h2 {
+  font-size: 34px;
+  line-height: 1.35;
+  color: #f4e6b9;
+  margin: 14px 0;
+}
+.defense-cover p:not(.chapter) {
+  font-size: 13px;
+  line-height: 1.9;
+  color: #bed0b6;
+}
+.defense-cover .cover-note {
+  font-size: 11px !important;
+  margin: 18px 0 0;
+}
+.seed-shelf {
+  padding: 17px 12px;
+  background: #244535;
+  border-left: 1px solid #527049;
+}
+.seed-shelf h2 {
+  font-size: 15px;
+  color: #efe3bb;
+  margin: 0 0 5px;
+}
+.seed-shelf > p {
+  font-size: 10px;
+  color: #a7bf9b;
+  margin: 0 0 15px;
+}
+.seed {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 10px;
+  background: #304e39;
+  border: 1px solid #61794d;
+  border-radius: 5px;
+  color: #e4e5c4;
+  padding: 10px 8px;
+  margin-bottom: 9px;
+}
+.seed.selected {
+  background: #526b3f;
+  border: 2px solid #eed189;
+  padding: 9px 7px;
+  box-shadow: inset 0 0 0 2px #395735;
+}
+.seed strong {
+  display: block;
+  font-size: 13px;
+}
+.seed small {
+  display: block;
+  font-size: 9px;
+  color: #bed0ab;
+  margin: 3px 0 6px;
+}
+.seed em {
+  font-style: normal;
+  font-size: 11px;
+  color: #f1d086;
+}
+.seed kbd {
+  font-size: 9px;
+  margin-left: 10px;
+}
+.seed-art {
+  font-size: 34px;
+  width: 40px;
+  text-align: center;
+  color: #d2ad6c;
+}
+.seed-art.ice {
+  color: #98d5d1;
+}
+.seed-art.wall {
+  color: #c6a070;
+}
+.seed.unaffordable {
+  opacity: 0.55;
+}
+.bomb-button {
+  width: 100%;
+  border: 1px solid #d2a363;
+  border-radius: 5px;
+  background: #705038;
+  color: #fff0cc;
+  padding: 13px 5px;
+  font-size: 13px;
+  margin-top: 7px;
+}
+.bomb-button kbd {
+  font-size: 9px;
+}
+.bomb-note {
+  display: block;
+  font-size: 9px;
+  line-height: 1.7;
+  text-align: center;
+  color: #bec6a1;
+  margin: 8px 0 12px;
+}
+.next-button {
+  width: 100%;
+  font-size: 11px;
+}
+.defense-notice {
+  margin: 0;
+  background: #102d25;
+  color: #e3d49e;
+  font-size: 12px;
+  padding: 12px 15px;
+  min-height: 43px;
+}
+.defense-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0 0;
+}
+.direction-pad {
+  display: flex;
+  gap: 5px;
+}
+.defense-controls button {
+  touch-action: none;
+  user-select: none;
+  background: #304e3e;
+  color: #e9e4be;
+  border: 1px solid #668062;
+  border-radius: 5px;
+  min-width: 43px;
+  height: 42px;
+}
+.defense-controls > button {
+  font-size: 11px;
+  padding: 0 12px;
+}
+.defense-controls > span {
+  margin-left: auto;
+  font-size: 10px;
+  color: #a9bda2;
+}
+.defense-guide {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 38px;
+  margin: 30px 0;
+}
+.defense-guide article {
+  position: relative;
+  padding-left: 32px;
+}
+.defense-guide article > span {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  color: #d4bb79;
+  font-size: 12px;
+}
+.defense-guide h2 {
+  font-size: 14px;
+  margin: 0 0 9px;
+}
+.defense-guide p {
+  font-size: 11px;
+  line-height: 1.9;
+  color: #adc2aa;
+  margin: 0;
+}
+.defense-main footer {
+  margin-top: 30px;
+}
+button:disabled {
+  cursor: default;
+}
+@media (max-width: 1000px) {
+  .defense-main {
+    padding: 25px 20px;
+  }
+  .defense-layout {
+    grid-template-columns: minmax(0, 1fr) 185px;
+  }
+  .seed-shelf {
+    padding: 12px 9px;
+  }
+  .seed-art {
+    width: 28px;
+    font-size: 27px;
+  }
+  .seed {
+    gap: 5px;
+  }
+  .defense-cover h2 {
+    font-size: 28px;
+  }
+  .defense-controls > span {
+    display: none;
+  }
+  .site-header {
+    gap: 25px;
+  }
+  .site-header nav {
+    gap: 18px;
+  }
+}
+@media (max-width: 700px) {
+  .site-header {
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 18px 16px;
+  }
+  .site-header nav {
+    display: flex;
+    gap: 22px;
+  }
+  .defense-main {
+    padding: 22px 10px;
+  }
+  .defense-intro {
+    margin-bottom: 20px;
+  }
+  .defense-intro h1 {
+    font-size: 25px;
+  }
+  .defense-intro p:not(.chapter) {
+    font-size: 11px;
+    max-width: 260px;
+    line-height: 1.8;
+  }
+  .defense-record strong {
+    font-size: 22px;
+  }
+  .defense-shell {
+    padding: 5px;
+  }
+  .defense-toolbar {
+    font-size: 12px;
+  }
+  .defense-toolbar button {
+    font-size: 11px;
+    padding: 7px 9px;
+  }
+  .defense-hud {
+    flex-wrap: wrap;
+    padding: 9px;
+    gap: 9px 16px;
+    font-size: 10px;
+  }
+  .defense-hud b {
+    font-size: 14px;
+  }
+  .defense-hud #wave {
+    margin-left: auto;
+  }
+  .defense-layout {
+    display: flex;
+    flex-direction: column;
+  }
+  .defense-field {
+    width: 100%;
+  }
+  .seed-shelf {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+    border-left: 0;
+    padding: 9px;
+  }
+  .seed-shelf h2,
+  .seed-shelf > p {
+    display: none;
+  }
+  .seed {
+    margin: 0;
+    padding: 8px 5px;
+    gap: 5px;
+    min-height: 78px;
+  }
+  .seed.selected {
+    padding: 7px 4px;
+  }
+  .seed-art {
+    font-size: 26px;
+    width: 23px;
+  }
+  .seed strong {
+    font-size: 11px;
+  }
+  .seed small {
+    font-size: 8px;
+  }
+  .seed em {
+    font-size: 10px;
+  }
+  .seed kbd {
+    display: none;
+  }
+  .bomb-button {
+    margin: 0;
+    padding: 10px 2px;
+    font-size: 12px;
+  }
+  .bomb-note {
+    font-size: 8px;
+    margin: 3px 0;
+  }
+  .next-button {
+    font-size: 10px;
+    padding: 5px;
+  }
+  .defense-cover {
+    padding: 10px;
+  }
+  .defense-cover h2 {
+    font-size: 23px;
+    margin: 5px 0 8px;
+  }
+  .defense-cover p:not(.chapter) {
+    font-size: 10px;
+    line-height: 1.65;
+    margin: 5px 0 10px;
+  }
+  .defense-cover .chapter {
+    display: none;
+  }
+  .defense-cover .cover-note {
+    display: none;
+  }
+  .defense-cover .primary {
+    padding: 10px 18px;
+  }
+  .defense-notice {
+    font-size: 10px;
+    line-height: 1.7;
+    padding: 8px;
+    min-height: 48px;
+  }
+  .defense-controls {
+    justify-content: space-between;
+    padding: 8px 4px 3px;
+  }
+  .defense-controls > button kbd {
+    display: none;
+  }
+  .defense-controls button {
+    min-width: 44px;
+    height: 46px;
+  }
+  .defense-guide {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin: 25px 12px;
+  }
+  .defense-guide h2 {
+    font-size: 13px;
+  }
+  .defense-guide p {
+    font-size: 11px;
+  }
+  .defense-main footer {
+    font-size: 9px;
+  }
+}
