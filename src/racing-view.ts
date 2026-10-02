@@ -5,6 +5,7 @@ import {
   track,
   TRACK_LENGTH,
   mod,
+  clamp,
   itemBoxes,
   boostPads,
   obstacles,
@@ -64,6 +65,8 @@ type Kart = {
   sparks: THREE.Group;
   impactBurst: THREE.Group;
   stunStars: THREE.Group;
+  /** Per-kart material copies so an opponent can fade without affecting others. */
+  fade: THREE.Material[];
 };
 
 /** Three.js presentation only; race rules stay in RacingEngine. */
@@ -813,6 +816,18 @@ export class RacingView {
       this.batchParts(body);
       this.batchParts(sparks);
       this.batchParts(flame);
+      const fade: THREE.Material[] = [];
+      if (i > 0) {
+        fade.push(mat);
+        body.traverse((o) => {
+          if (!(o instanceof THREE.Mesh)) return;
+          const copy = (o.material as THREE.Material).clone();
+          copy.transparent = true;
+          this.extraMaterials.push(copy);
+          fade.push(copy);
+          o.material = copy;
+        });
+      }
       return {
         group,
         body,
@@ -822,6 +837,7 @@ export class RacingView {
         sparks,
         impactBurst,
         stunStars,
+        fade,
       };
     });
   }
@@ -889,7 +905,8 @@ export class RacingView {
       this.look.copy(target);
       this.cameraReady = true;
     } else if (!s.paused) {
-      const alpha = this.reduced.matches ? 1 : 1 - Math.exp(-dt * 12);
+      // Fast follow keeps the chase gap near 12.5 at top speed (lag ~ speed / rate).
+      const alpha = this.reduced.matches ? 1 : 1 - Math.exp(-dt * 22);
       this.camera.position.lerp(cameraPosition, alpha);
       this.look.lerp(target, alpha);
     }
@@ -910,10 +927,26 @@ export class RacingView {
     this.sun.target.position
       .copy(player.position)
       .addScaledVector(player.tangent, 12);
+    const eye = this.camera.position,
+      toPlayer = player.position.clone().sub(eye).setY(0);
+    const reach = toPlayer.lengthSq();
     this.karts.forEach((kart, i) => {
       const car = i === 0 ? s : s.opponents[i - 1];
       kart.group.visible = i === 0 || !s.opponents[i - 1].finished;
       const frame = this.place(kart.group, car.distance, car.x);
+      if (i > 0) {
+        // Chase-camera occlusion: an opponent between the lens and the player
+        // turns see-through so the player's own kart always stays readable.
+        const toCar = frame.position.clone().sub(eye).setY(0);
+        const along = toCar.dot(toPlayer) / reach;
+        const off = toCar.clone().addScaledVector(toPlayer, -along).length();
+        const blocking = along > 0 && along < 1 ? clamp(3.6 - off, 0, 1) : 0;
+        const opacity = 1 - blocking * 0.72;
+        for (const m of kart.fade) {
+          m.opacity = opacity;
+          m.depthWrite = opacity > 0.99;
+        }
+      }
       kart.body.rotation.y = i === 0 ? axis * (s.drifting ? -0.3 : -0.08) : 0;
       kart.body.rotation.z =
         i === 0 && !this.reduced.matches
@@ -958,8 +991,9 @@ export class RacingView {
         kart.driver.material.map = map;
         kart.driver.material.needsUpdate = true;
       }
-      kart.driver.material.opacity =
-        i === 0 && hit > 0.7 && Math.floor(s.seconds * 10) % 2 ? 0.5 : 1;
+      if (i === 0)
+        kart.driver.material.opacity =
+          hit > 0.7 && Math.floor(s.seconds * 10) % 2 ? 0.5 : 1;
       kart.flame.visible = i === 0 && s.boost > 0;
       kart.flame.scale.z = this.reduced.matches
         ? 1

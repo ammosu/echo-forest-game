@@ -1,8 +1,9 @@
 import { defineConfig } from "vite";
 import { resolve } from "node:path";
 
-export default defineConfig({
-  base: "/echo-forest-game/",
+// GitHub Pages serves the build under /echo-forest-game/; dev and tests stay at /.
+export default defineConfig(({ command, isPreview }) => ({
+  base: command === "build" || isPreview ? "/echo-forest-game/" : "/",
   build: {
     rollupOptions: {
       input: {
@@ -12,4 +13,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
