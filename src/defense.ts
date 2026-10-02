@@ -257,6 +257,12 @@ function mountGame() {
       game.phase !== "build" || game.paused;
     $<HTMLButtonElement>("bomb").disabled = !game.active;
     $<HTMLButtonElement>("plant-here").disabled = !game.active;
+    document
+      .querySelectorAll<HTMLButtonElement>("[data-move]")
+      .forEach((b) => (b.disabled = !game.active));
+    document
+      .querySelector(".defense-shell")!
+      .classList.toggle("ended", game.phase === "won" || game.phase === "lost");
     document.querySelectorAll<HTMLButtonElement>("[data-seed]").forEach((b) => {
       b.classList.toggle(
         "unaffordable",

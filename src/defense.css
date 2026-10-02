@@ -1230,3 +1230,17 @@ img.seed-art {
     padding-top: 8px;
   }
 }
+.ended .seed.selected {
+  background: linear-gradient(#2c4c3a, #253f31);
+  border: 1px solid #456849;
+  padding: 8px 8px 8px 4px;
+  box-shadow: none;
+}
+.ended .seed.selected img.seed-art {
+  transform: none;
+}
+@media (max-width: 700px) {
+  .ended .seed.selected {
+    padding: 5px 4px 7px;
+  }
+}
