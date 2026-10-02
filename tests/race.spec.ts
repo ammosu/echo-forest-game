@@ -112,10 +112,10 @@ test("race three real laps with opponents, checkpoints, items and saved timing",
     let target = 0;
     const z = s.distance % 48000;
     for (const obstacle of [
-      { z: 13200, x: 0.45 },
-      { z: 22400, x: -0.55 },
-      { z: 33300, x: 0.48 },
-      { z: 45200, x: -0.38 },
+      { z: 13200, x: 0.92 },
+      { z: 22400, x: -0.92 },
+      { z: 33300, x: 0.92 },
+      { z: 45200, x: -0.92 },
     ]) {
       if (obstacle.z - z > 0 && obstacle.z - z < 1700)
         target = obstacle.x > 0 ? -0.15 : 0.2;

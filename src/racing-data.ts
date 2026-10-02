@@ -147,11 +147,13 @@ export const boostPads = [
   { z: 24800, x: 0.4 },
   { z: 37400, x: 0 },
 ];
+// Stumps sit on the road shoulder: inside edges punish cutting a corner too
+// tightly, the last one guards the outside; the middle of the road stays clear.
 export const obstacles = [
-  { z: 13200, x: 0.45 },
-  { z: 22400, x: -0.55 },
-  { z: 33300, x: 0.48 },
-  { z: 45200, x: -0.38 },
+  { z: 13200, x: 0.92 },
+  { z: 22400, x: -0.92 },
+  { z: 33300, x: 0.92 },
+  { z: 45200, x: -0.92 },
 ];
 export const zoneNames = ["晨光林道", "蕨葉彎道", "金色花谷"];
 export const mod = (n: number, d: number) => ((n % d) + d) % d;

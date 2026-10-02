@@ -7,6 +7,9 @@ import {
   kartBounds,
   shapes,
   signedGap,
+  kartHitsStump,
+  stumpClearX,
+  stumpPushOut,
   type RacePoint,
 } from "./racing-collision";
 import { RacingView } from "./racing-view";
@@ -430,7 +433,8 @@ export class RacingEngine {
     const centrifugal =
       curve * 0.22 * ratio * ratio * (this.drifting ? 0.7 : 1);
     this.x += (steer - centrifugal + this.lateralVelocity) * dt;
-    const playerBounds = kartBounds(axis * (this.drifting ? 0.3 : 0.08));
+    const playerYaw = axis * (this.drifting ? 0.3 : 0.08);
+    const playerBounds = kartBounds(playerYaw);
     this.resolveWall(this, playerBounds, (this.x - playerBefore.x) / dt);
     const offroad = Math.abs(this.x) > 1.05;
     let target = this.autoGas || this.controls.gas ? vehicles.moss.topSpeed : 0;
@@ -478,14 +482,35 @@ export class RacingEngine {
     for (const p of obstacles) {
       const contact = hitProp(p, shapes.stump);
       if (!contact) continue;
-      this.hit("碰到樹樁！轉向繞過它再出發。");
-      if (contact.axis === "x") {
-        this.x = clamp(
-          p.x + contact.sign * (contact.extent.x + 0.001),
-          -1.75,
-          1.75,
+      // The box sweep is a broad phase; only a real trunk/body overlap counts.
+      const fixed = { distance: p.z, x: p.x };
+      const steps = Math.min(
+        24,
+        Math.max(4, Math.ceil(Math.abs(this.distance - before) / 20)),
+      );
+      let touched = false;
+      for (let k = 1; k <= steps && !touched; k++) {
+        const t = contact.time + ((1 - contact.time) * k) / steps;
+        touched = kartHitsStump(
+          {
+            distance: playerBefore.distance + (this.distance - before) * t,
+            x: playerBefore.x + (this.x - playerBefore.x) * t,
+          },
+          playerYaw,
+          fixed,
         );
-      } else if (contact.sign < 0) {
+      }
+      if (!touched) continue;
+      if (contact.axis === "x") {
+        // A side scrape nudges the kart away instead of counting as a crash.
+        const away = contact.sign || Math.sign(this.x - p.x) || 1;
+        this.x = clamp(stumpClearX(this, playerYaw, fixed, away), -1.75, 1.75);
+        this.lateralVelocity = away * 0.35;
+        this.scrape();
+        continue;
+      }
+      this.hit("碰到樹樁！轉向繞過它再出發。");
+      if (contact.sign < 0) {
         const z = playerBefore.distance - signedGap(playerBefore.distance, p.z);
         this.distance = Math.max(
           before,
@@ -494,7 +519,7 @@ export class RacingEngine {
         this.speed = 0;
       } else {
         this.x = clamp(
-          p.x + Math.sign(this.x - p.x || 1) * (contact.extent.x + 0.001),
+          stumpClearX(this, playerYaw, fixed, Math.sign(this.x - p.x || 1)),
           -1.75,
           1.75,
         );
@@ -644,6 +669,14 @@ export class RacingEngine {
     for (const car of [this, ...this.opponents]) {
       for (const p of obstacles) {
         const fixed = { distance: p.z, x: p.x };
+        if (car === this) {
+          // Side impacts from other cars cannot push the player into a trunk.
+          if (!kartHitsStump(car, playerYaw, fixed)) continue;
+          const out = stumpPushOut(car, playerYaw, fixed);
+          car.x = clamp(out.x, -1.75, 1.75);
+          car.distance = out.distance;
+          continue;
+        }
         const overlap = sweepContact(
           car,
           car,
@@ -679,7 +712,14 @@ export class RacingEngine {
       const contact = hitProp(p, shapes.item);
       const lap = Math.round((this.distance - p.z) / TRACK_LENGTH);
       const key = `item-${lap}-${i}`;
-      if (contact && !this.item && !this.consumed.has(key)) {
+      if (contact && this.item && !this.consumed.has(key)) {
+        // Already carrying energy: the box still breaks and turns into a short boost.
+        this.consumed.add(key);
+        this.pickupSerial++;
+        this.boost = Math.max(this.boost, 1.1);
+        this.tone("boost");
+        this.emit({ type: "notice", message: "能量已滿，箱子化為加速！" });
+      } else if (contact && !this.consumed.has(key)) {
         this.consumed.add(key);
         this.item = true;
         this.pickupSerial++;
@@ -789,6 +829,14 @@ export class RacingEngine {
         });
       }
     }
+  }
+  private scrape() {
+    this.speed *= 0.92;
+    this.driftCharge *= 0.5;
+    if (this.hitCooldown > 0) return;
+    this.hitCooldown = 0.6;
+    this.tone("hit");
+    this.emit({ type: "notice", message: "擦過樹樁！" });
   }
   private hit(message: string) {
     // Every physical contact interrupts boost/charge; cooldown only gates repeated penalties.

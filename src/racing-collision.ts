@@ -11,7 +11,8 @@ export const WORLD_PER_DISTANCE =
 export const shapes = {
   kart: { width: 1.05, length: 1.52 },
   stump: { width: 1, length: 1 },
-  item: { width: 0.98, length: 0.98 },
+  // Pickups are generous: the glowing box and its orbiting sparkles reach ~1.2.
+  item: { width: 1.25, length: 1.25 },
   pad: { width: 1.75, length: 1.75 },
 };
 export type RacePoint = { distance: number; x: number };
@@ -109,4 +110,47 @@ export function collisionImpulse(
     closing,
     impulse,
   };
+}
+
+/** Exact stump test: the trunk is a circle, the kart a rectangle turned by `yaw`
+ * (positive yaw points the nose toward +x). The AABB sweep is only a broad phase. */
+export function kartHitsStump(car: RacePoint, yaw: number, stump: RacePoint) {
+  const dx = (stump.x - car.x) * ROAD_HALF_WIDTH,
+    dz = signedGap(stump.distance, car.distance) * WORLD_PER_DISTANCE;
+  const sin = Math.sin(yaw),
+    cos = Math.cos(yaw);
+  const side = dx * cos - dz * sin,
+    ahead = dx * sin + dz * cos;
+  const nx = side - Math.max(-shapes.kart.width, Math.min(shapes.kart.width, side)),
+    nz = ahead - Math.max(-shapes.kart.length, Math.min(shapes.kart.length, ahead));
+  return nx * nx + nz * nz < shapes.stump.width * shapes.stump.width;
+}
+/** Smallest lateral move in `direction` that frees the kart from the stump. */
+export function stumpClearX(car: RacePoint, yaw: number, stump: RacePoint, direction: number) {
+  let lo = car.x,
+    hi = stump.x + direction * ((shapes.kart.length + shapes.stump.width) / ROAD_HALF_WIDTH);
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    if (kartHitsStump({ distance: car.distance, x: mid }, yaw, stump)) lo = mid;
+    else hi = mid;
+  }
+  return hi;
+}
+/** Frees the kart with the smallest world-space move: sideways either way, or back. */
+export function stumpPushOut(car: RacePoint, yaw: number, stump: RacePoint) {
+  const left = stumpClearX(car, yaw, stump, -1),
+    right = stumpClearX(car, yaw, stump, 1);
+  let near = car.distance,
+    far = car.distance - (shapes.kart.length + shapes.stump.width) / WORLD_PER_DISTANCE;
+  for (let i = 0; i < 18; i++) {
+    const mid = (near + far) / 2;
+    if (kartHitsStump({ distance: mid, x: car.x }, yaw, stump)) near = mid;
+    else far = mid;
+  }
+  const options = [
+    { x: left, distance: car.distance, cost: Math.abs(left - car.x) * ROAD_HALF_WIDTH },
+    { x: right, distance: car.distance, cost: Math.abs(right - car.x) * ROAD_HALF_WIDTH },
+    { x: car.x, distance: far, cost: (car.distance - far) * WORLD_PER_DISTANCE },
+  ];
+  return options.reduce((a, b) => (b.cost < a.cost ? b : a));
 }
