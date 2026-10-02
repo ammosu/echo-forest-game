@@ -1,4 +1,15 @@
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { BrightnessContrastShader } from "three/examples/jsm/shaders/BrightnessContrastShader.js";
+import { ColorCorrectionShader } from "three/examples/jsm/shaders/ColorCorrectionShader.js";
+import { HorizontalTiltShiftShader } from "three/examples/jsm/shaders/HorizontalTiltShiftShader.js";
+import { HueSaturationShader } from "three/examples/jsm/shaders/HueSaturationShader.js";
+import { VerticalTiltShiftShader } from "three/examples/jsm/shaders/VerticalTiltShiftShader.js";
+import { VignetteShader } from "three/examples/jsm/shaders/VignetteShader.js";
 import {
   entries,
   vehicles,
@@ -69,6 +80,8 @@ type Kart = {
   fade: THREE.Material[];
 };
 
+export type RaceLook = "standard" | "hd2d";
+
 /** Three.js presentation only; race rules stay in RacingEngine. */
 export class RacingView {
   readonly renderer: THREE.WebGLRenderer;
@@ -101,8 +114,18 @@ export class RacingView {
   private pickupSerial = 0;
   private pickupAt = -10;
   private pickupBurst = new THREE.Group();
+  private sky = new THREE.HemisphereLight("#fff5d6", "#48674e", 2.2);
+  /** HD-2D look: golden haze, bloom, grading, tilt-shift focus band, motes. */
+  style: RaceLook = "standard";
+  private composer?: EffectComposer;
+  private tiltShift: ShaderPass[] = [];
+  private motes?: THREE.Points;
+  private moteSeeds: number[] = [];
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    style: RaceLook = "standard",
+  ) {
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
@@ -116,7 +139,7 @@ export class RacingView {
     this.renderer.toneMappingExposure = 1.15;
     this.scene.background = new THREE.Color("#c9ddcf");
     this.scene.fog = new THREE.Fog("#c9ddcf", 60, 150);
-    this.scene.add(new THREE.HemisphereLight("#fff5d6", "#48674e", 2.2));
+    this.scene.add(this.sky);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(1024, 1024);
     Object.assign(this.sun.shadow.camera, {
@@ -159,6 +182,7 @@ export class RacingView {
     this.observer.observe(canvas);
     this.resize();
     this.ready = this.loadKarts();
+    this.setLook(style);
     if (import.meta.env.DEV)
       (window as any).__raceView = { snapshot: () => this.diagnostics() };
   }
@@ -850,6 +874,7 @@ export class RacingView {
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    this.sizeComposer();
     this.hud.width = Math.round(width * Math.min(devicePixelRatio, 1.5));
     this.hud.height = Math.round(height * Math.min(devicePixelRatio, 1.5));
     this.hudH = (640 * height) / width;
@@ -1037,7 +1062,10 @@ export class RacingView {
       );
       p.scale.setScalar(Math.max(0, 1 - age / 0.65) * 1.6);
     });
-    this.renderer.render(this.scene, this.camera);
+    if (this.style === "hd2d" && this.composer) {
+      this.animateMotes(player, s.seconds);
+      this.composer.render();
+    } else this.renderer.render(this.scene, this.camera);
     this.drawHUD(s);
   }
   private drawHUD(s: RaceSnapshot) {
@@ -1162,8 +1190,126 @@ export class RacingView {
         : [],
     };
   }
+  /** Switch between the standard forest and the HD-2D diorama at runtime. */
+  setLook(style: RaceLook) {
+    const hd = style === "hd2d";
+    this.style = style;
+    if (hd && !this.composer) this.buildHd2d();
+    this.renderer.toneMappingExposure = hd ? 1.22 : 1.15;
+    const haze = hd ? "#e9d9ae" : "#c9ddcf";
+    (this.scene.background as THREE.Color).set(haze);
+    const fog = this.scene.fog as THREE.Fog;
+    fog.color.set(haze);
+    fog.near = hd ? 38 : 60;
+    fog.far = hd ? 135 : 150;
+    this.sun.color.set(hd ? "#ffc97e" : "#ffe2ab");
+    this.sun.intensity = hd ? 3.7 : 2.8;
+    this.sky.intensity = hd ? 1.75 : 2.2;
+    this.sky.color.set(hd ? "#ffe7bd" : "#fff5d6");
+    if (this.motes) this.motes.visible = hd;
+    this.renderKey = "";
+  }
+  private sizeComposer() {
+    if (!this.composer || !this.width) return;
+    this.composer.setSize(this.width, this.height);
+    const [horizontal, vertical] = this.tiltShift;
+    // Blur is a pixel radius, so narrow screens get proportionally less of it.
+    const strength = 1.6 * THREE.MathUtils.clamp(this.width / 1100, 0.4, 1);
+    horizontal.uniforms.h.value = strength / this.width;
+    vertical.uniforms.v.value = strength / this.height;
+    // Focus band sits on the player's kart (lower on wide screens, mid on portrait).
+    const focus = this.camera.aspect < 1 ? 0.4 : 0.24;
+    horizontal.uniforms.r.value = vertical.uniforms.r.value = focus;
+    if (this.motes)
+      (this.motes.material as THREE.PointsMaterial).size = THREE.MathUtils.clamp(
+        this.width / 200,
+        2.5,
+        6,
+      );
+  }
+  private buildHd2d() {
+    const dot = document.createElement("canvas");
+    dot.width = dot.height = 32;
+    const g = dot.getContext("2d")!,
+      fade = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+    fade.addColorStop(0, "#fff8dc");
+    fade.addColorStop(0.35, "#ffe9a8aa");
+    fade.addColorStop(1, "#ffe9a800");
+    g.fillStyle = fade;
+    g.fillRect(0, 0, 32, 32);
+    const dotTexture = new THREE.CanvasTexture(dot);
+    this.textures.push(dotTexture);
+    // Motes ride along with the player: x across, -z ahead of the kart.
+    const count = 90,
+      positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions.set(
+        [Math.random() * 30 - 15, 0.6 + Math.random() * 6, Math.random() * 46 - 36],
+        i * 3,
+      );
+      this.moteSeeds.push(Math.random() * Math.PI * 2);
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const material = new THREE.PointsMaterial({
+      map: dotTexture,
+      size: 5,
+      sizeAttenuation: false,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      fog: false,
+    });
+    this.extraMaterials.push(material);
+    this.motes = new THREE.Points(geometry, material);
+    this.motes.frustumCulled = false;
+    this.scene.add(this.motes);
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.composer.addPass(
+      new UnrealBloomPass(new THREE.Vector2(512, 512), 0.3, 0.5, 0.84),
+    );
+    // Grade, blur and vignette after tone mapping, in display colour space.
+    this.composer.addPass(new OutputPass());
+    const warm = new ShaderPass(ColorCorrectionShader);
+    warm.uniforms.mulRGB.value.set(1.06, 1.01, 0.9);
+    warm.uniforms.powRGB.value.set(1.08, 1.04, 1.0);
+    this.composer.addPass(warm);
+    const grade = new ShaderPass(HueSaturationShader);
+    grade.uniforms.saturation.value = 0.14;
+    this.composer.addPass(grade);
+    const contrast = new ShaderPass(BrightnessContrastShader);
+    contrast.uniforms.contrast.value = 0.07;
+    this.composer.addPass(contrast);
+    for (const shader of [HorizontalTiltShiftShader, VerticalTiltShiftShader]) {
+      const pass = new ShaderPass(shader);
+      this.composer.addPass(pass);
+      this.tiltShift.push(pass);
+    }
+    const vignette = new ShaderPass(VignetteShader);
+    vignette.uniforms.offset.value = 0.95;
+    vignette.uniforms.darkness.value = 1.05;
+    this.composer.addPass(vignette);
+    this.sizeComposer();
+  }
+  private animateMotes(player: ReturnType<typeof raceFrame>, seconds: number) {
+    if (!this.motes) return;
+    this.motes.position.copy(player.position);
+    this.motes.rotation.y = player.heading;
+    if (this.reduced.matches) return;
+    const position = this.motes.geometry.getAttribute(
+      "position",
+    ) as THREE.BufferAttribute;
+    for (let i = 0; i < position.count; i++) {
+      const seed = this.moteSeeds[i];
+      position.setY(i, 0.6 + ((seed * 3 + seconds * 0.25 + Math.sin(seconds + seed) * 0.2) % 6));
+      position.setX(i, position.getX(i) + Math.sin(seconds * 0.7 + seed) * 0.004);
+    }
+    position.needsUpdate = true;
+  }
   destroy() {
     this.disposed = true;
+    this.composer?.dispose();
     this.observer.disconnect();
     this.hud.remove();
     for (const g of this.geometries.values()) g.dispose();

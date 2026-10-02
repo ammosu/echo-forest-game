@@ -1369,3 +1369,11 @@
     border-radius: 10px;
   }
 }
+
+/* Look toggle: lit when the HD-2D diorama is on. */
+#race-look[aria-pressed="true"] {
+  color: var(--gold);
+}
+#race-look[aria-pressed="true"] span {
+  border-bottom: 1px solid var(--gold);
+}

@@ -12,7 +12,7 @@ import {
   stumpPushOut,
   type RacePoint,
 } from "./racing-collision";
-import { RacingView } from "./racing-view";
+import { RacingView, type RaceLook } from "./racing-view";
 import {
   entries,
   vehicles,
@@ -183,12 +183,13 @@ export class RacingEngine {
   constructor(
     public canvas: HTMLCanvasElement,
     private emit: (event: RaceEvent) => void,
+    private look: RaceLook = "standard",
   ) {
     this.opponents = this.freshOpponents();
     this.readyPromise = Promise.resolve()
       .then(async () => {
         if (this.destroyed) return;
-        this.view = new RacingView(canvas);
+        this.view = new RacingView(canvas, this.look);
         await this.view.ready;
         if (this.destroyed || this.phase === "error") return;
         this.phase = "ready";
@@ -211,6 +212,13 @@ export class RacingEngine {
       (window as unknown as { __race: unknown }).__race = {
         snapshot: () => this.snapshot(),
       };
+  }
+  get lookName() {
+    return this.look;
+  }
+  setLook(look: RaceLook) {
+    this.look = look;
+    this.view?.setLook(look);
   }
   get active() {
     return this.phase === "countdown" || this.phase === "racing";

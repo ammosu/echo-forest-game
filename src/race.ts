@@ -38,7 +38,7 @@ document.getElementById("app")!.innerHTML = `
 <main class="race-main">
   <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> 晨光盃・森林環線</p><h1 id="page-title">把晨光，甩在身後。</h1><p class="intro-copy">沿著林間彎道，和夥伴們一起衝向終點。</p></div><div class="race-intro-badge"><span class="checker" aria-hidden="true"></span><div><strong>3 圈 <span>／ 4 位車手</span></strong><small>一條環線，三種森林風景</small></div></div></section>
   <section class="game-shell race-shell is-locked" id="race-shell" aria-label="森林賽車">
-    <div class="game-toolbar"><div class="trail-name"><span aria-hidden="true">⚑</span> 晨光盃 <span class="trail-en">Woodland circuit</span></div><div class="toolbar-actions"><button id="race-sound" aria-label="開啟音效" aria-pressed="false">♫ <span>音效關</span></button><button id="race-fullscreen" aria-label="全螢幕">⛶ <span>全螢幕</span></button><button id="race-pause" aria-label="暫停比賽" disabled>Ⅱ <span>暫停</span></button><button id="race-restart" aria-label="重新比賽" disabled>↻ <span>重來</span></button></div></div>
+    <div class="game-toolbar"><div class="trail-name"><span aria-hidden="true">⚑</span> 晨光盃 <span class="trail-en">Woodland circuit</span></div><div class="toolbar-actions"><button id="race-look" aria-pressed="false" title="切換畫面風格">✧ <span id="race-look-name">標準</span></button><button id="race-sound" aria-label="開啟音效" aria-pressed="false">♫ <span>音效關</span></button><button id="race-fullscreen" aria-label="全螢幕">⛶ <span>全螢幕</span></button><button id="race-pause" aria-label="暫停比賽" disabled>Ⅱ <span>暫停</span></button><button id="race-restart" aria-label="重新比賽" disabled>↻ <span>重來</span></button></div></div>
     <div class="race-stage"><canvas id="race-canvas" tabindex="0" aria-label="森林賽車，方向鍵轉向，空白鍵甩尾，E 使用道具，Escape 暫停"></canvas>
       <div class="race-hud" id="race-hud" hidden><div class="race-position"><span><img src="${flagIcon}" alt="">目前名次</span><strong><b id="race-position">4</b><small> / 4</small></strong></div><div class="race-progress"><span><img src="${lapIcon}" alt="">圈數 <b id="race-lap">1</b><small> / 3</small></span><strong><img src="${timerIcon}" alt=""><span id="race-time">00:00.00</span></strong></div></div>
       <div class="race-speed" id="race-speed-panel" hidden><div><img src="${speedIcon}" alt=""><b id="race-speed">0</b><span>km/h</span><em id="race-boost-status">苔綠號</em></div><div class="drift-meter"><span id="drift-fill"></span></div><small id="drift-hint">按住空白鍵＋轉向甩尾</small></div>
@@ -205,7 +205,34 @@ function onEvent(event: RaceEvent) {
     }
   }
 }
-const race = new RacingEngine(canvas, onEvent);
+type Look = "standard" | "hd2d";
+/** ?look= wins for sharing a link; otherwise reuse the viewer's last choice. */
+function initialLook(): Look {
+  const param = new URLSearchParams(location.search).get("look");
+  if (param === "hd2d" || param === "standard") return param;
+  try {
+    return localStorage.getItem("echo-race-look") === "hd2d"
+      ? "hd2d"
+      : "standard";
+  } catch {
+    return "standard";
+  }
+}
+const race = new RacingEngine(canvas, onEvent, initialLook());
+function showLook() {
+  const hd = race.lookName === "hd2d";
+  el("race-look-name").textContent = hd ? "HD-2D" : "標準";
+  el("race-look").setAttribute("aria-pressed", String(hd));
+}
+showLook();
+el("race-look").onclick = () => {
+  race.setLook(race.lookName === "hd2d" ? "standard" : "hd2d");
+  try {
+    localStorage.setItem("echo-race-look", race.lookName);
+  } catch {}
+  showLook();
+  focus();
+};
 start.onclick = () => void begin();
 restart.onclick = () => void begin();
 pause.onclick = () => {
