@@ -92,9 +92,10 @@
 #field {
   width: 100%;
   height: auto;
+  aspect-ratio: 1000 / 680;
   display: block;
   touch-action: manipulation;
-  image-rendering: pixelated;
+  image-rendering: auto;
 }
 .defense-cover {
   position: absolute;
@@ -469,6 +470,54 @@ button:disabled {
     font-size: 11px;
   }
   .defense-main footer {
+    font-size: 9px;
+  }
+}
+
+/* Keep the miniature grove visible behind the welcome and result panels. */
+.defense-cover {
+  background: #102d2580;
+}
+.defense-cover > div {
+  background: #14372ee8;
+  padding: 20px 28px;
+  border: 1px solid #93a775;
+  box-shadow: 0 12px 35px #102a2966;
+}
+.defense-cover .primary {
+  margin: 0 auto;
+}
+.view-badge {
+  font-size: 10px;
+  margin-left: 6px;
+  color: #243c31;
+  background: #d6c383;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+.field-legend {
+  display: flex;
+  gap: 20px;
+  padding: 11px 8px 0;
+  color: #b9caaa;
+  font-size: 10px;
+  flex-wrap: wrap;
+}
+.field-legend span:first-child {
+  color: #efd994;
+}
+.field-legend span:nth-child(2) {
+  color: #edb57c;
+}
+@media (max-width: 700px) {
+  #field {
+    aspect-ratio: 1.32;
+  }
+  .defense-cover > div {
+    padding: 14px 16px;
+  }
+  .field-legend {
+    gap: 5px 12px;
     font-size: 9px;
   }
 }

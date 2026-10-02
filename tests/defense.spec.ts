@@ -146,14 +146,15 @@ test("mobile: seeds, board placement, touch movement and bomb button", async ({
   await page.goto("/defense.html");
   await page.getByRole("button", { name: "開始守護", exact: true }).click();
   await page.locator('[data-seed="wall"]').click();
-  const box = (await page.locator("#field").boundingBox())!;
-  await page.mouse.click(
-    box.x + (157 / 1000) * box.width,
-    box.y + (143 / 620) * box.height,
+  await page.locator("#field").scrollIntoViewIfNeeded();
+  const cell = await page.evaluate(() =>
+    (window as any).__defenseView.cell(0, 0),
   );
+  await page.mouse.click(cell.x, cell.y);
   expect(
     await page.evaluate(() => (window as any).__defense.plants[0].kind),
   ).toBe("wall");
+  await page.getByRole("button", { name: "向上移動" }).scrollIntoViewIfNeeded();
   const up = (await page
     .getByRole("button", { name: "向上移動" })
     .boundingBox())!;
@@ -162,7 +163,9 @@ test("mobile: seeds, board placement, touch movement and bomb button", async ({
     type: "touchStart",
     touchPoints: [{ x: up.x + 20, y: up.y + 20 }],
   });
-  await page.waitForTimeout(190);
+  await expect
+    .poll(() => page.evaluate(() => (window as any).__defense.player.y))
+    .toBeLessThan(2);
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
     touchPoints: [],
@@ -179,6 +182,13 @@ test("mobile: seeds, board placement, touch movement and bomb button", async ({
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as any).__defenseView.snapshot().entities.bomb,
+      ),
+    )
+    .toBe(1);
   await page.screenshot({
     path: "tests/evidence/defense-mobile.png",
     fullPage: true,

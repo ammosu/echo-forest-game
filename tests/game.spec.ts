@@ -19,7 +19,8 @@ test('loads all assets, collects notes, supports jump height, pause and reset',a
   await start(page);
   await expect(page.locator('img')).toHaveCount(12);
   expect(await page.locator('img').evaluateAll(imgs=>imgs.every(i=>i.complete&&i.naturalWidth>0))).toBe(true);
-  await walkUntil(page,196);expect((await snapshot(page)).notes).toBe(1);
+  // Stop before the stump without the helper jumping; this test presses jump itself.
+  await walkUntil(page,196,false);expect((await snapshot(page)).notes).toBe(1);
   await page.keyboard.down('Space');await page.waitForTimeout(200);await page.keyboard.up('Space');
   expect((await snapshot(page)).y).toBeLessThan(255);
   await page.waitForTimeout(500);
