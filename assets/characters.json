@@ -1,0 +1,186 @@
+{
+  "grid": [
+    40,
+    48
+  ],
+  "anchor": "bottom-center",
+  "outline": "#261E1A",
+  "characters": [
+    {
+      "id": "owl",
+      "name": "Owl",
+      "species": "貓頭鷹",
+      "identity": "指揮棒・書本",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/owl.png",
+        "blink": "sprites/1x/owl_blink.png",
+        "idle4x": "sprites/4x/owl.png",
+        "blink4x": "sprites/4x/owl_blink.png"
+      }
+    },
+    {
+      "id": "anji",
+      "name": "Anji",
+      "species": "雪鴞",
+      "identity": "小鼓",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/anji.png",
+        "blink": "sprites/1x/anji_blink.png",
+        "idle4x": "sprites/4x/anji.png",
+        "blink4x": "sprites/4x/anji_blink.png"
+      }
+    },
+    {
+      "id": "anje",
+      "name": "Anje",
+      "species": "銀喉長尾山雀",
+      "identity": "月弧五鈴",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/anje.png",
+        "blink": "sprites/1x/anje_blink.png",
+        "idle4x": "sprites/4x/anje.png",
+        "blink4x": "sprites/4x/anje_blink.png"
+      }
+    },
+    {
+      "id": "anbo",
+      "name": "Anbo",
+      "species": "柴犬",
+      "identity": "鈴鼓",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/anbo.png",
+        "blink": "sprites/1x/anbo_blink.png",
+        "idle4x": "sprites/4x/anbo.png",
+        "blink4x": "sprites/4x/anbo_blink.png"
+      }
+    },
+    {
+      "id": "ansey",
+      "name": "Ansey",
+      "species": "俄羅斯藍貓",
+      "identity": "小提琴",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/ansey.png",
+        "blink": "sprites/1x/ansey_blink.png",
+        "idle4x": "sprites/4x/ansey.png",
+        "blink4x": "sprites/4x/ansey_blink.png"
+      }
+    },
+    {
+      "id": "angoo",
+      "name": "Angoo",
+      "species": "赤狐",
+      "identity": "圍巾・蝴蝶結",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/angoo.png",
+        "blink": "sprites/1x/angoo_blink.png",
+        "idle4x": "sprites/4x/angoo.png",
+        "blink4x": "sprites/4x/angoo_blink.png"
+      }
+    },
+    {
+      "id": "anmi",
+      "name": "Anmi",
+      "species": "水獺",
+      "identity": "沙鈴",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/anmi.png",
+        "blink": "sprites/1x/anmi_blink.png",
+        "idle4x": "sprites/4x/anmi.png",
+        "blink4x": "sprites/4x/anmi_blink.png"
+      }
+    },
+    {
+      "id": "anka",
+      "name": "Anka",
+      "species": "水豚",
+      "identity": "烏克麗麗",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/anka.png",
+        "blink": "sprites/1x/anka_blink.png",
+        "idle4x": "sprites/4x/anka.png",
+        "blink4x": "sprites/4x/anka_blink.png"
+      }
+    },
+    {
+      "id": "anzo",
+      "name": "Anzo",
+      "species": "守宮",
+      "identity": "拇指琴",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/anzo.png",
+        "blink": "sprites/1x/anzo_blink.png",
+        "idle4x": "sprites/4x/anzo.png",
+        "blink4x": "sprites/4x/anzo_blink.png"
+      }
+    },
+    {
+      "id": "anbi",
+      "name": "Anbi",
+      "species": "白尾鹿",
+      "identity": "三角鐵",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/anbi.png",
+        "blink": "sprites/1x/anbi_blink.png",
+        "idle4x": "sprites/4x/anbi.png",
+        "blink4x": "sprites/4x/anbi_blink.png"
+      }
+    },
+    {
+      "id": "anleo",
+      "name": "Anleo",
+      "species": "亞洲雄獅",
+      "identity": "手鼓",
+      "size": [
+        40,
+        48
+      ],
+      "files": {
+        "idle": "sprites/1x/anleo.png",
+        "blink": "sprites/1x/anleo_blink.png",
+        "idle4x": "sprites/4x/anleo.png",
+        "blink4x": "sprites/4x/anleo_blink.png"
+      }
+    }
+  ]
+}
