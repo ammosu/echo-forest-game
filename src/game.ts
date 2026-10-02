@@ -23,6 +23,7 @@ const notePositions = [
   [2570,227],[2770,197],[3040,263],
 ];
 type Controls = { left: boolean; right: boolean; jump: boolean };
+export type Look = 'standard' | 'hd2d';
 class ForestScene extends Phaser.Scene {
   owner: ForestGame;
   player!: Phaser.Physics.Arcade.Sprite;
@@ -37,6 +38,9 @@ class ForestScene extends Phaser.Scene {
   worldArt!: Phaser.GameObjects.Graphics;
   effects!: Phaser.GameObjects.Graphics;
   motes!: Phaser.GameObjects.Graphics;
+  backdrop!: Phaser.GameObjects.Image;
+  shafts!: Phaser.GameObjects.Graphics;
+  warmth!: Phaser.GameObjects.Rectangle;
   particles: { x:number; y:number; vx:number; vy:number; life:number; color:number }[] = [];
   seconds = 0; notesCollected = 0; lives = 3; checkpoint = false;
   groundedAt = -1000; jumpQueuedAt = -1000; invulnerableUntil = 0;
@@ -49,12 +53,16 @@ class ForestScene extends Phaser.Scene {
   }
   create() {
     if (this.hasLoadError) return;
-    this.add.image(320,160,'forest').setDisplaySize(680,454).setScrollFactor(0).setDepth(-10);
+    this.backdrop=this.add.image(320,160,'forest').setDisplaySize(680,454).setScrollFactor(0).setDepth(-10);
     this.add.rectangle(320,180,640,360,0x174737,.08).setScrollFactor(0).setDepth(-9);
     this.makeTextures();
     this.worldArt = this.add.graphics().setDepth(-1);
     this.effects = this.add.graphics().setDepth(5);
     this.motes = this.add.graphics().setScrollFactor(0).setDepth(-2);
+    // HD-2D extras: slanted sun shafts over the backdrop and a warm screen wash.
+    this.shafts=this.add.graphics().setScrollFactor(0).setDepth(-3).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+    for(const [x,w,a] of [[150,60,.07],[300,34,.05],[455,70,.06]]){this.shafts.fillStyle(0xfff0c0,a);this.shafts.fillPoints([{x,y:-20},{x:x+w,y:-20},{x:x+w-150,y:320},{x:x-150-w*.4,y:320}],true);}
+    this.warmth=this.add.rectangle(320,240,640,480,0xff9a3c,.035).setScrollFactor(0).setDepth(6).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
     this.platforms = this.physics.add.staticGroup();
     groundSpans.forEach(([start,end]) => this.addPlatform(start,FLOOR,end-start,88,'ground'));
     [[250,276,52,28],[950,276,48,28],[1810,276,52,28],[2530,276,58,28]].forEach(p=>this.addPlatform(p[0],p[1],p[2],p[3],'stump'));
@@ -92,13 +100,27 @@ class ForestScene extends Phaser.Scene {
     this.owl=this.add.sprite(3140,FLOOR,'owlDown').setOrigin(.5,1).setDepth(2);
     this.flags=this.add.graphics().setDepth(1);
     this.cursor=this.input.keyboard!.addKeys({left:'LEFT',right:'RIGHT',up:'UP',space:'SPACE',a:'A',d:'D',w:'W'},false) as Record<string,Phaser.Input.Keyboard.Key>;
+    // Phones get a 4:3 canvas and a closer camera over the same 360px-tall world.
+    if(this.owner.compact)this.cameras.main.setZoom(4/3);
     this.cameras.main.setBounds(0,0,WIDTH,360); this.cameras.main.startFollow(this.player,true,.11,.11, -95,0); this.cameras.main.setRoundPixels(true);
     this.physics.world.setBounds(0,0,WIDTH,430);
+    this.applyLook();
     this.ready=true; this.physics.pause(); this.drawFlags(); this.owner.emit({type:'ready'}); this.sync();
     if(import.meta.env.DEV) {
       // Read-only diagnostics for browser verification; no teleport or win bypass.
       (window as unknown as {__forest:unknown}).__forest = { snapshot: () => this.snapshot() };
     }
+  }
+  /** Octopath-style diorama: soft backdrop, crisp sprites, bloom, warm grade, vignette. */
+  applyLook() {
+    const hd=this.owner.look==='hd2d', cam=this.cameras.main;
+    cam.postFX?.clear(); this.backdrop.preFX?.clear();
+    this.shafts.setVisible(hd); this.warmth.setVisible(hd);
+    if(!hd || this.game.renderer.type!==Phaser.WEBGL)return;
+    this.backdrop.preFX?.addBlur(0,1,1,.5);
+    const grade=cam.postFX.addColorMatrix();grade.saturate(.12);grade.brightness(1.04,true);
+    cam.postFX.addBloom(0xffffff,1,1,.8,1.05,4);
+    cam.postFX.addVignette(.5,.5,.92,.32);
   }
   makeTextures() {
     const texture=(name:string,w:number,h:number,draw:(g:Phaser.GameObjects.Graphics)=>void)=>{const g=this.make.graphics({x:0,y:0});draw(g);g.generateTexture(name,w,h);g.destroy();};
@@ -195,7 +217,7 @@ class ForestScene extends Phaser.Scene {
   update(_time:number,delta:number) {
     if(!this.ready)return;
     const dt=Math.min(delta,40)/1000;
-    if(!this.owner.paused && !this.owner.reducedMotion){this.motes.clear();for(let i=0;i<20;i++){const x=(i*83+_time*.005)%640;const y=80+(i*37)%205+Math.sin(_time*.0006+i)*8;this.motes.fillStyle(0xffe6a0,.2+(i%3)*.15);this.motes.fillRect(Math.round(x),Math.round(y),i%3===0?2:1,2);}}
+    if(!this.owner.paused && !this.owner.reducedMotion){const hd=this.owner.look==='hd2d';this.motes.clear();for(let i=0;i<(hd?42:20);i++){const x=(i*83+_time*.005)%640;const y=60+(i*37)%240+Math.sin(_time*.0006+i)*8;if(hd){this.motes.fillStyle(0xffe6a0,.12);this.motes.fillCircle(x,y,i%3===0?4:3);}this.motes.fillStyle(0xffe6a0,.2+(i%3)*.15);this.motes.fillRect(Math.round(x),Math.round(y),i%3===0?2:1,2);}}
     if(!this.owner.running || this.owner.paused)return;
     this.simTime+=dt*1000;this.seconds+=dt;
     const body=this.player.body as Phaser.Physics.Arcade.Body;
@@ -232,13 +254,16 @@ class ForestScene extends Phaser.Scene {
 }
 export class ForestGame {
   controls:Controls={left:false,right:false,jump:false};running=false;paused=false;
+  look:Look='standard';
+  readonly compact=window.matchMedia('(max-width: 750px) and (orientation: portrait)').matches;
   readonly reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   scene:ForestScene; game:Phaser.Game; private sound=false;private audio?:AudioContext;
   constructor(parent:HTMLElement,public emit:(event:GameEvent)=>void) {
     this.scene=new ForestScene(this);
-    this.game=new Phaser.Game({type:Phaser.AUTO,parent,width:640,height:360,pixelArt:true,roundPixels:true,backgroundColor:'#173c36',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{gravity:{x:0,y:820},debug:false}},render:{antialias:false},audio:{noAudio:true},scene:[this.scene]});
+    this.game=new Phaser.Game({type:Phaser.AUTO,parent,width:640,height:this.compact?480:360,pixelArt:true,roundPixels:true,backgroundColor:'#173c36',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{gravity:{x:0,y:820},debug:false}},render:{antialias:false},audio:{noAudio:true},scene:[this.scene]});
   }
   start(){this.ensureAudio();this.scene.start();}
+  setLook(look:Look){this.look=look;if(this.scene.ready)this.scene.applyLook();}
   setPaused(paused:boolean){if(!this.running || this.paused===paused)return;this.paused=paused;this.releaseControls();if(paused)this.scene.physics.pause();else this.scene.physics.resume();this.emit({type:'pause',paused});}
   releaseControls(){this.controls={left:false,right:false,jump:false};if(this.scene.cursor)Object.values(this.scene.cursor).forEach(k=>k.reset());document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
   setControl(key:keyof Controls,down:boolean){this.controls[key]=down;}

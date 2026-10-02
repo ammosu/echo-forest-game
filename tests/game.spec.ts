@@ -68,8 +68,8 @@ test('eight kart views are selectable and workshop pauses then resumes play',asy
   await page.screenshot({path:'tests/evidence/kart-eight-directions.png',fullPage:true});
   await page.keyboard.press('Escape');await expect(page.locator('#kart-dialog')).not.toBeVisible();await expect.poll(async()=> (await snapshot(page)).paused).toBe(false);
 });
-test('mobile touch controls move, jump and release without layout overflow',async({browser})=>{
-  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2});const page=await context.newPage();await page.goto('http://127.0.0.1:5173');
+test('mobile touch controls move, jump and release without layout overflow',async({browser,baseURL})=>{
+  const context=await browser.newContext({baseURL,viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2});const page=await context.newPage();await page.goto('/');
   await page.getByRole('button',{name:'開始冒險'}).click();await expect(page.getByRole('button',{name:'向右移動'})).toBeVisible();
   const right=page.getByRole('button',{name:'向右移動'}),jump=page.getByRole('button',{name:'跳躍',exact:true});
   // Real simultaneous touch contacts validate pointer capture, not synthetic unregistered IDs.

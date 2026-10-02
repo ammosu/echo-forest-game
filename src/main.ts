@@ -1,7 +1,10 @@
 import './style.css';
-import { ForestGame, type GameEvent } from './game';
+import './adventure.css';
+import { ForestGame, type GameEvent, type Look } from './game';
 import characters from '../assets/characters.json';
 import anbo from '../assets/sprites/4x/anbo.png?url';
+import restBadge from '../assets/ui/adv-rest.png';
+import winBadge from '../assets/ui/adv-win.png';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 // Vite statically includes the source asset directory in production builds.
@@ -16,11 +19,11 @@ app.innerHTML = `
   </header>
   <main>
     <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> 第一章・晨光小徑</p><h1 id="page-title">森林裡，出發。</h1><p class="intro-copy">跟著 Anbo 的腳步，找回散落在林間的旋律。</p></div><div class="player-badge"><img src="${anbo}" alt="橘白色柴犬 Anbo"/><div><small>今天的冒險夥伴</small><strong>Anbo <span>柴犬</span></strong></div></div></section>
-    <section class="game-shell" aria-label="森林音符冒險">
-      <div class="game-toolbar"><div class="trail-name"><span aria-hidden="true">✦</span> 晨光小徑 <span class="trail-en">Morning trail</span></div><div class="toolbar-actions"><button id="sound" aria-label="開啟音效" aria-pressed="false">♫ <span>音效關</span></button><button id="pause" aria-label="暫停遊戲" disabled>Ⅱ <span>暫停</span></button><button id="restart" aria-label="重新開始遊戲" disabled>↻ <span>重來</span></button></div></div>
+    <section class="game-shell is-locked" aria-label="森林音符冒險">
+      <div class="game-toolbar"><div class="trail-name"><span aria-hidden="true">✦</span> 晨光小徑 <span class="trail-en">Morning trail</span></div><div class="toolbar-actions"><button id="look" aria-pressed="false" title="切換畫面風格">✧ <span id="look-name">標準</span></button><button id="sound" aria-label="開啟音效" aria-pressed="false">♫ <span>音效關</span></button><button id="pause" aria-label="暫停遊戲" disabled>Ⅱ <span>暫停</span></button><button id="restart" aria-label="重新開始遊戲" disabled>↻ <span>重來</span></button></div></div>
       <div class="stage" id="stage">
         <div id="game" role="application" aria-label="Anbo 森林冒險，方向鍵移動，空白鍵跳躍，Escape 暫停" tabindex="0"></div>
-        <div class="hud" id="hud" hidden><div class="hud-left"><span id="hearts" aria-label="3 顆愛心">♥ ♥ ♥</span><span class="hud-notes">♪ <b id="note-count">0</b><small> / <span id="note-total">20</span></small></span></div><div class="hud-right"><span id="timer">00:00</span><span id="checkpoint-label">尋找森林裡的 Owl</span></div></div>
+        <div class="hud" id="hud" hidden><div class="hud-left"><span id="hearts" role="img" aria-label="3 顆愛心"><i class="hud-icon heart"></i><i class="hud-icon heart"></i><i class="hud-icon heart"></i></span><span class="hud-notes"><i class="hud-icon note" aria-hidden="true"></i> <b id="note-count">0</b><small> / <span id="note-total">20</span></small></span></div><div class="hud-right"><span class="hud-time"><i class="hud-icon timer" aria-hidden="true"></i><span id="timer">00:00</span></span><span id="checkpoint-label">目標：找到 Owl</span></div></div>
         <div class="overlay" id="overlay">
           <div class="welcome" id="welcome"><span class="welcome-label">Echo Forest Adventure</span><h2>一隻柴犬，<br>一整座奇遇。</h2><p>跳過樹樁，追著音符前進。<br>Owl 正在森林的另一端等你。</p><button class="primary" id="start" disabled>正在準備森林…</button><span class="start-hint">← → 移動 <span>／</span> 空白鍵跳躍</span></div>
           <div class="result-panel" id="result" hidden></div>
@@ -47,31 +50,44 @@ let modalPaused = false;
 const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`;
 function showToast(message: string) { el('toast').textContent = message; el('toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el('toast').classList.remove('visible'), 2600); }
 function focusGame() { el('game').focus({ preventScroll: true }); }
-function begin() { el('welcome').hidden = true; result.hidden = true; overlay.hidden = true; el('hud').hidden = false; pauseButton.disabled = false; restartButton.disabled = false; game.start(); focusGame(); }
+const shell = document.querySelector<HTMLElement>('.game-shell')!;
+function begin() { shell.classList.remove('is-locked'); el('welcome').hidden = true; result.hidden = true; overlay.hidden = true; el('hud').hidden = false; pauseButton.disabled = false; restartButton.disabled = false; game.start(); focusGame(); }
 function handleEvent(event: GameEvent) {
   if (event.type === 'ready') { start.disabled = false; start.textContent = '開始冒險　→'; }
   if (event.type === 'error') { start.textContent = '素材載入失敗，請重新整理'; showToast(event.message); }
   if (event.type === 'tick') { el('timer').textContent = formatTime(event.seconds); el('note-count').textContent = String(event.notes); el('note-total').textContent = String(event.total); }
-  if (event.type === 'health') { el('hearts').textContent = '♥ '.repeat(event.lives) + '♡ '.repeat(3 - event.lives); el('hearts').setAttribute('aria-label', `${event.lives} 顆愛心`); }
+  if (event.type === 'health') { el('hearts').innerHTML = '<i class="hud-icon heart"></i>'.repeat(event.lives) + '<i class="hud-icon heart empty"></i>'.repeat(3 - event.lives); el('hearts').setAttribute('aria-label', `${event.lives} 顆愛心`); }
   if (event.type === 'checkpoint') { el('checkpoint-label').textContent = '已點亮中途營地'; showToast('中途營地已點亮！跌倒也能從這裡再出發。'); }
-  if (event.type === 'reset') { el('checkpoint-label').textContent = '尋找森林裡的 Owl'; }
+  if (event.type === 'reset') { el('checkpoint-label').textContent = '目標：找到 Owl'; }
   if (event.type === 'hint') showToast(event.message);
   if (event.type === 'pause') {
     pauseButton.innerHTML = event.paused ? '▶ <span>繼續</span>' : 'Ⅱ <span>暫停</span>';
     pauseButton.setAttribute('aria-label', event.paused ? '繼續遊戲' : '暫停遊戲');
+    shell.classList.toggle('is-locked', event.paused);
     if (event.paused) {
-      result.innerHTML = `<span class="result-symbol">☾</span><p class="chapter">在樹蔭下歇一會</p><h2>森林會等你。</h2><p>準備好，再一起往前走。</p><button class="primary" id="resume">繼續冒險 →</button>`;
+      result.innerHTML = `<img class="result-badge" src="${restBadge}" alt=""><p class="chapter">在樹蔭下歇一會</p><h2>森林會等你。</h2><p>準備好，再一起往前走。</p><button class="primary" id="resume">繼續冒險 →</button>`;
       result.hidden = false; overlay.hidden = false; el('resume').onclick = () => { game.setPaused(false); focusGame(); }; el('resume').focus({ preventScroll: true });
     } else { overlay.hidden = true; result.hidden = true; }
   }
   if (event.type === 'end') {
     pauseButton.disabled = true;
+    el('hud').hidden = true;
+    shell.classList.add('is-locked');
     const won = event.won;
-    result.innerHTML = `<img class="result-mascot" src="${anbo}" alt="Anbo"/><p class="chapter">${won ? '晨光小徑・完成' : '冒險還沒結束'}</p><h2>${won ? '森林聽見你了！' : '再試一次吧。'}</h2><p>${won ? '你把旋律帶回了森林，Owl 為你揮旗！' : '慢慢來，留意腳下的空隙與小刺球。'}</p><div class="result-stats"><span>收集音符<strong>${event.notes} / ${event.total}</strong></span><span>冒險時間<strong>${formatTime(event.seconds)}</strong></span></div>${won && event.best ? `<p class="best">本機最佳：${event.best.notes} 音符 · ${formatTime(event.best.seconds)}</p>` : ''}<button class="primary" id="play-again">${won ? '再冒險一次' : '重新出發'} →</button><button class="text-button" id="result-kart">去看看 Anbo 的小車 ↗</button>`;
+    result.innerHTML = `${won ? `<img class="result-badge" src="${winBadge}" alt="">` : `<img class="result-mascot" src="${anbo}" alt="Anbo"/>`}<p class="chapter">${won ? '晨光小徑・完成' : '冒險還沒結束'}</p><h2>${won ? '森林聽見你了！' : '再試一次吧。'}</h2><p>${won ? '你把旋律帶回了森林，Owl 為你揮旗！' : '慢慢來，留意腳下的空隙與小刺球。'}</p><div class="result-stats"><span>收集音符<strong>${event.notes} / ${event.total}</strong></span><span>冒險時間<strong>${formatTime(event.seconds)}</strong></span></div>${won && event.best ? `<p class="best">本機最佳：${event.best.notes} 音符 · ${formatTime(event.best.seconds)}</p>` : ''}<button class="primary" id="play-again">${won ? '再冒險一次' : '重新出發'} →</button><button class="text-button" id="result-kart">去看看 Anbo 的小車 ↗</button>`;
     result.hidden = false; overlay.hidden = false; el('play-again').onclick = begin; el('result-kart').onclick = openKart; el('play-again').focus({ preventScroll: true });
   }
 }
 const game = new ForestGame(el('game'), handleEvent);
+/** ?look= wins for sharing a link; otherwise reuse the viewer's last choice. */
+function initialLook(): Look {
+  const param = new URLSearchParams(location.search).get('look');
+  if (param === 'hd2d' || param === 'standard') return param;
+  try { return localStorage.getItem('echo-adventure-look') === 'hd2d' ? 'hd2d' : 'standard'; } catch { return 'standard'; }
+}
+function showLook() { const hd = game.look === 'hd2d'; el('look-name').textContent = hd ? 'HD-2D' : '標準'; el('look').setAttribute('aria-pressed', String(hd)); }
+game.setLook(initialLook()); showLook();
+el('look').onclick = () => { game.setLook(game.look === 'hd2d' ? 'standard' : 'hd2d'); try { localStorage.setItem('echo-adventure-look', game.look); } catch {} showLook(); if (game.running && !game.paused) focusGame(); };
 start.onclick = begin;
 pauseButton.onclick = () => { game.setPaused(!game.paused); if (!game.paused) focusGame(); };
 restartButton.onclick = begin;
