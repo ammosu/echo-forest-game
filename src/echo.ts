@@ -15,7 +15,7 @@ let best = 0;
 try { const saved = Number(localStorage.getItem('echo-memory-best')); if (Number.isFinite(saved)) best = Math.max(0, Math.min(8, saved)); } catch {}
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <header class="site-header"><a class="brand" href="./"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a><nav aria-label="遊戲選單"><a class="nav-button" href="./">森林冒險</a><a class="nav-button" href="./race.html">森林賽車</a><a class="nav-button" href="./defense.html">爆破保衛戰</a><span class="nav-current" aria-current="page">森林回音</span><a class="nav-button" href="./catch.html">音符接接樂</a></nav></header>
+  <header class="site-header"><a class="brand" href="./forest.html"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a><nav aria-label="遊戲選單"><a class="nav-button" href="./forest.html">森林地圖</a><a class="nav-button" href="./">森林冒險</a><a class="nav-button" href="./race.html">森林賽車</a><a class="nav-button" href="./defense.html">爆破保衛戰</a><span class="nav-current" aria-current="page">森林回音</span><a class="nav-button" href="./catch.html">音符接接樂</a></nav></header>
   <main class="echo-main">
     <section class="echo-intro"><div><p class="chapter">林間小舞台・記憶合奏</p><h1>森林回音</h1><p>聽一段旋律，讓森林聽見你的回應。</p></div><div class="echo-best">最長合奏<strong><span id="best">${best}</span><small> / 8 段</small></strong></div></section>
     <section class="echo-concert" aria-label="森林回音遊戲" data-phase="ready">

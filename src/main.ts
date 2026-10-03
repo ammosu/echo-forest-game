@@ -18,8 +18,8 @@ const kartSheet = new URL('../assets/generated/anbo-kart-eight-directions.png', 
 const directions = ['正面', '右前', '右側', '右後', '背面', '左後', '左側', '左前'];
 app.innerHTML = `
   <header class="site-header">
-    <a class="brand" href="./" aria-label="Echo Forest 首頁"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a>
-    <nav aria-label="遊戲選單"><span class="nav-current">森林冒險</span><a class="nav-button" href="./race.html">森林賽車</a><button class="nav-button" id="open-kart">賽車工坊 <span aria-hidden="true">↗</span></button><a class="nav-button" href="./defense.html">爆破保衛戰</a><a class="nav-button" href="./echo.html">森林回音</a><a class="nav-button" href="./catch.html">音符接接樂</a></nav>
+    <a class="brand" href="./forest.html" aria-label="Echo Forest 森林地圖"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a>
+    <nav aria-label="遊戲選單"><a class="nav-button" href="./forest.html">森林地圖</a><span class="nav-current">森林冒險</span><a class="nav-button" href="./race.html">森林賽車</a><button class="nav-button" id="open-kart">賽車工坊 <span aria-hidden="true">↗</span></button><a class="nav-button" href="./defense.html">爆破保衛戰</a><a class="nav-button" href="./echo.html">森林回音</a><a class="nav-button" href="./catch.html">音符接接樂</a></nav>
     <span class="edition">一段小小的森林旅程</span>
   </header>
   <main>

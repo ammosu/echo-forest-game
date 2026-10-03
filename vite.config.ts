@@ -7,6 +7,7 @@ export default defineConfig(({ command, isPreview }) => ({
   build: {
     rollupOptions: {
       input: {
+        forest: resolve(import.meta.dirname, "forest.html"),
         adventure: resolve(import.meta.dirname, "index.html"),
         defense: resolve(import.meta.dirname, "defense.html"),
         race: resolve(import.meta.dirname, "race.html"),
