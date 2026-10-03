@@ -34,7 +34,7 @@ try {
   if (Number.isFinite(n) && n > 0) saved = time(n);
 } catch {}
 document.getElementById("app")!.innerHTML = `
-<header class="site-header"><a class="brand" href="./" aria-label="Echo Forest 首頁"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a><nav aria-label="遊戲選單"><a class="nav-button" href="./">森林冒險</a><span class="nav-current">森林賽車</span><a class="nav-button" href="./defense.html">爆破保衛戰</a></nav><span class="edition">四位夥伴，一場森林裡的追逐</span></header>
+<header class="site-header"><a class="brand" href="./" aria-label="Echo Forest 首頁"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a><nav aria-label="遊戲選單"><a class="nav-button" href="./">森林冒險</a><span class="nav-current">森林賽車</span><a class="nav-button" href="./defense.html">爆破保衛戰</a><a class="nav-button" href="./echo.html">森林回音</a></nav><span class="edition">四位夥伴，一場森林裡的追逐</span></header>
 <main class="race-main">
   <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> 晨光盃・森林環線</p><h1 id="page-title">把晨光，甩在身後。</h1><p class="intro-copy">沿著林間彎道，和夥伴們一起衝向終點。</p></div><div class="race-intro-badge"><span class="checker" aria-hidden="true"></span><div><strong>3 圈 <span>／ 4 位車手</span></strong><small>一條環線，三種森林風景</small></div></div></section>
   <section class="game-shell race-shell is-locked" id="race-shell" aria-label="森林賽車">

@@ -10,6 +10,7 @@ export default defineConfig(({ command, isPreview }) => ({
         adventure: resolve(import.meta.dirname, "index.html"),
         defense: resolve(import.meta.dirname, "defense.html"),
         race: resolve(import.meta.dirname, "race.html"),
+        echo: resolve(import.meta.dirname, "echo.html"),
       },
     },
   },
