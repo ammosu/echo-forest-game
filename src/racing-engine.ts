@@ -1,3 +1,5 @@
+import { raceRecordKey } from './racing-courses';
+import { freshFlight, stepFlight, tryTrick, ramps, type FlightState } from './racing-jumps';
 import {
   sweepContact,
   wallLimit,
@@ -52,7 +54,7 @@ export interface ImpactState {
   impactSide: number;
   impactKind: "wall" | "car" | "stump" | null;
 }
-type ImpactBody = ImpactState & { distance: number; x: number; speed: number };
+type ImpactBody = ImpactState & { distance: number; x: number; speed: number; flight?: FlightState };
 const freshImpact = (): ImpactState => ({
   stun: 0,
   lateralVelocity: 0,
@@ -62,6 +64,7 @@ const freshImpact = (): ImpactState => ({
   impactKind: null,
 });
 export interface RaceSnapshot extends ImpactState {
+  flight: FlightState;
   phase: RacePhase;
   paused: boolean;
   distance: number;
@@ -83,6 +86,7 @@ export interface RaceSnapshot extends ImpactState {
   boostsUsed: number;
   driftBoosts: number;
   opponents: (ImpactState & {
+    flight: FlightState;
     name: string;
     distance: number;
     x: number;
@@ -101,6 +105,8 @@ export type RaceEvent =
   | { type: "notice"; message: string }
   | { type: "finish"; result: RaceResult };
 interface Opponent extends ImpactState {
+  flight: FlightState;
+  boost: number;
   entry: (typeof entries)[number];
   distance: number;
   x: number;
@@ -108,6 +114,7 @@ interface Opponent extends ImpactState {
   finishTime: number | null;
 }
 export class RacingEngine {
+  flight = freshFlight();
   phase: RacePhase = "loading";
   paused = false;
   autoGas = true;
@@ -148,6 +155,7 @@ export class RacingEngine {
   private frameId = 0;
   private stateClock = 0;
   private itemQueued = false;
+  private trickPressedAt = -10;
   private previousCount = 4;
   private driftDirection = 0;
   private hitCooldown = 0;
@@ -227,10 +235,12 @@ export class RacingEngine {
     return entries.slice(1).map((entry, i) => ({
       entry,
       ...freshImpact(),
+      flight: freshFlight(),
       distance: 250 + i * 320,
       x: [-0.48, 0.46, 0][i],
       speed: 0,
       finishTime: null,
+      boost: 0,
     }));
   }
   async start() {
@@ -254,6 +264,8 @@ export class RacingEngine {
     this.driftBoosts = 0;
     this.pickupSerial = 0;
     Object.assign(this, freshImpact());
+    this.flight = freshFlight();
+    this.trickPressedAt = -10;
     this.pairContacts.clear();
     this.hitCooldown = 0;
     this.itemQueued = false;
@@ -275,6 +287,10 @@ export class RacingEngine {
     this.sendState();
   }
   setControl(control: Control, value: boolean) {
+    if (control === 'drift' && value && !this.controls.drift && this.phase === 'racing' && !this.paused && this.stun <= 0) {
+      this.trickPressedAt = this.seconds;
+      if (tryTrick(this.flight)) this.emit({ type: 'notice', message: '特技成功！穩定落地可獲得更長加速。' });
+    }
     if (
       control === "item" &&
       value &&
@@ -287,6 +303,7 @@ export class RacingEngine {
     this.controls[control] = value;
   }
   release() {
+    this.trickPressedAt = -10;
     this.itemQueued = false;
     for (const k of Object.keys(this.controls) as Control[])
       this.controls[k] = false;
@@ -379,6 +396,7 @@ export class RacingEngine {
     this.seconds += dt;
     for (const car of [this, ...this.opponents]) {
       // Normalize fixture/old-state fields as well as new race entries.
+      car.flight ??= freshFlight();
       car.stun = Math.max(0, (car.stun ?? 0) - dt);
       car.lateralVelocity = (car.lateralVelocity ?? 0) * Math.exp(-5 * dt);
       car.impact ??= 0;
@@ -396,12 +414,14 @@ export class RacingEngine {
           : Number(this.controls.right) - Number(this.controls.left);
     const wasDrifting = this.drifting;
     if (
+      this.flight.airborne ||
       !this.controls.drift ||
       !axis ||
       this.speed < 1100 ||
       Math.abs(this.x) > 1.06
     ) {
       if (
+        !this.flight.airborne &&
         wasDrifting &&
         this.driftCharge >= 0.65 &&
         this.speed >= 1100 &&
@@ -440,16 +460,18 @@ export class RacingEngine {
       vehicles.moss.handling;
     const centrifugal =
       curve * 0.22 * ratio * ratio * (this.drifting ? 0.7 : 1);
-    this.x += (steer - centrifugal + this.lateralVelocity) * dt;
+    this.x += ((steer - centrifugal) * (this.flight.airborne ? .65 : 1) + this.lateralVelocity) * dt;
     const playerYaw = axis * (this.drifting ? 0.3 : 0.08);
     const playerBounds = kartBounds(playerYaw);
     this.resolveWall(this, playerBounds, (this.x - playerBefore.x) / dt);
-    const offroad = Math.abs(this.x) > 1.05;
-    let target = this.autoGas || this.controls.gas ? vehicles.moss.topSpeed : 0;
+    const offroad = !this.flight.airborne && Math.abs(this.x) > 1.05;
+    let target = this.autoGas || this.controls.gas || this.flight.gliding ? vehicles.moss.topSpeed : 0;
     if (this.boost > 0) target = vehicles.moss.topSpeed * 1.34;
-    if (this.controls.brake) target = 0;
+    if (this.flight.gliding) target *= 1 - this.flight.pitch * .10;
+    const braking = this.controls.brake && !this.flight.gliding;
+    if (braking) target = 0;
     if (offroad) target = Math.min(target, 1450);
-    const acceleration = this.controls.brake
+    const acceleration = braking
       ? 4800
       : this.speed > target
         ? offroad
@@ -472,6 +494,17 @@ export class RacingEngine {
     this.itemQueued = false;
     const before = this.distance;
     this.distance += this.speed * dt;
+    const jumpEvent = stepFlight(this.flight, playerBefore, this, dt, Number(this.controls.brake) - Number(this.controls.gas));
+    if (jumpEvent === 'launch') {
+      this.drifting = false; this.driftCharge = 0;
+      if (this.seconds - this.trickPressedAt <= .18) tryTrick(this.flight);
+      this.emit({ type: 'notice', message: this.flight.trick ? '特技成功！穩定落地可獲得更長加速。' : '展開滑翔翼！↑ 俯衝、↓ 拉升，起跳可按甩尾做特技。' });
+      this.tone('boost');
+    } else if (jumpEvent === 'land') {
+      this.boost = Math.max(this.boost, this.flight.trick ? 1.4 : .8);
+      this.emit({ type: 'notice', message: this.flight.trick ? '特技落地！加速 1.4 秒。' : '漂亮落地！獲得短暫加速。' });
+      this.tone('boost');
+    }
     const hitProp = (
       p: { z: number; x: number },
       shape: typeof shapes.stump,
@@ -488,6 +521,7 @@ export class RacingEngine {
     };
     // Resolve solid obstacles before pickups/checkpoints so blocked travel earns no progress.
     for (const p of obstacles) {
+      if (this.flight.height > 1.5) continue;
       const contact = hitProp(p, shapes.stump);
       if (!contact) continue;
       // The box sweep is a broad phase; only a real trunk/body overlap counts.
@@ -537,10 +571,16 @@ export class RacingEngine {
       if (o.finishTime !== null) return;
       const vehicle = vehicles[o.entry.vehicleId];
       const c = curveAt(o.distance);
-      const targetX = Math.sin(o.distance / 6500 + i * 2) * 0.53;
+      o.boost = Math.max(0, (o.boost ?? 0) - dt);
+      const upcomingPad = boostPads.find(p => mod(p.z - o.distance, TRACK_LENGTH) < 2200);
+      const upcomingRamp = ramps.find((r, index) => (index + i) % 2 === 0 && mod(r.z - o.distance, TRACK_LENGTH) < 2000);
+      const onRamp = ramps.find(r => mod(o.distance, TRACK_LENGTH) >= r.z && mod(o.distance, TRACK_LENGTH) < r.z + r.length && Math.abs(o.x - r.x) < r.halfWidth + .1);
+      const targetX = (onRamp ?? upcomingRamp)?.x ?? (upcomingPad ? upcomingPad.x : Math.sin(o.distance / 6500 + i * 2) * 0.53);
       if (o.stun <= 0) o.x += clamp(targetX - o.x, -dt * 0.65, dt * 0.65);
       o.x += o.lateralVelocity * dt;
-      let top = vehicle.topSpeed * (1 - Math.min(Math.abs(c), 4) * 0.028);
+      // Small pace increase after lap one; actual pad contact earns a short boost.
+      const pace = o.distance < TRACK_LENGTH ? 1.03 : 1.05;
+      let top = vehicle.topSpeed * pace * (1 - Math.min(Math.abs(c), 4) * 0.018) * (o.boost > 0 ? 1.18 : 1);
       // Traffic avoidance alters opponent lanes; no teleporting or lap-based rubber band.
       const nearObstacle = obstacles.find(
         (p) =>
@@ -559,7 +599,22 @@ export class RacingEngine {
       o.speed += clamp(top - o.speed, -3000 * dt, vehicle.acceleration * dt);
       if (o.stun > 0) o.speed = 0;
       o.distance += o.speed * dt;
+      const flightEvent = stepFlight(o.flight, opponentsBefore[i], o, dt);
+      if (flightEvent === 'launch' && (i + Math.floor(o.distance / TRACK_LENGTH)) % 2 === 0) tryTrick(o.flight);
+      if (flightEvent === 'land') o.boost = Math.max(o.boost, o.flight.trick ? 1.4 : .8);
+      for (let padIndex = 0; padIndex < boostPads.length; padIndex++) {
+        const p = boostPads[padIndex];
+        const lap = Math.round((o.distance - p.z) / TRACK_LENGTH);
+        const key = `opponent-${i}-pad-${lap}-${padIndex}`;
+        const fixed = { distance: p.z, x: p.x };
+        if (o.flight.height < .25 && !this.consumed.has(key) && sweepContact(opponentsBefore[i], o, fixed, fixed, shapes.kart, shapes.pad)) {
+          this.consumed.add(key);
+          o.boost = Math.max(o.boost, 1.1);
+        }
+      }
+      if (o.stun > 0) o.boost = 0;
       for (const p of obstacles) {
+        if (o.flight.height > 1.5) continue;
         const fixed = { distance: p.z, x: p.x };
         const contact = sweepContact(
           opponentsBefore[i],
@@ -587,6 +642,7 @@ export class RacingEngine {
       b0: RacePoint,
       player: boolean,
     ) => {
+      if (Math.abs((a.flight?.height ?? 0) - (b.flight?.height ?? 0)) > 1.5) return;
       const contact = sweepContact(
         a0,
         a,
@@ -675,6 +731,7 @@ export class RacingEngine {
         }
       });
     for (const car of [this, ...this.opponents]) {
+      if (car.flight.height > 1.5) continue;
       for (const p of obstacles) {
         const fixed = { distance: p.z, x: p.x };
         if (car === this) {
@@ -717,7 +774,7 @@ export class RacingEngine {
     }
     for (let i = 0; i < itemBoxes.length; i++) {
       const p = itemBoxes[i];
-      const contact = hitProp(p, shapes.item);
+      const contact = this.flight.height < 1.8 && hitProp(p, shapes.item);
       const lap = Math.round((this.distance - p.z) / TRACK_LENGTH);
       const key = `item-${lap}-${i}`;
       if (contact && this.item && !this.consumed.has(key)) {
@@ -742,7 +799,7 @@ export class RacingEngine {
       const p = boostPads[i],
         lap = Math.round((this.distance - p.z) / TRACK_LENGTH),
         key = `pad-${lap}-${i}`;
-      if (hitProp(p, shapes.pad) && !this.consumed.has(key)) {
+      if (this.flight.height < .25 && hitProp(p, shapes.pad) && !this.consumed.has(key)) {
         this.consumed.add(key);
         this.boost = Math.max(this.boost, 1.1);
         this.tone("boost");
@@ -810,6 +867,7 @@ export class RacingEngine {
     side: number,
     stunned: boolean,
   ) {
+    if (car.flight) car.flight.clean = false;
     car.impact = Math.max(0.08, strength);
     car.impactTime = this.seconds;
     car.impactSide = side;
@@ -867,10 +925,10 @@ export class RacingEngine {
     this.tone("finish");
     let best = this.seconds;
     try {
-      const prior = Number(localStorage.getItem("echo-forest-race-best-v1"));
+      const prior = Number(localStorage.getItem(raceRecordKey));
       if (Number.isFinite(prior) && prior > 0)
         best = Math.min(prior, this.seconds);
-      localStorage.setItem("echo-forest-race-best-v1", String(best));
+      localStorage.setItem(raceRecordKey, String(best));
     } catch {
       /* Storage is optional. */
     }
@@ -917,6 +975,7 @@ export class RacingEngine {
   }
   snapshot(): RaceSnapshot {
     return {
+      flight: { ...this.flight },
       stun: this.stun,
       lateralVelocity: this.lateralVelocity,
       impact: this.impact,
@@ -940,11 +999,12 @@ export class RacingEngine {
       countdown: this.countdown,
       lapTimes: [...this.lapTimes],
       collisions: this.collisions,
-      offroad: Math.abs(this.x) > 1.05,
+      offroad: !this.flight.airborne && Math.abs(this.x) > 1.05,
       boostsUsed: this.boostsUsed,
       driftBoosts: this.driftBoosts,
       opponents: this.opponents.map((o) => ({
         name: o.entry.name,
+        flight: { ...o.flight },
         stun: o.stun,
         lateralVelocity: o.lateralVelocity,
         impact: o.impact,

@@ -74,14 +74,14 @@ class ForestScene extends Phaser.Scene {
     [[480,244,155,14],[1130,227,124,14],[1910,224,144,14],[2680,240,170,14]].forEach(p=>this.addPlatform(p[0],p[1],p[2],p[3],'branch'));
     this.moving = this.physics.add.image(2135,234,'branch').setDisplaySize(76,14).setImmovable(true);
     const movingBody = this.moving.body as Phaser.Physics.Arcade.Body;
-    movingBody.setAllowGravity(false); movingBody.setSize(76,14); movingBody.setFriction(1,0); movingBody.setVelocityX(36);
+    movingBody.setAllowGravity(false); movingBody.setSize(76,14); movingBody.setFriction(1,0); movingBody.setVelocityX(46);
     this.drawDecor();
     this.notes = this.physics.add.staticGroup();
     notePositions.forEach(([x,y],i) => { const n=this.notes.create(x,y,'note') as Phaser.Physics.Arcade.Image; n.setData('baseY',y); n.setData('index',i); n.setDepth(2); });
     this.mushroom = this.physics.add.image(1050,293,'mushroom').setImmovable(true);
     (this.mushroom.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setSize(28,13).setOffset(2,9);
     this.enemies = this.physics.add.group({ allowGravity:false, immovable:true });
-    [[1255,1340],[2035,2230],[2820,2940]].forEach(([start,end])=>{
+    [[1255,1340],[2035,2230],[2610,2670],[2820,2940]].forEach(([start,end])=>{
       const obj=this.enemies.create(start,294,'hazard') as Phaser.Physics.Arcade.Sprite;
       obj.setSize(20,15).setOffset(4,6); obj.setDepth(1); this.enemyRanges.push({obj,start,end,direction:1});
     });
@@ -179,7 +179,7 @@ class ForestScene extends Phaser.Scene {
     this.owner.running=true;this.owner.paused=false;this.physics.resume();this.seconds=0;this.simTime=0;this.tickAt=0;this.notesCollected=0;this.lives=3;this.checkpoint=false;this.invulnerableUntil=0;this.particles=[];
     this.notes.getChildren().forEach(child=>{const n=child as Phaser.Physics.Arcade.Image;n.enableBody(false,n.x,n.y,true,true);});
     this.enemyRanges.forEach(e=>{e.direction=1;e.obj.enableBody(true,e.start,294,true,true);});
-    this.moving.setPosition(2135,234);(this.moving.body as Phaser.Physics.Arcade.Body).reset(2135,234);this.moving.setVelocityX(36);
+    this.moving.setPosition(2135,234);(this.moving.body as Phaser.Physics.Arcade.Body).reset(2135,234);this.moving.setVelocityX(46);
     this.respawn();this.drawFlags();this.cameras.main.scrollX=0;this.owner.emit({type:'reset'});this.owner.emit({type:'health',lives:3});this.owner.emit({type:'pause',paused:false});this.sync();
   }
   respawn() {
@@ -254,8 +254,8 @@ class ForestScene extends Phaser.Scene {
     if(this.player.y>396){this.invulnerableUntil=0;this.hurt();}
     if(this.player.x>1715 && !this.checkpoint){this.checkpoint=true;this.drawFlags();this.owner.emit({type:'checkpoint'});this.owner.tone('checkpoint');this.burst(1720,266,0xffda70,16);}
     if(this.player.x>3105 && this.player.y>246){this.finish(true);return;}
-    this.enemyRanges.forEach(e=>{if(!e.obj.active)return;if(e.obj.x>e.end)e.direction=-1;if(e.obj.x<e.start)e.direction=1;e.obj.setVelocityX(e.direction*33);e.obj.setFlipX(e.direction<0);});
-    if(this.moving.x>2240)this.moving.setVelocityX(-36);if(this.moving.x<2120)this.moving.setVelocityX(36);
+    this.enemyRanges.forEach(e=>{if(!e.obj.active)return;if(e.obj.x>e.end)e.direction=-1;if(e.obj.x<e.start)e.direction=1;e.obj.setVelocityX(e.direction*(e.start > 1700 ? 43 : 33));e.obj.setFlipX(e.direction<0);});
+    if(this.moving.x>2240)this.moving.setVelocityX(-46);if(this.moving.x<2120)this.moving.setVelocityX(46);
     this.owl.setTexture(this.hostFrame(Math.floor(this.simTime/650)%2===1));
     this.effects.clear();this.particles=this.particles.filter(p=>p.life>0);for(const p of this.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=70*dt;this.effects.fillStyle(p.color,Math.min(1,p.life*3));this.effects.fillRect(Math.round(p.x),Math.round(p.y),2,2);}
     if(this.simTime-this.tickAt>100){this.tickAt=this.simTime;this.sync();}

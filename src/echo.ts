@@ -1,6 +1,6 @@
 import './style.css';
 import './echo.css';
-import { EchoGame } from './echo-engine';
+import { EchoGame, echoTiming } from './echo-engine';
 import characters from '../assets/characters.json';
 import forest from '../assets/generated/forest-background.png';
 
@@ -15,7 +15,7 @@ let best = 0;
 try { const saved = Number(localStorage.getItem('echo-memory-best')); if (Number.isFinite(saved)) best = Math.max(0, Math.min(8, saved)); } catch {}
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <header class="site-header"><a class="brand" href="./"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a><nav aria-label="遊戲選單"><a class="nav-button" href="./">森林冒險</a><a class="nav-button" href="./race.html">森林賽車</a><a class="nav-button" href="./defense.html">爆破保衛戰</a><span class="nav-current" aria-current="page">森林回音</span></nav></header>
+  <header class="site-header"><a class="brand" href="./"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a><nav aria-label="遊戲選單"><a class="nav-button" href="./">森林冒險</a><a class="nav-button" href="./race.html">森林賽車</a><a class="nav-button" href="./defense.html">爆破保衛戰</a><span class="nav-current" aria-current="page">森林回音</span><a class="nav-button" href="./catch.html">音符接接樂</a></nav></header>
   <main class="echo-main">
     <section class="echo-intro"><div><p class="chapter">林間小舞台・記憶合奏</p><h1>森林回音</h1><p>聽一段旋律，讓森林聽見你的回應。</p></div><div class="echo-best">最長合奏<strong><span id="best">${best}</span><small> / 8 段</small></strong></div></section>
     <section class="echo-concert" aria-label="森林回音遊戲" data-phase="ready">
@@ -86,10 +86,10 @@ function tone(index: number, duration = .48) {
 }
 
 const flashes = [0, 0, 0, 0];
-function flash(index: number) {
+function flash(index: number, duration = 470) {
   const flashId = ++flashes[index];
-  buttons[index].classList.add('singing'); tone(index);
-  later(() => { if (flashId === flashes[index]) buttons[index].classList.remove('singing'); }, 470);
+  buttons[index].classList.add('singing'); tone(index, duration / 1000);
+  later(() => { if (flashId === flashes[index]) buttons[index].classList.remove('singing'); }, duration);
 }
 
 function message(label: string, heading: string, detail: string) {
@@ -115,15 +115,16 @@ function render() {
 
 function playback() {
   cancel(); game.listen(); render();
-  message('先聽聽', '夥伴正在演奏…', '記住亮起的順序，演奏結束後就輪到你。');
+  const timing = echoTiming(game.round);
+  message('先聽聽', '夥伴正在演奏…', '記住亮起的順序；第三段起節奏逐漸加快。');
   game.sequence.forEach((note, i) => later(() => {
-    flash(note);
+    flash(note, timing.flash);
     el('detail').textContent = `${i + 1} / ${game.sequence.length} · ${cast[note].name} ${shapes[note]}`;
-  }, 650 + i * 760));
+  }, 650 + i * timing.beat));
   later(() => {
     game.phase = 'answer'; render();
     message('換你回應', '把剛才的旋律，接回來。', '點選夥伴，或按鍵盤 1、2、3、4。不用趕時間。');
-  }, 650 + game.sequence.length * 760);
+  }, 650 + game.sequence.length * timing.beat);
 }
 
 function saveBest() {

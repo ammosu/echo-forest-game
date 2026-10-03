@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { echoTiming } from '../src/echo-engine';
 
 // Observe actual on-screen cues; drive normal buttons/keys without changing game state.
 async function listen(page: Page, length: number) {
@@ -8,7 +9,10 @@ async function listen(page: Page, length: number) {
     const lit = page.locator('.echo-musician.singing');
     await expect(lit).toHaveCount(1);
     sequence.push(Number(await lit.getAttribute('data-note')));
-    await page.clock.runFor(760);
+    const timing = echoTiming(length - 1);
+    await page.clock.runFor(timing.flash);
+    await expect(page.locator('.echo-musician.singing')).toHaveCount(0);
+    await page.clock.runFor(timing.beat - timing.flash);
   }
   await expect(page.locator('.echo-concert')).toHaveAttribute('data-phase', 'answer');
   return sequence;

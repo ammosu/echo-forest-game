@@ -190,9 +190,9 @@ export class DefenseEngine {
       if (this.remaining > 0 && this.spawn <= 0) {
         const n = this.remaining,
           kind =
-            this.wave >= 3 && n % 4 === 0
+            this.wave >= 3 && n % (this.wave >= 4 ? 3 : 4) === 0
               ? 2
-              : this.wave >= 2 && n % 3 === 0
+              : this.wave >= 2 && n % (this.wave >= 4 ? 2 : 3) === 0
                 ? 1
                 : 0;
         const hp = [75, 50, 200][kind];
@@ -206,7 +206,7 @@ export class DefenseEngine {
           attack: 0,
         });
         this.remaining--;
-        this.spawn = 1.9;
+        this.spawn = [1.9, 1.9, 1.75, 1.6, 1.45][this.wave - 1];
       }
     }
     for (const p of this.plants) {
@@ -278,7 +278,7 @@ export class DefenseEngine {
         this.message = "五波全數擊退，森林平安了！";
       } else {
         this.phase = "build";
-        this.timer = 10;
+        this.timer = this.wave < 2 ? 10 : this.wave < 4 ? 8 : 6;
         this.resources += 65;
         this.message = "守住了！獲得 65 露珠，補好防線迎接下一波。";
       }

@@ -1,3 +1,5 @@
+import { course } from './racing-courses';
+import { ramps } from './racing-jumps';
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
@@ -27,6 +29,7 @@ import {
   ROAD_HALF_WIDTH as HALF_WIDTH,
   WORLD_SCALE as SCALE,
   WALL_LANE,
+  WORLD_PER_DISTANCE,
 } from "./racing-collision";
 
 const portraits = import.meta.glob(
@@ -38,6 +41,7 @@ const portraits = import.meta.glob(
 ) as Record<string, string>;
 const UP = new THREE.Vector3(0, 1, 0);
 const roadColors = ["#b6a17a", "#8f9e82", "#c5aa79"];
+const carGlideLabel = (s: RaceSnapshot) => s.flight.gliding ? '滑翔中 · ↑ 俯衝 ／ ↓ 拉升' : '飛躍中 · 輕轉方向，落回路面';
 const leafColors = ["#608452", "#327963", "#b2b55a"];
 
 /** One shared distance-to-world mapping for track, cars, scenery and gameplay props. */
@@ -69,6 +73,7 @@ export function raceFrame(distance: number, lane = 0) {
 type Kart = {
   group: THREE.Group;
   body: THREE.Group;
+  glider: THREE.Group;
   driver: THREE.Sprite;
   front: THREE.Texture;
   back: THREE.Texture;
@@ -158,6 +163,7 @@ export class RacingView {
     this.buildGuardrails();
     this.batchScenery();
     this.buildProps();
+    this.buildRamps();
     this.scene.add(this.pickupBurst);
     for (let i = 0; i < 16; i++)
       this.mesh(
@@ -318,7 +324,7 @@ export class RacingView {
       this.box(start, "#dec383", side * 6.25, 0.4, 0, 1, 0.8, 1);
     }
     this.box(start, "#345b43", 0, 6.6, 0, 13, 1.15, 0.6);
-    this.sign(start, "晨光盃  /  START", 0, 6.6, 0.34, 8, 0.85);
+    this.sign(start, course.name + "  /  START", 0, 6.6, 0.34, 8, 0.85);
     for (let j = 0; j < 16; j++)
       this.box(
         start,
@@ -553,6 +559,44 @@ export class RacingView {
     group.rotation.y = f.heading;
     return f;
   }
+  private buildRamps() {
+    ramps.forEach((r, index) => {
+      const positions: number[] = [], colors: number[] = [];
+      const point = (t: number, lane: number, height: number) => raceFrame(r.z + t * r.length, lane).position.setY(height + .035);
+      const triangle = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, color: string) => {
+        const col = new THREE.Color(color);
+        for (const p of [a, b, c]) { positions.push(p.x, p.y, p.z); colors.push(col.r, col.g, col.b); }
+      };
+      for (let i = 0; i < 16; i++) {
+        const t = i / 16, u = (i + 1) / 16;
+        const a = point(t, r.x - r.halfWidth, t * r.height), b = point(t, r.x + r.halfWidth, t * r.height);
+        const c = point(u, r.x - r.halfWidth, u * r.height), d = point(u, r.x + r.halfWidth, u * r.height);
+        const color = i % 2 ? '#9d693c' : '#c18b51';
+        triangle(a, c, b, color); triangle(b, c, d, color);
+        for (const side of [-1, 1]) {
+          const lane = r.x + side * r.halfWidth;
+          const lowA = point(t, lane, 0), lowB = point(u, lane, 0);
+          const highA = point(t, lane, t * r.height), highB = point(u, lane, u * r.height);
+          triangle(lowA, highA, highB, '#715136'); triangle(lowA, highB, lowB, '#715136');
+        }
+      }
+      // Painted forward arrows distinguish jump ramps from flat boost pads.
+      for (const t of [.22, .48, .74]) {
+        triangle(point(t, r.x - .16, t * r.height + .012), point(t + .15, r.x, (t + .15) * r.height + .012), point(t, r.x + .16, t * r.height + .012), '#ffe89b');
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); geo.computeVertexNormals();
+      this.geometries.set(`ramp-${index}`, geo);
+      const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .9, side: THREE.DoubleSide });
+      this.extraMaterials.push(mat);
+      const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = true; this.scene.add(mesh);
+      const sign = new THREE.Group(); this.scene.add(sign); this.place(sign, r.z - 250, r.x > 0 ? 1.3 : -1.3);
+      this.box(sign, '#655038', 0, 1.2, 0, .1, 2.4, .1);
+      this.box(sign, '#315c4c', 0, 2.35, 0, 3.3, .8, .12);
+      this.sign(sign, '↑ ' + r.name, 0, 2.35, .07, 3.1, .48);
+    });
+  }
   private buildProps() {
     for (const p of obstacles) {
       const g = new THREE.Group();
@@ -766,6 +810,29 @@ export class RacingView {
       driver.position.set(0, 1.65, 0.05);
       driver.scale.set(1.9, 2.28, 1);
       body.add(driver);
+      const glider = new THREE.Group();
+      glider.position.y = 2.65; glider.visible = false; group.add(glider);
+      const wingPositions: number[] = [], wingColors: number[] = [];
+      const wingTriangle = (a: number[], b: number[], c: number[], tint: string) => {
+        const col = new THREE.Color(tint);
+        for (const p of [a, b, c]) { wingPositions.push(...p); wingColors.push(col.r, col.g, col.b); }
+      };
+      for (const side of [-1, 1]) {
+        const nose = [0, .7, -1.4], tip = [side * 2.8, 0, .9], tail = [0, .2, .55], rib = [side * 1.3, .4, .05];
+        wingTriangle(nose, tip, rib, color); wingTriangle(tip, tail, rib, '#f7dfa0'); wingTriangle(tail, nose, rib, color);
+      }
+      const wingGeo = new THREE.BufferGeometry();
+      wingGeo.setAttribute('position', new THREE.Float32BufferAttribute(wingPositions, 3));
+      wingGeo.setAttribute('color', new THREE.Float32BufferAttribute(wingColors, 3)); wingGeo.computeVertexNormals();
+      this.geometries.set(`glider-${i}`, wingGeo);
+      const wingMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: .75 });
+      this.extraMaterials.push(wingMat);
+      const canopy = new THREE.Mesh(wingGeo, wingMat); canopy.castShadow = true; canopy.receiveShadow = true; glider.add(canopy);
+      const wirePoints = [[0,-1.35,.7],[0,.7,-1.4], [0,-1.35,.7],[-2.8,0,.9], [0,-1.35,.7],[2.8,0,.9], [-2.8,0,.9],[0,.7,-1.4], [0,.7,-1.4],[2.8,0,.9]];
+      const wireGeo = new THREE.BufferGeometry().setFromPoints(wirePoints.map(p => new THREE.Vector3(...p as [number,number,number])));
+      this.geometries.set(`glider-frame-${i}`, wireGeo);
+      const wireMat = new THREE.LineBasicMaterial({ color: '#eed9ab' }); this.extraMaterials.push(wireMat);
+      glider.add(new THREE.LineSegments(wireGeo, wireMat));
       const flame = new THREE.Group();
       body.add(flame);
       for (const x of [-0.55, 0.55]) {
@@ -842,7 +909,8 @@ export class RacingView {
       this.batchParts(flame);
       const fade: THREE.Material[] = [];
       if (i > 0) {
-        fade.push(mat);
+        fade.push(mat, wingMat, wireMat);
+        wingMat.transparent = true; wireMat.transparent = true;
         body.traverse((o) => {
           if (!(o instanceof THREE.Mesh)) return;
           const copy = (o.material as THREE.Material).clone();
@@ -855,6 +923,7 @@ export class RacingView {
       return {
         group,
         body,
+        glider,
         driver,
         ...images[i],
         flame,
@@ -903,6 +972,11 @@ export class RacingView {
       s.pickupSerial,
       s.stun,
       s.impactTime,
+      s.flight.height,
+      s.flight.trick,
+      s.flight.trickAge,
+      s.flight.airAge,
+      s.flight.pitch,
       this.width,
       this.height,
       this.reduced.matches,
@@ -911,15 +985,16 @@ export class RacingView {
     if (key === this.renderKey) return;
     this.renderKey = key;
     const player = raceFrame(s.distance, s.x);
+    const cameraLift = this.reduced.matches ? 0 : s.flight.height * .45;
     const cameraPosition = player.position
       .clone()
       .addScaledVector(player.tangent, -12.5)
-      .add(new THREE.Vector3(0, 6.6, 0));
+      .add(new THREE.Vector3(0, 6.6 + cameraLift, 0));
     // Aim below the horizon so the whole player kart stays in frame; narrow
     // portrait stages need a steeper tilt to lift the kart above the HUD.
     const tilt = this.camera.aspect < 1 ? -4.2 : -3.2;
     const target = raceFrame(s.distance + 850, s.x * 0.3).position.add(
-      new THREE.Vector3(0, tilt, 0),
+      new THREE.Vector3(0, tilt + cameraLift, 0),
     );
     if (
       !this.cameraReady ||
@@ -959,6 +1034,17 @@ export class RacingView {
       const car = i === 0 ? s : s.opponents[i - 1];
       kart.group.visible = i === 0 || !s.opponents[i - 1].finished;
       const frame = this.place(kart.group, car.distance, car.x);
+      kart.group.position.y = car.flight.height;
+      kart.glider.visible = car.flight.gliding;
+      const open = this.reduced.matches ? 1 : Math.min(1, car.flight.airAge / .25);
+      kart.glider.scale.set(Math.max(.05, open), .7 + open * .3, 1);
+      kart.glider.rotation.z = this.reduced.matches ? 0 : i === 0 ? -axis * .12 : 0;
+      kart.glider.rotation.x = this.reduced.matches ? 0 : car.flight.pitch * .12;
+      const z = mod(car.distance, TRACK_LENGTH);
+      const slope = ramps.find(r => z >= r.z && z < r.z + r.length && Math.abs(car.x - r.x) <= r.halfWidth);
+      kart.body.rotation.x = this.reduced.matches ? 0 : car.flight.airborne
+        ? car.flight.gliding ? car.flight.pitch * .12 : clamp(car.flight.velocity * .035, -.2, .2)
+        : slope ? Math.atan2(slope.height, slope.length * WORLD_PER_DISTANCE) : 0;
       if (i > 0) {
         // Chase-camera occlusion: an opponent between the lens and the player
         // turns see-through so the player's own kart always stays readable.
@@ -973,6 +1059,7 @@ export class RacingView {
         }
       }
       kart.body.rotation.y = i === 0 ? axis * (s.drifting ? -0.3 : -0.08) : 0;
+      if (!this.reduced.matches && car.flight.airborne && car.flight.trick) kart.body.rotation.y += Math.min(1, car.flight.trickAge / .5) * Math.PI * 2;
       kart.body.rotation.z =
         i === 0 && !this.reduced.matches
           ? -axis * Math.min(s.speed / 3600, 1) * 0.035
@@ -1111,6 +1198,7 @@ export class RacingView {
       c.fill();
       c.stroke();
     };
+    ramps.forEach(r => dot(r.z, '#f3b75f', 2.5));
     s.opponents.forEach((o, i) =>
       dot(o.distance, vehicles[entries[i + 1].vehicleId].color, 3),
     );
@@ -1141,6 +1229,12 @@ export class RacingView {
       c.strokeText(label, 320, h * 0.675);
       c.fillText(label, 320, h * 0.675);
     }
+    if (s.flight.airborne && s.phase === 'racing' && s.stun <= 0) {
+      c.textAlign = 'center'; c.font = 'bold 14px sans-serif';
+      c.strokeStyle = '#294735'; c.lineWidth = 3; c.fillStyle = '#ffe6a1';
+      c.strokeText(s.flight.trick ? '特技成功 · 穩住落點！' : s.flight.trickWindow > 0 ? '現在按甩尾鍵 · 起跳特技！' : carGlideLabel(s), 320, h * .675);
+      c.fillText(s.flight.trick ? '特技成功 · 穩住落點！' : s.flight.trickWindow > 0 ? '現在按甩尾鍵 · 起跳特技！' : carGlideLabel(s), 320, h * .675);
+    }
     if (s.offroad && s.stun <= 0 && s.phase === "racing") {
       c.textAlign = "center";
       c.font = "bold 12px sans-serif";
@@ -1170,6 +1264,8 @@ export class RacingView {
         position: k.group.position.toArray(),
         heading: k.group.rotation.y,
         boost: k.flame.visible,
+        glider: k.glider.visible,
+        gliderScale: k.glider.scale.x,
         sparks: k.sparks.visible,
         impactBurst: k.impactBurst.visible,
         stunStars: k.stunStars.visible,
@@ -1180,13 +1276,14 @@ export class RacingView {
         glow: g.children[2].scale.x,
         rotation: g.children[0].rotation.y,
       })),
+      ramps: ramps.map(r => ({ ...r, position: raceFrame(r.z, r.x).position.toArray() })),
       pads: this.pads.map((g) => g.position.toArray()),
       seam: raceFrame(0).position.distanceTo(raceFrame(TRACK_LENGTH).position),
       playerExpected: this.lastState
         ? raceFrame(
             this.lastState.distance,
             this.lastState.x,
-          ).position.toArray()
+          ).position.setY(this.lastState.flight.height).toArray()
         : [],
     };
   }

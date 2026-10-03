@@ -1,3 +1,4 @@
+import { course } from './racing-courses';
 /** Character identity, vehicle tuning, and art bindings remain separate.
  * The Three.js view composes independent vehicle geometry and original driver sprites.
  * Fixed entries can later support a picker without changing physics or character metadata. */
@@ -71,20 +72,7 @@ export interface Segment {
   mapX: number;
   mapY: number;
 }
-const controlPoints = [
-  [0, 0],
-  [0, -130],
-  [80, -235],
-  [220, -230],
-  [280, -110],
-  [225, 5],
-  [330, 120],
-  [250, 230],
-  [110, 220],
-  [5, 155],
-  [-105, 105],
-  [-90, 20],
-];
+const controlPoints = course.points;
 function point(t: number): [number, number] {
   const n = controlPoints.length,
     p = (t % 1) * n,

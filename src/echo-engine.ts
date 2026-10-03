@@ -1,3 +1,9 @@
+/** Keep the first two phrases gentle, then shorten both cue and silence. */
+export function echoTiming(round: number) {
+  const level = Math.max(0, Math.min(6, round - 2));
+  return { beat: 760 - level * 35, flash: 470 - level * 25 };
+}
+
 export type EchoPhase = 'ready' | 'listen' | 'answer' | 'retry' | 'between' | 'paused' | 'complete';
 
 /** Pure sequence rules. The UI owns playback timing and cancellation. */

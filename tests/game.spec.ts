@@ -47,7 +47,9 @@ test('complete the actual level using keyboard input and save the result',async(
   await start(page);let held=false,releaseAt=0;let reachedCheckpoint=false;const began=Date.now();
   while(Date.now()-began<50000){
     const s=await snapshot(page);reachedCheckpoint ||= s.checkpoint;if(!s.running)break;
-    await page.keyboard.down('ArrowRight');
+    // Brake before landing beside a patrol, then jump again from stable ground.
+    const landingHazard = !s.grounded && s.vy > 0 && s.y > 230 && s.enemies.some(e => e.active && e.x - s.x > 0 && e.x - s.x < 85);
+    await page.keyboard[landingHazard ? 'up' : 'down']('ArrowRight');
     if(held&&Date.now()>=releaseAt){await page.keyboard.up('Space');held=false;}
     const jump=[250,950,1810,2530].some(x=>x-s.x>0&&x-s.x<58)||[700,1510,2310].some(x=>x-s.x>0&&x-s.x<31)||s.enemies.some(e=>e.active&&e.x-s.x>0&&e.x-s.x<58);
     if(s.grounded&&!held&&jump){await page.keyboard.down('Space');held=true;releaseAt=Date.now()+850;}
