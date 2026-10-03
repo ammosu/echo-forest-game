@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import background from '../assets/generated/forest-background.png?url';
-import idle from '../assets/sprites/extras/anbo_side.png?url';
-import runA from '../assets/sprites/extras/anbo_run_a.png?url';
-import runB from '../assets/sprites/extras/anbo_run_b.png?url';
+import anboHost from '../assets/sprites/1x/anbo.png?url';
+import anboHostBlink from '../assets/sprites/1x/anbo_blink.png?url';
 import owlUp from '../assets/sprites/extras/owl_flag_up.png?url';
 import owlDown from '../assets/sprites/extras/owl_flag_down.png?url';
 
@@ -23,6 +22,11 @@ const notePositions = [
   [2570,227],[2770,197],[3040,263],
 ];
 type Controls = { left: boolean; right: boolean; jump: boolean };
+// Side-view frames for every mascot: assets/sprites/side/<id>_<run_a|run_b|stand>.png (tools/mascots/side.py).
+const sideFrames = import.meta.glob('../assets/sprites/side/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+export const playableIds = [...new Set(Object.keys(sideFrames).map(path => path.split('/').pop()!.replace(/_(run_a|run_b|stand)\.png$/, '')))];
+/** Owl waits at the finish line; when Owl is the hero, Anbo takes the host spot. */
+export const hostOf = (id: string) => id === 'owl' ? 'anbo' : 'owl';
 export type Look = 'standard' | 'hd2d';
 class ForestScene extends Phaser.Scene {
   owner: ForestGame;
@@ -48,7 +52,8 @@ class ForestScene extends Phaser.Scene {
   ready = false; hasLoadError = false;
   constructor(owner: ForestGame) { super('forest'); this.owner = owner; }
   preload() {
-    this.load.image('forest', background); this.load.image('idle', idle); this.load.image('runA', runA); this.load.image('runB', runB); this.load.image('owlUp', owlUp); this.load.image('owlDown', owlDown);
+    this.load.image('forest', background); this.load.image('owlUp', owlUp); this.load.image('owlDown', owlDown); this.load.image('anboHost', anboHost); this.load.image('anboHostBlink', anboHostBlink);
+    for (const [path, url] of Object.entries(sideFrames)) this.load.image(path.split('/').pop()!.replace('.png', ''), url);
     this.load.on('loaderror', () => { this.hasLoadError = true; this.owner.emit({ type:'error', message:'有素材尚未載入，請確認網路後重新整理。' }); });
   }
   create() {
@@ -80,10 +85,10 @@ class ForestScene extends Phaser.Scene {
       const obj=this.enemies.create(start,294,'hazard') as Phaser.Physics.Arcade.Sprite;
       obj.setSize(20,15).setOffset(4,6); obj.setDepth(1); this.enemyRanges.push({obj,start,end,direction:1});
     });
-    this.player = this.physics.add.sprite(100,FLOOR,'idle').setOrigin(.5,1).setDepth(3);
+    this.player = this.physics.add.sprite(100,FLOOR,this.frame('stand')).setOrigin(.5,1).setDepth(3);
     this.player.setSize(18,34).setOffset(11,14); this.player.setMaxVelocity(190,620);
     this.player.setCollideWorldBounds(false);
-    this.anims.create({key:'run',frames:[{key:'runA'},{key:'runB'}],frameRate:9,repeat:-1});
+    for(const id of playableIds)this.anims.create({key:`${id}_run`,frames:[{key:`${id}_run_a`},{key:`${id}_run_b`}],frameRate:9,repeat:-1});
     this.physics.add.collider(this.player,this.platforms);
     this.physics.add.collider(this.player,this.moving);
     this.physics.add.collider(this.player,this.mushroom,()=>{
@@ -97,7 +102,7 @@ class ForestScene extends Phaser.Scene {
       if(body.velocity.y>80 && body.bottom<enemy.y+2) { enemy.disableBody(true,true); body.setVelocityY(-265); this.burst(enemy.x,enemy.y,0xc3d396,10); this.owner.tone('bounce'); }
       else this.hurt();
     });
-    this.owl=this.add.sprite(3140,FLOOR,'owlDown').setOrigin(.5,1).setDepth(2);
+    this.owl=this.add.sprite(3140,FLOOR,this.hostFrame(false)).setOrigin(.5,1).setDepth(2);
     this.flags=this.add.graphics().setDepth(1);
     this.cursor=this.input.keyboard!.addKeys({left:'LEFT',right:'RIGHT',up:'UP',space:'SPACE',a:'A',d:'D',w:'W'},false) as Record<string,Phaser.Input.Keyboard.Key>;
     // Phones get a 4:3 canvas and a closer camera over the same 360px-tall world.
@@ -108,9 +113,13 @@ class ForestScene extends Phaser.Scene {
     this.ready=true; this.physics.pause(); this.drawFlags(); this.owner.emit({type:'ready'}); this.sync();
     if(import.meta.env.DEV) {
       // Read-only diagnostics for browser verification; no teleport or win bypass.
-      (window as unknown as {__forest:unknown}).__forest = { snapshot: () => this.snapshot() };
+      (window as unknown as {__forest:unknown}).__forest = { snapshot: () => this.snapshot(), hero: () => ({ player: this.player.texture.key, host: this.owl.texture.key }) };
     }
   }
+  frame(kind:'run_a'|'run_b'|'stand'){return `${this.owner.character}_${kind}`;}
+  hostFrame(up:boolean){return hostOf(this.owner.character)==='owl'?(up?'owlUp':'owlDown'):(up?'anboHostBlink':'anboHost');}
+  /** Swap the hero (and the finish host) before a run; textures are all preloaded. */
+  applyCharacter(){this.player.anims.stop();this.player.setTexture(this.frame('stand'));this.owl.setTexture(this.hostFrame(false));}
   /** Octopath-style diorama: soft backdrop, crisp sprites, bloom, warm grade, vignette. */
   applyLook() {
     const hd=this.owner.look==='hd2d', cam=this.cameras.main;
@@ -175,7 +184,7 @@ class ForestScene extends Phaser.Scene {
   }
   respawn() {
     const x=this.checkpoint?1745:100;
-    this.player.setPosition(x,FLOOR);(this.player.body as Phaser.Physics.Arcade.Body).reset(x,FLOOR);this.player.setVelocity(0,0);this.player.setAlpha(1).setAngle(0).setFlipX(false);this.player.anims.stop();this.player.setTexture('idle');
+    this.player.setPosition(x,FLOOR);(this.player.body as Phaser.Physics.Arcade.Body).reset(x,FLOOR);this.player.setVelocity(0,0);this.player.setAlpha(1).setAngle(0).setFlipX(false);this.player.anims.stop();this.player.setTexture(this.frame('stand'));
     this.groundedAt=-1000;this.jumpQueuedAt=-1000;this.prevJump=false;this.owner.releaseControls();
   }
   collectNotes() {
@@ -199,10 +208,10 @@ class ForestScene extends Phaser.Scene {
   }
   finish(won:boolean) {
     if(!this.owner.running)return;
-    this.owner.running=false;this.owner.paused=false;this.player.setVelocity(0,0);this.player.setAlpha(1).setAngle(0);this.player.anims.stop();this.player.setTexture('idle');this.physics.pause();this.owner.releaseControls();this.sync();
+    this.owner.running=false;this.owner.paused=false;this.player.setVelocity(0,0);this.player.setAlpha(1).setAngle(0);this.player.anims.stop();this.player.setTexture(this.frame('stand'));this.physics.pause();this.owner.releaseControls();this.sync();
     let best:Best|undefined;
     if(won){
-      this.owl.setTexture('owlUp');this.owner.tone('win');
+      this.owl.setTexture(this.hostFrame(true));this.owner.tone('win');
       const current={notes:this.notesCollected,seconds:Math.round(this.seconds*10)/10};
       try{const value=JSON.parse(localStorage.getItem('echo-forest-best-v1')||'null') as Best|null;
         if(value && Number.isFinite(value.notes) && Number.isFinite(value.seconds) && value.notes>=0 && value.notes<=notePositions.length && value.seconds>=0)best=value;
@@ -236,9 +245,9 @@ class ForestScene extends Phaser.Scene {
     body.setVelocityX(Phaser.Math.Linear(body.velocity.x,axis*180,Math.min(1,dt*(axis?14:20))));
     if(Math.abs(body.velocity.x)<2 && !axis)body.setVelocityX(0);
     if(axis)this.player.setFlipX(axis<0);
-    if(!grounded){this.player.anims.stop();this.player.setTexture('runB');this.player.setAngle(body.velocity.y<0?(this.player.flipX?8:-8):0);}
-    else if(Math.abs(body.velocity.x)>10){this.player.setAngle(0);this.player.play('run',true);}
-    else{this.player.setAngle(0);this.player.anims.stop();this.player.setTexture('idle');}
+    if(!grounded){this.player.anims.stop();this.player.setTexture(this.frame('run_b'));this.player.setAngle(body.velocity.y<0?(this.player.flipX?8:-8):0);}
+    else if(Math.abs(body.velocity.x)>10){this.player.setAngle(0);this.player.play(`${this.owner.character}_run`,true);}
+    else{this.player.setAngle(0);this.player.anims.stop();this.player.setTexture(this.frame('stand'));}
     this.player.setAlpha(this.simTime<this.invulnerableUntil?(Math.floor(this.simTime/100)%2?.4:1):1);
     this.collectNotes();
     if(this.player.x<14){this.player.x=14;body.setVelocityX(0);}
@@ -247,14 +256,14 @@ class ForestScene extends Phaser.Scene {
     if(this.player.x>3105 && this.player.y>246){this.finish(true);return;}
     this.enemyRanges.forEach(e=>{if(!e.obj.active)return;if(e.obj.x>e.end)e.direction=-1;if(e.obj.x<e.start)e.direction=1;e.obj.setVelocityX(e.direction*33);e.obj.setFlipX(e.direction<0);});
     if(this.moving.x>2240)this.moving.setVelocityX(-36);if(this.moving.x<2120)this.moving.setVelocityX(36);
-    this.owl.setTexture(Math.floor(this.simTime/650)%2?'owlUp':'owlDown');
+    this.owl.setTexture(this.hostFrame(Math.floor(this.simTime/650)%2===1));
     this.effects.clear();this.particles=this.particles.filter(p=>p.life>0);for(const p of this.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=70*dt;this.effects.fillStyle(p.color,Math.min(1,p.life*3));this.effects.fillRect(Math.round(p.x),Math.round(p.y),2,2);}
     if(this.simTime-this.tickAt>100){this.tickAt=this.simTime;this.sync();}
   }
 }
 export class ForestGame {
   controls:Controls={left:false,right:false,jump:false};running=false;paused=false;
-  look:Look='standard';
+  look:Look='standard';character='anbo';
   readonly compact=window.matchMedia('(max-width: 750px) and (orientation: portrait)').matches;
   readonly reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   scene:ForestScene; game:Phaser.Game; private sound=false;private audio?:AudioContext;
@@ -263,6 +272,7 @@ export class ForestGame {
     this.game=new Phaser.Game({type:Phaser.AUTO,parent,width:640,height:this.compact?480:360,pixelArt:true,roundPixels:true,backgroundColor:'#173c36',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{gravity:{x:0,y:820},debug:false}},render:{antialias:false},audio:{noAudio:true},scene:[this.scene]});
   }
   start(){this.ensureAudio();this.scene.start();}
+  setCharacter(id:string){if(!playableIds.includes(id)||this.running)return;this.character=id;if(this.scene.ready)this.scene.applyCharacter();}
   setLook(look:Look){this.look=look;if(this.scene.ready)this.scene.applyLook();}
   setPaused(paused:boolean){if(!this.running || this.paused===paused)return;this.paused=paused;this.releaseControls();if(paused)this.scene.physics.pause();else this.scene.physics.resume();this.emit({type:'pause',paused});}
   releaseControls(){this.controls={left:false,right:false,jump:false};if(this.scene.cursor)Object.values(this.scene.cursor).forEach(k=>k.reset());document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}

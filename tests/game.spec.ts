@@ -17,7 +17,7 @@ async function walkUntil(page:Page, target:number, jumpStumps=true) {
 test('loads all assets, collects notes, supports jump height, pause and reset',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await start(page);
-  await expect(page.locator('img')).toHaveCount(12);
+  await expect(page.locator('img')).toHaveCount(24);
   expect(await page.locator('img').evaluateAll(imgs=>imgs.every(i=>i.complete&&i.naturalWidth>0))).toBe(true);
   // Stop before the stump without the helper jumping; this test presses jump itself.
   await walkUntil(page,196,false);expect((await snapshot(page)).notes).toBe(1);
@@ -59,6 +59,23 @@ test('complete the actual level using keyboard input and save the result',async(
   const best=await page.evaluate(()=>JSON.parse(localStorage.getItem('echo-forest-best-v1')||'null'));expect(best.notes).toBe(s.notes);expect(best.seconds).toBeGreaterThan(10);
   await page.screenshot({path:'tests/evidence/completed.png',fullPage:true});
   await page.getByRole('button',{name:'再冒險一次'}).click();expect((await snapshot(page)).checkpoint).toBe(false);expect((await snapshot(page)).notes).toBe(0);
+});
+test('character select swaps the hero sprite, host and labels, and is remembered',async({page})=>{
+  await page.goto('/');await expect(page.getByRole('button',{name:'開始冒險'})).toBeEnabled();
+  await expect(page.getByRole('radio')).toHaveCount(11);
+  await page.getByRole('radio',{name:/^Anka/}).click();
+  await expect(page.getByRole('radio',{name:/^Anka/})).toHaveAttribute('aria-checked','true');
+  await expect(page.locator('#picker-title')).toHaveText('Anka・水豚');
+  await page.keyboard.press('ArrowRight');await expect(page.getByRole('radio',{name:/^Anzo/})).toHaveAttribute('aria-checked','true');
+  await page.screenshot({path:'tests/evidence/character-select.png'});
+  await page.keyboard.press('Enter');await expect.poll(async()=> (await snapshot(page)).grounded).toBe(true);
+  expect(await page.evaluate(()=>(window as any).__forest.hero())).toEqual({player:'anzo_stand',host:'owlDown'});
+  await page.keyboard.down('ArrowRight');await page.waitForTimeout(300);
+  expect((await page.evaluate(()=>(window as any).__forest.hero())).player).toMatch(/^anzo_run_/);await page.keyboard.up('ArrowRight');
+  await page.reload();await expect(page.getByRole('radio',{name:/^Anzo/})).toHaveAttribute('aria-checked','true');
+  await page.getByRole('radio',{name:/^Owl/}).click();await expect(page.locator('#checkpoint-label')).toHaveText('目標：找到 Anbo');
+  await page.getByRole('button',{name:'開始冒險'}).click();await expect.poll(async()=> (await snapshot(page)).grounded).toBe(true);
+  expect(await page.evaluate(()=>(window as any).__forest.hero())).toEqual({player:'owl_stand',host:'anboHost'});
 });
 test('eight kart views are selectable and workshop pauses then resumes play',async({page})=>{
   await start(page);await page.getByRole('button',{name:'賽車工坊'}).click();expect((await snapshot(page)).paused).toBe(true);
