@@ -2,3 +2,44 @@
 @media(max-width:850px){.echo-conductor{position:static;margin:0 auto 12px;justify-content:center;width:auto}.echo-conductor img{width:30px;height:36px}.echo-conductor span{max-width:none}.echo-message{min-height:135px}.echo-moon{right:8%;width:40px;height:40px}.echo-musicians{gap:8px}.echo-controls{flex-wrap:wrap;justify-content:center}.echo-controls>span{margin-left:0;width:100%;text-align:center}.echo-guide{padding:20px 0;gap:12px}.echo-guide>div{gap:10px}}
 @media(max-width:540px){.site-header{gap:20px;padding:20px}.site-header nav{width:100%;justify-content:space-between;gap:9px;margin:0}.echo-main{padding:25px 12px 0}.echo-intro{margin-bottom:22px}.echo-intro h1{font-size:33px;letter-spacing:3px}.echo-intro .chapter{font-size:9px}.echo-intro p:last-child{font-size:11px}.echo-best{font-size:10px}.echo-best strong{font-size:24px}.echo-best small{font-size:10px}.echo-toolbar{padding:10px 12px;flex-wrap:wrap;font-size:11px}.echo-toolbar>div{gap:15px}.echo-toolbar button{font-size:11px}.echo-stage{padding:16px 9px;min-height:0}.echo-message{min-height:136px}.echo-message h2{font-size:20px;letter-spacing:0}.echo-message p{max-width:280px;margin:auto;font-size:11px;min-height:40px}.echo-musicians{gap:0}.echo-musician{padding:8px 1px}.echo-portrait{height:93px}.echo-portrait img{width:70px;height:84px}.echo-plinth{top:107px;width:76px;height:26px;border-bottom-width:6px}.echo-note{font-size:20px}.echo-musician strong{font-size:15px;margin-top:16px}.echo-instrument{font-size:10px}.echo-stage:after{bottom:-190px}.echo-controls{gap:12px;padding:16px 12px}.echo-controls button{padding:10px 13px}.echo-controls>span{font-size:11px}.echo-guide{gap:8px}.echo-guide>div{display:block;flex:1}.echo-guide>div>span{font-size:17px}.echo-guide p{font-size:10px}.echo-main footer{font-size:10px;gap:10px}}
 @media(prefers-reduced-motion:reduce){.echo-musician.singing .echo-portrait,.echo-musician.singing .echo-note{transform:none}}
+/* Pixel gems, a status-style action while listening and a finale badge. */
+.echo-conductor{width:auto}.echo-conductor span{max-width:none;white-space:nowrap}
+.echo-note img{width:34px;height:34px;image-rendering:pixelated;display:block}.echo-note{opacity:.55}.echo-musician.singing .echo-note{text-shadow:none;filter:drop-shadow(0 0 10px var(--note-color))}
+.echo-controls .echo-primary:disabled{opacity:1;background:#f3d48414;border:1px dashed #f3d48499;color:#f3d484;font-weight:500;cursor:default}
+.echo-controls .echo-primary:disabled:before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#f3d484;margin-right:9px;vertical-align:1px;animation:echo-blink 1s ease-in-out infinite}
+@keyframes echo-blink{50%{opacity:.25}}
+.echo-concert[data-phase=listen] .echo-musician:not(.singing) .echo-portrait{filter:brightness(.72) saturate(.8)}
+.echo-concert[data-phase=answer] .echo-plinth{box-shadow:0 7px 0 #162e2288,0 0 0 2px color-mix(in srgb,var(--note-color) 70%,transparent),0 0 18px color-mix(in srgb,var(--note-color) 35%,transparent)}
+.echo-concert[data-phase=answer] .echo-musician{cursor:pointer}.echo-concert[data-phase=answer] .echo-note{opacity:.9}
+.echo-concert[data-phase=answer] .echo-message>span,.echo-concert[data-phase=retry] .echo-message>span{display:inline-block;background:#f3d484;color:#243c2f;padding:3px 12px;border-radius:12px;letter-spacing:1px;font-weight:700}
+.echo-finale{position:absolute;right:5%;top:18px;width:130px;height:130px;image-rendering:pixelated;opacity:0;transform:scale(.6) rotate(-8deg);transition:opacity .4s,transform .5s cubic-bezier(.3,1.6,.5,1);pointer-events:none;filter:drop-shadow(0 0 22px #f3d48466)}
+.echo-concert[data-phase=complete] .echo-finale{opacity:1;transform:none}
+.echo-concert[data-phase=complete] .echo-plinth{background:var(--note-color);box-shadow:0 0 26px color-mix(in srgb,var(--note-color) 45%,transparent)}.echo-concert[data-phase=complete] .echo-note{opacity:1}
+.echo-concert[data-phase=complete] .echo-message h2{font-size:32px;color:#ffe9a0;text-shadow:0 0 18px #f3d48466}
+@media(max-width:850px){.echo-finale{width:84px;height:84px;right:3%;top:8px}}
+@media(max-width:540px){.echo-note img{width:26px;height:26px}.echo-finale{width:64px;height:64px;top:6px;right:6px}.echo-concert[data-phase=complete] .echo-message h2{font-size:24px}}
+@media(prefers-reduced-motion:reduce){.echo-controls .echo-primary:disabled:before{animation:none}.echo-finale{transition:none}}
+/* Round 2: status reads as status, replay is the live action, brighter secondary text. */
+.echo-controls .echo-primary:disabled{border:0;background:none;min-width:0;padding-left:4px;padding-right:4px;text-align:left}
+.echo-concert:is([data-phase=answer],[data-phase=retry]) #replay:not(:disabled){border-color:#f3d484;color:#ffe9a0}
+.echo-instrument{color:#e1ead7}.echo-controls>span{color:#d3dfcb}.echo-musician strong{text-shadow:0 1px 3px #0f2a20}
+.echo-toolbar button:disabled{opacity:.32;cursor:default}
+.echo-stage:after{background:repeating-radial-gradient(ellipse at center,#4b594022 0 34px,#89956822 35px 37px),linear-gradient(#6c7250,#263e2e)}
+.echo-concert[data-phase=answer] .echo-plinth{box-shadow:0 7px 0 #162e2288,0 0 0 2px var(--note-color)}
+.echo-finale{width:104px;height:104px;right:auto;left:calc(50% - 330px);top:28px}
+@media(max-width:850px){.echo-finale{left:auto;right:3%;width:84px;height:84px;top:8px}}
+@media(max-width:540px){.echo-message{min-height:118px}.echo-message h2{margin:10px 0 6px}.echo-stage{padding:12px 9px 10px}.echo-conductor{margin-bottom:6px}.echo-progress{margin-top:6px}.echo-controls{padding:10px 12px 14px;gap:10px}.echo-controls>span{order:-1;margin-bottom:2px;color:#ffe9a0}.echo-finale{width:60px;height:60px;top:4px;right:6px}.echo-intro{margin-bottom:14px}.echo-intro p:last-child{display:none}}
+@media(min-width:851px){.echo-finale{left:calc(50% + 200px)}}
+/* Round 3: badge sits beside the finale title, larger supporting text, slimmer phone header. */
+.echo-finale{position:static;display:none;width:96px;height:96px;transform:none;opacity:1;transition:none;grid-row:1/4}
+.echo-concert[data-phase=complete] .echo-message{display:grid;grid-template-columns:auto auto;justify-content:center;align-items:center;column-gap:22px;text-align:left}
+.echo-concert[data-phase=complete] .echo-finale{display:block;animation:echo-pop .5s cubic-bezier(.3,1.6,.5,1)}
+.echo-concert[data-phase=complete] .echo-message>span{justify-self:start}
+@keyframes echo-pop{from{transform:scale(.5) rotate(-10deg);opacity:0}}
+.echo-concert[data-phase=complete] #replay{display:none}
+.echo-message p{font-size:14px}.echo-instrument{font-size:13px}.echo-controls>span{font-size:14px}.echo-guide p{font-size:14px}.echo-conductor{font-size:12px}
+@media(max-width:850px){.echo-finale{width:84px;height:84px}}
+@media(max-width:540px){.site-header{padding:12px 16px;min-height:0;gap:8px}.echo-main{padding-top:14px}.echo-intro h1{font-size:28px}.echo-intro .chapter{margin-bottom:4px}
+.echo-concert[data-phase=complete] .echo-message{grid-template-columns:1fr;text-align:center;justify-items:center}.echo-concert[data-phase=complete] .echo-message>span{justify-self:center}.echo-finale{grid-row:auto;width:58px;height:58px;margin-bottom:4px}
+.echo-message p{font-size:12px}.echo-instrument{font-size:11px}.echo-controls>span{font-size:13px}.echo-guide p{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.echo-concert[data-phase=complete] .echo-finale{animation:none}}

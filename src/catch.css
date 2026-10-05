@@ -3,3 +3,38 @@
 @media(max-width:360px){.catch-picks{gap:5px}.catch-picks button{min-width:54px}.catch-intro h1{font-size:23px}.catch-toolbar>div{gap:10px}.catch-hud>div{padding-left:7px}}
 @media(max-height:550px) and (orientation:landscape){.catch-main{padding:8px;max-width:850px}.catch-intro,.catch-guide,.catch-main footer{display:none}.catch-stage{height:310px}.catch-panel{padding:14px 25px}.catch-panel h2{font-size:22px}.catch-panel p:not(.chapter){margin:5px 0 8px}.catch-picks{margin:8px 0}.catch-panel>small{margin-top:6px}.catch-player img{width:60px;height:72px}.catch-player{height:84px}.catch-caption{display:none}}
 @media(prefers-reduced-motion:reduce){.catch-player.catching img{transform:none}}
+/* Pixel notes, a visible catch halo and a lit lane that follows the player. */
+.catch-sun{display:none}
+.catch-lanes>span{transition:background .15s}.catch-lanes>span.active{background:linear-gradient(#fff3c000,#fff3c02e 60%,#fff3c047)}
+.catch-lanes b{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#14302799;border:1px solid #ecedc455;color:#f3ebc5;font-size:12px;font-weight:700}.catch-lanes span.active b{background:#f4d480;color:#243e30;border-color:#fff2bc}
+.falling-note{width:54px;height:54px;font-size:0;color:transparent;border:0!important;border-radius:0!important;background:var(--note) center/contain no-repeat!important;box-shadow:none!important;image-rendering:pixelated;filter:drop-shadow(0 0 8px #f6dc8399) drop-shadow(0 4px 2px #142d3366)}
+.falling-note.noise{width:46px;height:46px;background-image:var(--noise)!important;transform:translate(-50%,-50%);filter:drop-shadow(0 4px 2px #142d3366)}
+.catch-ring{position:absolute;top:8px;left:50%;width:76px;height:20px;transform:translateX(-50%);border-radius:50%;border:3px solid #ffe9a0;box-shadow:0 0 16px #ffe9a0aa,inset 0 0 8px #ffe9a066;z-index:2;opacity:.9}.catch-player.catching .catch-ring{border-color:#fff;box-shadow:0 0 26px #fff3b3}
+.catch-player i{background:#18382b66;border:0;box-shadow:none;height:14px;bottom:4px}
+.catch-line{border-top-color:#f3db8f66}
+.catch-legend{display:flex;justify-content:center;gap:18px;margin:10px 0 2px!important}.catch-legend span{display:flex;align-items:center;gap:6px;color:#f3e1a8;font-weight:700}.catch-legend img{width:28px;height:28px;image-rendering:pixelated}
+.catch-stars{display:flex;justify-content:center;gap:10px}.catch-stars img{width:46px;height:46px;image-rendering:pixelated;filter:grayscale(1) brightness(.45) opacity(.7)}.catch-stars img.on{filter:drop-shadow(0 0 10px #f6dc8399)}.catch-stars img:nth-child(2){transform:translateY(-8px)}
+.catch-next{color:#f3e1a8!important;font-weight:700;font-size:13px!important;margin-bottom:4px!important}
+.catch-results span:nth-child(2) strong{font-size:30px;color:#ffe9a0}
+.catch-guide b img{width:30px;height:30px;image-rendering:pixelated}
+@media(max-width:750px){.falling-note{width:46px;height:46px}.falling-note.noise{width:40px;height:40px}.catch-ring{width:62px}.catch-stars img{width:40px;height:40px}}
+.catch-shell[data-phase=complete] .catch-panel{padding:16px 26px 14px}.catch-shell[data-phase=complete] .catch-panel h2{font-size:24px;margin:4px 0 6px}.catch-shell[data-phase=complete] .catch-results{margin:10px 0;padding:10px 0}.catch-shell[data-phase=complete] .catch-panel p:not(.chapter){margin:6px 0 10px}.catch-shell[data-phase=complete] .catch-secondary{margin-top:6px}
+/* Let menu overlays grow the stage instead of clipping on small screens. */
+@media(max-width:750px){.catch-shell:is([data-phase=ready],[data-phase=complete]) .catch-stage{height:auto;min-height:400px}.catch-shell:is([data-phase=ready],[data-phase=complete]) .catch-overlay{position:relative;min-height:400px}.catch-shell[data-phase=complete] .catch-panel h2{font-size:21px}}
+/* Round 2: the catch point lives on the player; lanes light only when aligned. */
+.catch-line{border-top:1px dashed #f3db8f40}
+.catch-ring{top:2px;width:80px;height:22px;border:3px solid #ffe9a0;outline:2px solid #17372b;outline-offset:0;box-shadow:0 0 16px #ffe9a099;opacity:.55;transition:opacity .15s}.catch-player.in-lane .catch-ring{opacity:1}
+.catch-player:before{content:'';position:absolute;top:12px;left:50%;width:150px;height:3px;transform:translateX(-50%);background:linear-gradient(90deg,transparent,#ffe9a0,transparent);opacity:0;transition:opacity .15s}.catch-player.in-lane:before{opacity:.9}
+.catch-hint{position:absolute;top:-8px;left:calc(50% + 48px);font-style:normal;font-size:10px;color:#ffe9a0;white-space:nowrap;text-shadow:0 1px 2px #102a22}.catch-shell:not([data-phase=playing]) .catch-hint{display:none}
+#feedback{top:-50px;font-size:11px;padding:3px 9px}
+.catch-shell[data-phase=complete] .catch-touch,.catch-shell[data-phase=complete] .catch-caption{display:none}
+.catch-touch button[aria-pressed=true]{box-shadow:inset 0 -3px 0 #e2d493}
+@media(pointer:coarse){.catch-caption>span:first-child{display:none}}
+@media(max-width:750px){.catch-intro{margin-bottom:14px}.catch-intro h1{font-size:23px}.catch-intro p:last-child{display:none}.catch-stage{height:min(400px,50svh);min-height:330px}.catch-hud{padding:8px 14px}.catch-hud strong{font-size:19px}.catch-toolbar{padding:8px 14px}.catch-hint{display:none}}
+/* Round 3: quieter encouragement, HUD steps aside on results, one-column rules on phones. */
+#feedback.miss,#feedback.oops{top:auto;bottom:-26px;background:#13302699;border-color:transparent;font-size:10px;padding:2px 8px;color:#dfe8d6}
+.catch-shell[data-phase=complete] .catch-hud{display:none}
+@media(max-width:750px){.site-header{padding:12px 16px;min-height:0;gap:8px}.catch-main{padding-top:14px}.catch-intro .chapter{margin-bottom:2px}.catch-record strong{font-size:20px}
+.catch-stage{height:clamp(320px,calc(100svh - 360px),420px);min-height:0}
+.catch-guide{grid-template-columns:1fr;gap:14px}.catch-guide>div{display:flex;gap:12px;align-items:flex-start}.catch-guide b{display:block;margin:0}.catch-guide p{font-size:12px}.catch-guide strong{font-size:13px;margin-bottom:2px}}
+.catch-stars img{filter:grayscale(1) brightness(.85) opacity(.45) drop-shadow(0 0 1px #f3e1a8)}

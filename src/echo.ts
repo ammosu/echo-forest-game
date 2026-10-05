@@ -3,9 +3,12 @@ import './echo.css';
 import { EchoGame, echoTiming } from './echo-engine';
 import characters from '../assets/characters.json';
 import forest from '../assets/generated/forest-background.png';
+import finaleBadge from '../assets/ui/echo/finale-badge.png';
 
 const images = import.meta.glob('../assets/sprites/1x/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const sprite = (id: string) => images[`../assets/sprites/1x/${id}.png`];
+const gems = import.meta.glob('../assets/ui/echo/gem-*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const gem = (i: number) => gems[`../assets/ui/echo/gem-${i + 1}.png`];
 const ids = ['anje', 'ansey', 'anka', 'anzo'];
 const colors = ['#f3d484', '#bdb4ec', '#a9d5ad', '#91d5df'];
 const shapes = ['✦', '◆', '●', '▲'];
@@ -21,10 +24,10 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <section class="echo-concert" aria-label="森林回音遊戲" data-phase="ready">
       <div class="echo-toolbar"><span id="round">準備開演</span><div><button id="sound" aria-pressed="true">♫ 聲音開</button><button id="pause" disabled>暫停</button><button id="restart" disabled>重新開始</button></div></div>
       <div class="echo-stage" style="--forest:url('${forest}')">
-        <div class="echo-moon" aria-hidden="true"></div>
+        
         <div class="echo-conductor"><img src="${sprite('owl')}" alt="指揮 Owl"><span>Owl 的林間音樂會</span></div>
-        <div class="echo-message" role="status" aria-live="polite" aria-atomic="true"><span id="phase-label">跟著夥伴，一起演奏</span><h2 id="message">每一道回音，都是一份默契。</h2><p id="detail">記住亮起的夥伴，再依相同順序點選。從兩個音開始。</p></div>
-        <div class="echo-musicians">${cast.map((c, i) => `<button class="echo-musician" data-note="${i}" style="--note-color:${colors[i]}" aria-label="${i + 1} ${c.name} ${c.identity}" aria-disabled="false"><span class="echo-note" aria-hidden="true">${shapes[i]}</span><span class="echo-portrait"><img src="${sprite(c.id)}" alt=""></span><span class="echo-plinth" aria-hidden="true"></span><strong>${c.name}</strong><span class="echo-instrument">${c.identity}</span><kbd>${i + 1}</kbd></button>`).join('')}</div>
+        <div class="echo-message" role="status" aria-live="polite" aria-atomic="true"><img class="echo-finale" src="${finaleBadge}" alt="" aria-hidden="true"><span id="phase-label">跟著夥伴，一起演奏</span><h2 id="message">每一道回音，都是一份默契。</h2><p id="detail">記住亮起的夥伴，再依相同順序點選。從兩個音開始。</p></div>
+        <div class="echo-musicians">${cast.map((c, i) => `<button class="echo-musician" data-note="${i}" style="--note-color:${colors[i]}" aria-label="${i + 1} ${c.name} ${c.identity}" aria-disabled="false"><span class="echo-note" aria-hidden="true"><img src="${gem(i)}" alt=""></span><span class="echo-portrait"><img src="${sprite(c.id)}" alt=""></span><span class="echo-plinth" aria-hidden="true"></span><strong>${c.name}</strong><span class="echo-instrument">${c.identity}</span><kbd>${i + 1}</kbd></button>`).join('')}</div>
         <div class="echo-progress" id="progress" aria-label="尚未開始"></div>
       </div>
       <div class="echo-controls"><button class="echo-primary" id="action">開始合奏</button><button id="replay" disabled>再聽一次</button><span id="input-count">開始前，點夥伴試聽聲音</span></div>
@@ -108,13 +111,14 @@ function render() {
   action.textContent = ({ ready: '開始合奏', listen: '夥伴演奏中…', answer: '輪到你了', retry: '再試這一段', between: '接下一段', paused: '繼續合奏', complete: '再合奏一次' })[phase];
   buttons.forEach(b => b.setAttribute('aria-disabled', String(!['ready', 'answer', 'complete'].includes(phase))));
   const count = phase === 'answer' || phase === 'between' || phase === 'complete' ? game.cursor : 0;
-  el('input-count').textContent = phase === 'ready' ? '開始前，點夥伴試聽聲音' : phase === 'answer' ? `已回應 ${count} / ${game.sequence.length} 個音` : phase === 'paused' ? '繼續時會從頭重播這一段' : '鍵盤 1–4 演奏 · Esc 暫停';
+  el('input-count').textContent = ({ ready: '開始前，點夥伴試聽聲音', listen: '先聽旋律，稍後換你', answer: `已回應 ${count} / ${game.sequence.length} 個音`, retry: '按「再試這一段」重聽同一段', between: '準備好就接下一段', paused: '繼續時會從頭重播這一段', complete: '想再挑戰，就再合奏一次' })[phase];
   el('progress').innerHTML = Array.from({ length: game.sequence.length }, (_, i) => `<span class="${i < count ? 'filled' : ''}">${i < count ? '♪' : '·'}</span>`).join('');
   el('progress').setAttribute('aria-label', `已回應 ${count} / ${game.sequence.length} 個音`);
 }
 
 function playback() {
   cancel(); game.listen(); render();
+  if (game.round === 1 && matchMedia('(max-width:540px)').matches) document.querySelector('.echo-concert')!.scrollIntoView({ block: 'end', behavior: 'instant' });
   const timing = echoTiming(game.round);
   message('先聽聽', '夥伴正在演奏…', '記住亮起的順序；第三段起節奏逐漸加快。');
   game.sequence.forEach((note, i) => later(() => {
