@@ -1,16 +1,21 @@
 import { test, expect, type Page } from '@playwright/test';
-import { CatchGame, createChart } from '../src/catch-engine';
+import { CatchGame, createChart, CATCH_REACH, NOTE_WINDOW, NOISE_WINDOW, inReach } from '../src/catch-engine';
 import { build, preview } from 'vite';
 
 type Snapshot = ReturnType<CatchGame['snapshot']>;
+/** Like a player: stay under a caught note until its beat (and any decoy beside it) has passed the line. */
+function nextLane(game: CatchGame) {
+  const holding = game.chart.find(n => n.result === 'caught' && game.time < n.at + NOISE_WINDOW);
+  return (holding ?? game.chart.find(n => !n.settled && n.kind === 'note'))?.lane;
+}
 const state = (page: Page): Promise<Snapshot> => page.evaluate(() => (window as any).__catchState);
 
 test('whole chart is reachable, scores exact catches once, and completes all three phrases', () => {
   const game = new CatchGame(); game.start();
   const events: string[] = [];
   while (game.phase === 'playing') {
-    const next = game.chart.find(n => !n.settled && n.kind === 'note');
-    if (next) game.moveTo(next.lane);
+    const lane = nextLane(game);
+    if (lane !== undefined) game.moveTo(lane);
     events.push(...game.update(1 / 60).map(e => e.kind));
   }
   expect(game.caught).toBe(48); expect(game.missed).toBe(0); expect(game.noises).toBe(0);
@@ -24,7 +29,7 @@ test('whole chart is reachable, scores exact catches once, and completes all thr
 test('misses and noise reset streaks; pause freezes; restart resets chart and input', () => {
   const game = new CatchGame(); game.start();
   // Catch the first three normally, deliberately move to the fourth beat's noise.
-  while (game.time < 6.1) {
+  while (game.time < 6.2) {
     const next = game.chart.find(n => !n.settled && n.kind === (game.caught >= 3 ? 'noise' : 'note'));
     if (next) game.moveTo(next.lane);
     game.update(1 / 60);
@@ -48,8 +53,8 @@ test('normal keyboard controls complete 48-second song and persist record', asyn
   let captured = false;
   for (let step = 0; step < 300; step++) {
     const s = await state(page); if (s.phase === 'complete') break;
-    const next = s.upcoming.find(n => n.kind === 'note');
-    if (next) await page.keyboard.press(String(next.lane + 1));
+    const next = s.upcoming.find(n => n.kind === 'note' && n.at - s.time > -.05);
+    if (next && next.at - s.time < .5) await page.keyboard.press(String(next.lane + 1));
     await page.clock.runFor(180);
     if (s.time > 19 && !captured) { await page.screenshot({ path: 'tests/evidence/catch-playing.png', fullPage: true }); captured = true; }
   }
@@ -135,8 +140,8 @@ test('all existing games link to the new game without mobile page overflow', asy
 test('slower held-direction controls can reach every note at 30 fps', () => {
   const game = new CatchGame(); game.start();
   while (game.phase === 'playing') {
-    const next = game.chart.find(n => !n.settled && n.kind === 'note');
-    const delta = next ? next.lane - game.x : 0;
+    const lane = nextLane(game);
+    const delta = lane !== undefined ? lane - game.x : 0;
     game.direction = Math.abs(delta) > .09 ? Math.sign(delta) : 0;
     if (!game.direction) game.release();
     game.update(1 / 30);
@@ -153,4 +158,26 @@ test('three stars require both accurate catches and avoiding noise', () => {
   game.noises = 2; expect(game.stars).toBe(2);
   game.caught = 28; expect(game.stars).toBe(2);
   game.caught = 12; expect(game.stars).toBe(1);
+});
+
+test('touch judgment matches the ring: early/late within the window, center inside the reach', () => {
+  const at = (game: CatchGame) => game.chart[0].at;
+  const play = (x: number, until: number) => {
+    const game = new CatchGame(); game.start(); game.chart = [{ id: 0, lane: 1, at: 1, kind: 'note', pitch: 0, settled: false }];
+    game.x = game.target = x; while (game.time < until) game.update(1 / 120); return game;
+  };
+  // Standing just inside the ring edge catches as soon as the note overlaps the ring, a little before the line.
+  const early = play(1 + CATCH_REACH - .01, 1);
+  expect(early.chart[0].result).toBe('caught'); expect(early.chart[0].settledAt!).toBeLessThan(at(early));
+  expect(early.chart[0].settledAt!).toBeGreaterThanOrEqual(at(early) - NOTE_WINDOW - 1e-9);
+  // Just outside the ring never catches, and the miss is only decided after the window closes.
+  const outside = play(1 + CATCH_REACH + .01, 1.5);
+  expect(outside.chart[0].result).toBe('missed'); expect(outside.chart[0].settledAt!).toBeGreaterThan(1 + NOTE_WINDOW);
+  // Arriving slightly late (still inside the window) still catches.
+  const late = new CatchGame(); late.start(); late.chart = [{ id: 0, lane: 1, at: 1, kind: 'note', pitch: 0, settled: false }];
+  late.x = late.target = 2;
+  while (late.time < 1 + NOTE_WINDOW * .5) late.update(1 / 120);
+  late.x = late.target = 1; late.update(1 / 120);
+  expect(late.chart[0].result).toBe('caught');
+  expect(inReach(1.4, 1)).toBe(true); expect(inReach(1.41, 1)).toBe(false);
 });

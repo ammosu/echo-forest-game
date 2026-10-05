@@ -1,6 +1,6 @@
 import './style.css';
 import './catch.css';
-import { CatchGame } from './catch-engine';
+import { CatchGame, CATCH_REACH, inReach } from './catch-engine';
 import characters from '../assets/characters.json';
 import forest from '../assets/generated/forest-background.png';
 import noteIcon from '../assets/ui/catch/note.png';
@@ -21,9 +21,9 @@ document.querySelector('#app')!.innerHTML = `
 <section class="catch-shell" aria-label="音符接接樂遊戲" data-phase="ready">
   <div class="catch-toolbar"><span id="phrase">準備開演</span><div><button id="sound" aria-pressed="true">♫ 聲音開</button><button id="pause" disabled>暫停</button><button id="restart" disabled>重來</button></div></div>
   <div class="catch-hud"><div><small>合奏分數</small><strong id="score">0</strong></div><div><small>接住音符</small><strong><span id="caught">0</span><small> / 48</small></strong></div><div><small>連續接住</small><strong id="combo">0</strong></div><div><small>剩餘時間</small><strong id="time">48<small> 秒</small></strong></div></div>
-  <div class="catch-stage" id="stage" style="--forest:url('${forest}');--note:url('${noteIcon}');--noise:url('${noiseIcon}')" tabindex="0" aria-label="音符舞台，左右方向鍵或 A D 移動，1 到 4 選擇位置，Escape 暫停">
+  <div class="catch-stage" id="stage" style="--forest:url('${forest}');--note:url('${noteIcon}');--noise:url('${noiseIcon}');--catch-zone:${CATCH_REACH * 2 * 25}cqw" tabindex="0" aria-label="音符舞台，左右方向鍵或 A D 移動，1 到 4 選擇位置，Escape 暫停">
     <div class="catch-sun" aria-hidden="true"></div><div class="catch-lanes" aria-hidden="true">${[1,2,3,4].map(i => `<span><b>${i}</b></span>`).join('')}</div>
-    <div id="notes" aria-hidden="true"></div><div class="catch-line" aria-hidden="true"></div>
+    <div id="notes" aria-hidden="true"></div><div id="fx" aria-hidden="true"></div><div class="catch-line" aria-hidden="true"></div>
     <div class="catch-player" id="player" aria-hidden="true"><span id="feedback"></span><b class="catch-ring"></b><em class="catch-hint">接音點</em><img id="hero" src="${sprite(hero.id)}" alt=""><i></i></div>
     <div class="catch-overlay" id="overlay"><div class="catch-panel" id="panel"></div></div>
   </div>
@@ -31,7 +31,7 @@ document.querySelector('#app')!.innerHTML = `
   <div class="catch-touch" aria-label="選擇接音符的位置">${[1,2,3,4].map(i => `<button data-lane="${i - 1}" aria-label="移到第 ${i} 道">${i}<span>♪</span></button>`).join('')}</div>
   <div class="catch-caption"><span>← → / A D 移動 · 1–4 選位置 · Esc 暫停</span><span>手機：拖曳舞台，或點下方位置</span></div>
 </section>
-<section class="catch-guide"><div><b class="gold"><img src="${noteIcon}" alt=""></b><p><strong>金色音符，接住它</strong>每個 100 分，連擊最高加成 100 分。</p></div><div><b class="noise"><img src="${noiseIcon}" alt=""></b><p><strong>灰色雜音，讓它飄過</strong>碰到扣 50 分，漏接或碰雜音會中斷連擊。</p></div><div><b><img src="${starIcon}" alt=""></b><p><strong>慢慢熟悉，就能合奏</strong>接住 12 / 28 個得一 / 二星；三星需接住 44 個，且碰雜音不超過 1 次。</p></div></section>
+<section class="catch-guide"><div><b class="gold"><img src="${noteIcon}" alt=""></b><p><strong>金色音符，接住它</strong>音符落進腳下光圈就算接住，每個 100 分，連擊最高加成 100 分。</p></div><div><b class="noise"><img src="${noiseIcon}" alt=""></b><p><strong>灰色雜音，讓它飄過</strong>穿過光圈中央才算碰到，碰到扣 50 分，漏接或碰雜音會中斷連擊。</p></div><div><b><img src="${starIcon}" alt=""></b><p><strong>慢慢熟悉，就能合奏</strong>接住 12 / 28 個得一 / 二星；三星需接住 44 個，且碰雜音不超過 1 次。</p></div></section>
 <p id="announcement" class="catch-sr" role="status" aria-live="polite"></p>
 <footer><span>一點晨光，一首自己的小曲。</span><span>Echo Forest ✦</span></footer></main>`;
 
@@ -89,7 +89,7 @@ function showPicker() {
 }
 function start() {
   stopAudio(); unlockAudio(); release(); game.start(); feedbackUntil = 0; lastPhrase = -1;
-  noteElements.forEach(n => n.remove()); noteElements.clear();
+  noteElements.forEach(n => n.remove()); noteElements.clear(); el('fx').replaceChildren();
   overlay.hidden = true; setPhase(); render(); stage.focus({ preventScroll: true });
   if (matchMedia('(max-width:750px)').matches) stage.scrollIntoView({ block: 'center', behavior: 'instant' });
   announce('開始演奏，左右移動接住金色音符。');
@@ -122,6 +122,18 @@ function nextGoal() {
 function feedback(text: string, kind: string) {
   el('feedback').textContent = text; el('feedback').className = kind; feedbackUntil = game.time + .65;
 }
+/** Catch burst on the ring: shockwave, sparks and the note popping up; noise gets a grey puff. */
+function burst(lane: number, kind: 'catch' | 'noise') {
+  const fx = document.createElement('div');
+  const big = kind === 'catch' && game.combo >= 5;
+  fx.className = `catch-fx ${kind}${big ? ' big' : ''}`;
+  fx.style.left = `${12.5 + lane * 25}%`;
+  const sparks = reducedMotion ? 0 : kind === 'noise' ? 6 : big ? 12 : 8;
+  fx.innerHTML = `${kind === 'catch' ? '<b class="flash"></b>' : ''}<b class="wave"></b>${kind === 'catch' ? '<b class="pop"></b>' : ''}` +
+    Array.from({ length: sparks }, (_, i) => `<i style="--a:${(i / sparks) * 360 + Math.random() * 20}deg;--d:${(big ? 110 : 80) + Math.random() * 35}px"></i>`).join('');
+  el('fx').append(fx);
+  setTimeout(() => fx.remove(), 800);
+}
 function render() {
   player.style.left = `${12.5 + game.x * 25}%`;
   el('score').textContent = game.score.toLocaleString(); el('caught').textContent = String(game.caught);
@@ -135,13 +147,15 @@ function render() {
   player.classList.toggle('catching', !reducedMotion && game.time < feedbackUntil && el('feedback').className === 'good');
   el('feedback').hidden = game.time >= feedbackUntil;
   // Light a lane only where a note would actually be caught, so the cue never disagrees with the player.
-  const inLane = (lane: number) => Math.abs(game.x - lane) <= .4;
+  const inLane = (lane: number) => inReach(game.x, lane);
   document.querySelectorAll('[data-lane]').forEach(b => b.setAttribute('aria-pressed', String(inLane(Number((b as HTMLElement).dataset.lane)))));
   document.querySelectorAll('.catch-lanes>span').forEach((l, i) => l.classList.toggle('active', game.phase === 'playing' && inLane(i)));
   player.classList.toggle('in-lane', [0, 1, 2, 3].some(inLane));
   for (const note of game.chart) {
     const until = note.at - game.time;
-    if (note.settled || until > game.fallTime || game.phase === 'ready') {
+    // Missed notes and dodged noise keep falling past the ring so it's visible they went by it.
+    const fallingPast = note.result === 'missed' || note.result === 'passed';
+    if ((note.settled && !(fallingPast && until > -.4)) || until > game.fallTime || game.phase === 'ready') {
       noteElements.get(note.id)?.remove(); noteElements.delete(note.id); continue;
     }
     let node = noteElements.get(note.id);
@@ -150,6 +164,7 @@ function render() {
       node.textContent = note.kind === 'note' ? '♪' : '×'; node.dataset.noteId = String(note.id);
       node.style.left = `${12.5 + note.lane * 25}%`; el('notes').append(node); noteElements.set(note.id, node);
     }
+    node.classList.toggle('gone', fallingPast);
     node.style.top = `${5 + (1 - until / game.fallTime) * 67}%`;
   }
 }
@@ -192,8 +207,8 @@ function tick(now: number) {
   const dt = Math.max(0, (now - previous) / 1000); previous = now;
   if (game.phase === 'playing') {
     for (const event of game.update(dt)) {
-      if (event.kind === 'catch') { tone(event.pitch); feedback(game.combo >= 5 ? `${game.combo} 連擊！` : `+${100 + Math.min(10, game.combo - 1) * 10}`, 'good'); }
-      if (event.kind === 'noise') { tone(0, true); feedback('雜音飄過，繼續加油', 'oops'); }
+      if (event.kind === 'catch') { tone(event.pitch); burst(event.lane, 'catch'); feedback(game.combo >= 5 ? `${game.combo} 連擊！` : `+${100 + Math.min(10, game.combo - 1) * 10}`, 'good'); }
+      if (event.kind === 'noise') { tone(0, true); burst(event.lane, 'noise'); feedback('雜音飄過，繼續加油', 'oops'); }
       if (event.kind === 'miss') feedback('下一個音符等你', 'miss');
       if (event.kind === 'complete') finish();
     }

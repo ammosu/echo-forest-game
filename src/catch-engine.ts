@@ -1,5 +1,20 @@
 export type CatchPhase = 'ready' | 'playing' | 'paused' | 'complete';
-export type FallingNote = { id: number; lane: number; at: number; kind: 'note' | 'noise'; pitch: number; settled: boolean };
+export type NoteResult = 'caught' | 'missed' | 'hit' | 'passed';
+export type FallingNote = { id: number; lane: number; at: number; kind: 'note' | 'noise'; pitch: number; settled: boolean; result?: NoteResult; settledAt?: number };
+
+/**
+ * The single source of truth for "did it touch?". The view draws the catch ring from these
+ * numbers, so what the player sees is exactly what is judged, on every screen size.
+ * - Horizontal: a note's center must be within CATCH_REACH lanes of the player (= inside the ring).
+ * - Vertical (time): a gold note counts while it is within NOTE_WINDOW seconds of the catch line,
+ *   so arriving a moment early or late still catches it once it overlaps the ring.
+ * - Noise is forgiving: it only counts while within NOISE_WINDOW of the line's center, so
+ *   leaving right after a catch doesn't clip a decoy that is still above or below the ring.
+ */
+export const CATCH_REACH = .4;
+export const NOTE_WINDOW = .12;
+export const NOISE_WINDOW = .05;
+export const inReach = (x: number, lane: number) => Math.abs(x - lane) <= CATCH_REACH;
 export type CatchEvent = { kind: 'catch' | 'miss' | 'noise' | 'complete'; lane: number; pitch: number };
 
 /** Original three-phrase chart. Times are arrival times at the catch line. */
@@ -66,9 +81,12 @@ export class CatchGame {
       const delta = this.target - this.x;
       this.x += Math.sign(delta) * Math.min(Math.abs(delta), 7 * step);
       for (const note of this.chart) {
-        if (note.settled || note.at > this.time) continue;
-        note.settled = true;
-        if (Math.abs(this.x - note.lane) <= .40) {
+        if (note.settled) continue;
+        const window = note.kind === 'note' ? NOTE_WINDOW : NOISE_WINDOW;
+        const offset = this.time - note.at;
+        if (offset < -window) continue;
+        const touching = inReach(this.x, note.lane);
+        if (touching) {
           if (note.kind === 'note') {
             this.caught++; this.combo++; this.maxCombo = Math.max(this.maxCombo, this.combo);
             this.score += 100 + Math.min(10, this.combo - 1) * 10;
@@ -77,10 +95,13 @@ export class CatchGame {
             this.noises++; this.combo = 0; this.score = Math.max(0, this.score - 50);
             events.push({ kind: 'noise', lane: note.lane, pitch: 0 });
           }
-        } else if (note.kind === 'note') {
+        } else if (offset <= window) continue;
+        else if (note.kind === 'note') {
           this.missed++; this.combo = 0;
           events.push({ kind: 'miss', lane: note.lane, pitch: note.pitch });
         }
+        note.settled = true; note.settledAt = this.time;
+        note.result = touching ? (note.kind === 'note' ? 'caught' : 'hit') : (note.kind === 'note' ? 'missed' : 'passed');
       }
       if (this.time >= this.duration) {
         this.phase = 'complete'; this.release(); events.push({ kind: 'complete', lane: 0, pitch: 0 }); break;

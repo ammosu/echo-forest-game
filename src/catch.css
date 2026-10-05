@@ -38,3 +38,26 @@
 .catch-stage{height:clamp(320px,calc(100svh - 360px),420px);min-height:0}
 .catch-guide{grid-template-columns:1fr;gap:14px}.catch-guide>div{display:flex;gap:12px;align-items:flex-start}.catch-guide b{display:block;margin:0}.catch-guide p{font-size:12px}.catch-guide strong{font-size:13px;margin-bottom:2px}}
 .catch-stars img{filter:grayscale(1) brightness(.85) opacity(.45) drop-shadow(0 0 1px #f3e1a8)}
+/* Hit area = catch ring: its width comes from CATCH_REACH and its center sits on the catch line. */
+.catch-stage{container-type:inline-size}
+.catch-ring,.catch-player:before{width:var(--catch-zone)}
+.catch-ring{top:calc(17% - 11px);height:22px}
+.catch-player:before{top:calc(17% - 1.5px)}
+.falling-note.gone{opacity:.35;transition:opacity .2s}
+/* Catch effects: flash + shockwave + star sparks + popping note at the catch point; grey puff for noise. */
+#fx{position:absolute;inset:0;pointer-events:none;z-index:2}
+.catch-fx{position:absolute;top:72%;width:0;height:0}
+.catch-fx b,.catch-fx i{position:absolute;left:0;top:0;transform:translate(-50%,-50%)}
+.catch-fx .flash{width:150px;height:150px;border-radius:50%;background:radial-gradient(#fff8d6 0,#ffe9a0aa 30%,#ffe9a000 70%);animation:fx-flash .45s ease-out forwards}
+.catch-fx .wave{width:60px;height:22px;border-radius:50%;border:5px solid #ffd45a;box-shadow:0 0 18px #ffd45a,inset 0 0 10px #ffd45a;animation:fx-wave .6s cubic-bezier(.2,.7,.3,1) forwards}
+.catch-fx .pop{width:50px;height:50px;background:var(--note) center/contain no-repeat;image-rendering:pixelated;filter:drop-shadow(0 0 12px #f6dc83);animation:fx-pop .7s ease-out forwards}
+.catch-fx i{width:22px;height:22px;background:#ffd45a;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);filter:drop-shadow(0 0 3px #fff3b3);animation:fx-spark .65s cubic-bezier(.2,.7,.3,1) forwards}
+.catch-fx i:nth-child(odd){width:16px;height:16px;background:#fff8d6}
+.catch-fx.big .wave{border-color:#fff;animation-duration:.75s}.catch-fx.big .flash{width:200px;height:200px}.catch-fx.big i{width:26px;height:26px}
+.catch-fx.noise .wave{border-color:#aeb8b2;box-shadow:0 0 12px #67746d;animation-duration:.45s}
+.catch-fx.noise i{background:#8d9892;clip-path:none;border-radius:50%;width:14px;height:14px;filter:none;opacity:.8}
+@keyframes fx-flash{from{opacity:1;transform:translate(-50%,-50%) scale(.4)}to{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+@keyframes fx-wave{from{width:40px;height:14px;opacity:1}to{width:240px;height:80px;opacity:0;border-width:1px}}
+@keyframes fx-pop{0%{transform:translate(-50%,-50%) scale(1);opacity:1}30%{transform:translate(-50%,-70%) scale(1.5);opacity:1}100%{transform:translate(-50%,-90%) scale(1.9);opacity:0}}
+@keyframes fx-spark{from{transform:translate(-50%,-50%) rotate(var(--a)) translateY(0) scale(1.2);opacity:1}70%{opacity:1}to{transform:translate(-50%,-50%) rotate(var(--a)) translateY(calc(-1 * var(--d))) scale(.3);opacity:0}}
+@media(prefers-reduced-motion:reduce){.catch-fx .wave,.catch-fx .pop,.catch-fx .flash{animation:fx-fade .45s forwards}@keyframes fx-fade{to{opacity:0}}}
