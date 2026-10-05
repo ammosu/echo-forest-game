@@ -21,6 +21,7 @@ type Entity = Cell & {
   maxHp?: number;
   slow?: number;
   hit?: number;
+  power?: number;
   fuse?: number;
   life?: number;
 };
@@ -808,11 +809,13 @@ export class DefenseView {
     if (type === "spark") {
       const kind = entity.kind as SparkKind;
       const colors = { hit: ["#ffe59b", "#fff8d6"], ice: ["#b5ffff", "#ffffff"], defeat: ["#ffd45a", "#fff8d6"], hurt: ["#f39a7f", "#ffd2c4"], log: ["#b98a55", "#e1c08a"] }[kind];
-      const count = kind === "hit" || kind === "ice" ? 6 : 12;
+      const power = entity.power ?? 1;
+      const count = Math.round((kind === "hit" || kind === "ice" ? 6 : 12) * power);
       const star = this.geometry("spark", () => new THREE.OctahedronGeometry(1));
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * Math.PI * 2 + Math.random() * 0.4;
-        const piece = this.mesh(group, star, colors[i % 2], 0, 0.5, 0);
+        const rainbow = ["#ff9fb3", "#ffd45a", "#9ff3ff", "#c7a6ff", "#a6f0a0"];
+        const piece = this.mesh(group, star, power >= 2 ? rainbow[i % rainbow.length] : colors[i % 2], 0, 0.5, 0);
         piece.castShadow = false;
         piece.userData.dir = new THREE.Vector3(Math.cos(angle), 0.6 + Math.random() * 0.8, Math.sin(angle));
       }
@@ -848,10 +851,11 @@ export class DefenseView {
     const kind = entity.kind as SparkKind;
     const age = 1 - (entity.life ?? 0) / sparkLife[kind];
     const still = this.reducedMotion.matches;
-    const reach = kind === "hit" || kind === "ice" ? 0.45 : 0.9;
+    const power = entity.power ?? 1;
+    const reach = (kind === "hit" || kind === "ice" ? 0.45 : 0.9) * (1 + (power - 1) * 0.5);
     for (const piece of group.children) {
       if (piece.name === "ring") {
-        piece.scale.setScalar(still ? 0.6 : 0.2 + age * 0.7);
+        piece.scale.setScalar((still ? 0.6 : 0.2 + age * 0.7) * (1 + (power - 1) * 0.6));
         piece.visible = age < 0.85;
         continue;
       }
@@ -860,6 +864,29 @@ export class DefenseView {
       piece.position.set(dir.x * travel, 0.5 + dir.y * travel - age * age * 0.4, dir.z * travel);
       piece.scale.setScalar((kind === "hit" || kind === "ice" ? 0.11 : 0.15) * (1 - age * 0.7));
       piece.rotation.y = age * 6;
+    }
+  }
+
+  private kickAt = -10000;
+  private kickShake = 0;
+  private kickZoom = 0;
+  /** Camera reaction: shake (world units) and a zoom punch that decay over ~0.3s. */
+  kick(shake: number, zoom = 0) {
+    if (this.reducedMotion.matches) return;
+    const now = performance.now();
+    const left = Math.max(0, 1 - (now - this.kickAt) / 300);
+    this.kickShake = Math.max(shake, this.kickShake * left);
+    this.kickZoom = Math.max(zoom, this.kickZoom * left);
+    this.kickAt = now;
+  }
+  private applyKick() {
+    const k = Math.max(0, 1 - (performance.now() - this.kickAt) / 300);
+    const shake = this.kickShake * k * k;
+    this.camera.position.set(7.2 + (Math.random() - 0.5) * shake, 12.8 + (Math.random() - 0.5) * shake * 0.5, 15.8 + (Math.random() - 0.5) * shake);
+    const zoom = 1 + this.kickZoom * Math.sin(k * Math.PI);
+    if (this.camera.zoom !== zoom) {
+      this.camera.zoom = zoom;
+      this.camera.updateProjectionMatrix();
     }
   }
 
@@ -979,6 +1006,7 @@ export class DefenseView {
         this.scene.remove(group);
         this.entities.delete(entity);
       }
+    this.applyKick();
     this.animateAnbo(game);
     this.anbo.visible =
       game.player.invincible <= 0 ||

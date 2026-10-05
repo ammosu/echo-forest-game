@@ -96,13 +96,35 @@ function flash(index: number, duration = 470) {
 }
 
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/** Notes answered in a row without a mistake; 5 / 12 / 25 raise the burst tier. */
+let streak = 0;
+const streakTier = () => streak >= 25 ? 3 : streak >= 12 ? 2 : streak >= 5 ? 1 : 0;
+const stageEl = () => document.querySelector<HTMLElement>('.echo-stage')!;
+function react(kind: 'punch' | 'shake') {
+  if (reducedMotion) return;
+  const stage = stageEl(); stage.classList.remove('punch', 'shake'); void stage.offsetWidth; stage.classList.add(kind);
+}
+function banner(text: string, big = false) {
+  const node = document.createElement('div');
+  node.className = `echo-banner${big ? ' big' : ''}`; node.setAttribute('aria-hidden', 'true'); node.textContent = text;
+  const flash = document.createElement('div'); flash.className = 'echo-flash';
+  stageEl().append(flash, node);
+  setTimeout(() => { node.remove(); flash.remove(); }, 1300);
+}
+/** Musicians hop one after another, like a wave through the band. */
+function hop() {
+  if (reducedMotion) return;
+  buttons.forEach((b, i) => later(() => { b.classList.remove('echo-hop'); void b.offsetWidth; b.classList.add('echo-hop'); }, i * 90));
+}
 /** Touch feedback on a musician: sparks and a check for a right note, a grey shake for a wrong one. */
 function burst(index: number, kind: 'correct' | 'round' | 'wrong') {
   const fx = document.createElement('span');
-  fx.className = `echo-fx ${kind}`; fx.setAttribute('aria-hidden', 'true');
-  const sparks = reducedMotion ? 0 : kind === 'round' ? 14 : kind === 'correct' ? 8 : 5;
-  fx.innerHTML = `<b class="wave"></b><b class="mark">${kind === 'wrong' ? '×' : kind === 'round' ? '♪♪' : '♪'}</b>` +
-    Array.from({ length: sparks }, (_, i) => `<i style="--a:${(i / sparks) * 360 + Math.random() * 20}deg;--d:${(kind === 'round' ? 90 : 60) + Math.random() * 25}px"></i>`).join('');
+  const tier = kind === 'wrong' ? 0 : streakTier();
+  fx.className = `echo-fx ${kind} t${tier}`; fx.setAttribute('aria-hidden', 'true');
+  const sparks = reducedMotion ? 0 : kind === 'wrong' ? 5 : (kind === 'round' ? 14 : 8) + tier * 4;
+  const rainbow = ['#ff9fb3', '#ffd45a', '#9ff3ff', '#c7a6ff', '#a6f0a0'];
+  fx.innerHTML = `<b class="wave"></b>${tier >= 2 ? '<b class="wave second"></b>' : ''}<b class="mark">${kind === 'wrong' ? '×' : kind === 'round' ? '♪♪' : tier ? `♪×${streak}` : '♪'}</b>` +
+    Array.from({ length: sparks }, (_, i) => `<i style="--a:${(i / sparks) * 360 + Math.random() * 20}deg;--d:${(kind === 'round' ? 90 : 60) + tier * 15 + Math.random() * 25}px${tier >= 3 ? `;--c:${rainbow[i % rainbow.length]}` : ''}"></i>`).join('');
   buttons[index].append(fx);
   if (kind === 'wrong' && !reducedMotion) { buttons[index].classList.remove('echo-shake'); void buttons[index].offsetWidth; buttons[index].classList.add('echo-shake'); }
   setTimeout(() => { fx.remove(); buttons[index].classList.remove('echo-shake'); }, 800);
@@ -155,7 +177,11 @@ function play(index: number) {
   if (game.phase !== 'answer') return;
   const outcome = game.answer(index);
   render();
+  if (outcome === 'wrong') { streak = 0; react('shake'); }
+  else if (outcome !== 'ignored') streak++;
   if (outcome !== 'ignored') burst(index, outcome === 'wrong' ? 'wrong' : outcome === 'correct' ? 'correct' : 'round');
+  if (outcome === 'round') { banner(`第 ${game.round} 段完成！`); react('punch'); hop(); }
+  if (outcome === 'complete') { banner('八段全部完成！', true); react('punch'); hop(); }
   if (outcome === 'wrong') message('再聽一遍就好', '沒關係，我們一起再試試。', '按「再試這一段」重聽相同旋律，已完成的段落會保留。');
   if (outcome === 'round') {
     saveBest();
@@ -184,12 +210,12 @@ function togglePause() {
 action.onclick = () => {
   unlockAudio();
   if (game.phase === 'paused') return togglePause();
-  if (game.phase === 'ready' || game.phase === 'complete') game.start();
+  if (game.phase === 'ready' || game.phase === 'complete') { game.start(); streak = 0; }
   else if (game.phase === 'between') game.next();
   else if (game.phase !== 'retry') return;
   playback();
 };
-restart.onclick = () => { unlockAudio(); game.start(); playback(); };
+restart.onclick = () => { unlockAudio(); game.start(); streak = 0; playback(); };
 replay.onclick = () => { if (['answer', 'retry'].includes(game.phase)) { unlockAudio(); playback(); } };
 pause.onclick = togglePause;
 buttons.forEach((b, i) => b.onclick = () => play(i));

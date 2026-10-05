@@ -42,7 +42,8 @@ export class DefenseEngine {
     attack: number;
     hit: number;
   }[] = [];
-  sparks: { x: number; y: number; kind: SparkKind; life: number }[] = [];
+  /** `power` > 1 is set by the page for streaks and chains to make the burst bigger. */
+  sparks: { x: number; y: number; kind: SparkKind; life: number; power?: number }[] = [];
   bombs: { x: number; y: number; fuse: number }[] = [];
   flames: { x: number; y: number; life: number }[] = [];
   shots: { x: number; y: number; kind: PlantKind }[] = [];

@@ -154,6 +154,8 @@ export class RacingEngine {
   private view?: RacingView;
   private previous = 0;
   private accumulator = 0;
+  /** Hitstop after a heavy crash: the whole race holds for a few frames. */
+  private freezeUntil = 0;
   private frameId = 0;
   private stateClock = 0;
   private itemQueued = false;
@@ -353,7 +355,7 @@ export class RacingEngine {
   private frame = (time: number) => {
     const dt = this.previous ? Math.min((time - this.previous) / 1000, 0.1) : 0;
     this.previous = time;
-    if (!this.paused) {
+    if (!this.paused && time >= this.freezeUntil) {
       this.accumulator += dt;
       while (this.accumulator >= 1 / 120) {
         this.update(1 / 120);
@@ -881,6 +883,7 @@ export class RacingEngine {
       car.speed = 0;
     }
     if (car === this) {
+      if (stunned || strength > 0.5) this.freezeUntil = performance.now() + (stunned ? 90 : 60);
       this.boost = 0;
       this.drifting = false;
       this.driftCharge = 0;
@@ -916,6 +919,12 @@ export class RacingEngine {
     if (this.hitCooldown > 0) return;
     this.speed *= 0.48;
     this.hitCooldown = 1.5;
+    this.freezeUntil = performance.now() + 80;
+    // Stump crashes get the same screen flash, zoom punch and kart shake as other impacts.
+    this.impact = 0.7;
+    this.impactTime = this.seconds;
+    this.impactSide = 0;
+    this.impactKind = "stump";
     this.collisions++;
     this.tone("hit");
     this.emit({ type: "notice", message });

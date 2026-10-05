@@ -239,7 +239,23 @@ function mountGame() {
   let last = performance.now(),
     lastPhase = game.phase,
     lastKills = 0,
-    lastBombs = 0;
+    lastBombs = 0,
+    lastHearts = 3,
+    lastChains = 0,
+    freezeUntil = 0,
+    streak = 0,
+    streakAt = -10000;
+  const seenSparks = new WeakSet<object>();
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  /** Big centred text over the field for streaks and chain blasts. */
+  function banner(text: string, tier: number) {
+    const node = document.createElement("div");
+    node.className = `defense-banner t${tier}`;
+    node.setAttribute("aria-hidden", "true");
+    node.textContent = text;
+    canvas.parentElement!.append(node);
+    setTimeout(() => node.remove(), 1100);
+  }
   function frame(now: number) {
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
@@ -248,7 +264,36 @@ function mountGame() {
     else if (keys.has("ArrowRight") || keys.has("KeyD")) game.move(1, 0);
     else if (keys.has("ArrowUp") || keys.has("KeyW")) game.move(0, -1);
     else if (keys.has("ArrowDown") || keys.has("KeyS")) game.move(0, 1);
-    game.update(dt);
+    // Hitstop: hold the battle for a few frames after a defeat, a blast or a hurt.
+    if (now >= freezeUntil) game.update(dt);
+    if (game.kills > lastKills) {
+      streak = now - streakAt < 2500 ? streak + (game.kills - lastKills) : game.kills - lastKills;
+      streakAt = now;
+      if (streak >= 2) banner(`連破 ×${streak}！`, streak >= 5 ? 3 : streak >= 3 ? 2 : 1);
+      freezeUntil = now + (streak >= 3 ? 80 : 50);
+      view.kick(0.08 + Math.min(streak, 6) * 0.03, 0.015 + Math.min(streak, 6) * 0.006);
+    }
+    for (const spark of game.sparks)
+      if (!seenSparks.has(spark)) {
+        seenSparks.add(spark);
+        if (spark.kind === "defeat") spark.power = streak >= 5 ? 2.2 : streak >= 3 ? 1.6 : streak >= 2 ? 1.3 : 1;
+      }
+    if (game.chains > lastChains) {
+      banner(`連鎖爆破 ×${game.chains - lastChains + 1}！`, game.chains - lastChains >= 2 ? 3 : 2);
+      freezeUntil = now + 110;
+      view.kick(0.45, 0.04);
+    } else if (game.bombs.length < lastBombs) view.kick(0.25, 0.02);
+    if (game.hearts < lastHearts) {
+      freezeUntil = now + 130;
+      view.kick(0.4);
+      if (!reduced.matches) {
+        canvas.parentElement!.classList.remove("hurt");
+        void canvas.parentElement!.offsetWidth;
+        canvas.parentElement!.classList.add("hurt");
+      }
+    }
+    lastHearts = game.hearts;
+    lastChains = game.chains;
     view.render(game, hover, selected);
     $("tree").textContent = String(Math.max(0, game.tree));
     const hearts = Math.max(0, game.hearts);

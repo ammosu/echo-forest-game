@@ -89,7 +89,7 @@ function showPicker() {
 }
 function start() {
   stopAudio(); unlockAudio(); release(); game.start(); feedbackUntil = 0; lastPhrase = -1;
-  noteElements.forEach(n => n.remove()); noteElements.clear(); el('fx').replaceChildren();
+  noteElements.forEach(n => n.remove()); noteElements.clear(); el('fx').replaceChildren(); freezeUntil = 0;
   overlay.hidden = true; setPhase(); render(); stage.focus({ preventScroll: true });
   if (matchMedia('(max-width:750px)').matches) stage.scrollIntoView({ block: 'center', behavior: 'instant' });
   announce('開始演奏，左右移動接住金色音符。');
@@ -122,15 +122,32 @@ function nextGoal() {
 function feedback(text: string, kind: string) {
   el('feedback').textContent = text; el('feedback').className = kind; feedbackUntil = game.time + .65;
 }
+/** Combo tier: 5 / 10 / 20 in a row each make the catch burst bigger and change its colours. */
+const comboTier = () => game.combo >= 20 ? 3 : game.combo >= 10 ? 2 : game.combo >= 5 ? 1 : 0;
+const sparkColors = [['#ffd45a', '#fff8d6'], ['#ffd45a', '#fff8d6'], ['#ffd45a', '#9ff3ff', '#fff8d6'], ['#ff9fb3', '#ffd45a', '#9ff3ff', '#c7a6ff', '#a6f0a0']];
+let freezeUntil = 0;
+/** Hitstop: hold the song for a few frames so a catch or a bump lands with weight. */
+function hitstop(ms: number) { freezeUntil = Math.max(freezeUntil, performance.now() + ms); }
+function shakeStage(kind: 'shake' | 'punch') {
+  if (reducedMotion) return;
+  stage.classList.remove('shake', 'punch'); void stage.offsetWidth; stage.classList.add(kind);
+}
+function milestone(text: string, tier: number) {
+  const node = document.createElement('div');
+  node.className = `catch-milestone t${tier}`; node.setAttribute('aria-hidden', 'true'); node.textContent = text;
+  if (tier >= 2) { const flash = document.createElement('div'); flash.className = 'catch-flash'; el('fx').append(flash); setTimeout(() => flash.remove(), 400); }
+  el('fx').append(node); setTimeout(() => node.remove(), 1100);
+}
 /** Catch burst on the ring: shockwave, sparks and the note popping up; noise gets a grey puff. */
 function burst(lane: number, kind: 'catch' | 'noise') {
   const fx = document.createElement('div');
-  const big = kind === 'catch' && game.combo >= 5;
-  fx.className = `catch-fx ${kind}${big ? ' big' : ''}`;
+  const tier = kind === 'catch' ? comboTier() : 0;
+  fx.className = `catch-fx ${kind} t${tier}${tier ? ' big' : ''}`;
   fx.style.left = `${12.5 + lane * 25}%`;
-  const sparks = reducedMotion ? 0 : kind === 'noise' ? 6 : big ? 12 : 8;
-  fx.innerHTML = `${kind === 'catch' ? '<b class="flash"></b>' : ''}<b class="wave"></b>${kind === 'catch' ? '<b class="pop"></b>' : ''}` +
-    Array.from({ length: sparks }, (_, i) => `<i style="--a:${(i / sparks) * 360 + Math.random() * 20}deg;--d:${(big ? 110 : 80) + Math.random() * 35}px"></i>`).join('');
+  const sparks = reducedMotion ? 0 : kind === 'noise' ? 6 : 8 + tier * 4;
+  const colors = sparkColors[tier];
+  fx.innerHTML = `${kind === 'catch' ? '<b class="flash"></b>' : ''}<b class="wave"></b>${tier >= 2 ? '<b class="wave second"></b>' : ''}${kind === 'catch' ? '<b class="pop"></b>' : ''}` +
+    Array.from({ length: sparks }, (_, i) => `<i style="--a:${(i / sparks) * 360 + Math.random() * 20}deg;--d:${80 + tier * 18 + Math.random() * 35}px${kind === 'catch' ? `;--c:${colors[i % colors.length]}` : ''}"></i>`).join('');
   el('fx').append(fx);
   setTimeout(() => fx.remove(), 800);
 }
@@ -151,6 +168,7 @@ function render() {
   document.querySelectorAll('[data-lane]').forEach(b => b.setAttribute('aria-pressed', String(inLane(Number((b as HTMLElement).dataset.lane)))));
   document.querySelectorAll('.catch-lanes>span').forEach((l, i) => l.classList.toggle('active', game.phase === 'playing' && inLane(i)));
   player.classList.toggle('in-lane', [0, 1, 2, 3].some(inLane));
+  player.dataset.tier = String(game.phase === 'playing' ? comboTier() : 0);
   for (const note of game.chart) {
     const until = note.at - game.time;
     // Missed notes and dodged noise keep falling past the ring so it's visible they went by it.
@@ -205,10 +223,18 @@ window.addEventListener('blur', autoPause); document.addEventListener('visibilit
 let previous = performance.now(); let frame = 0;
 function tick(now: number) {
   const dt = Math.max(0, (now - previous) / 1000); previous = now;
-  if (game.phase === 'playing') {
+  if (game.phase === 'playing' && now < freezeUntil) render();
+  else if (game.phase === 'playing') {
     for (const event of game.update(dt)) {
-      if (event.kind === 'catch') { tone(event.pitch); burst(event.lane, 'catch'); feedback(game.combo >= 5 ? `${game.combo} 連擊！` : `+${100 + Math.min(10, game.combo - 1) * 10}`, 'good'); }
-      if (event.kind === 'noise') { tone(0, true); burst(event.lane, 'noise'); feedback('雜音飄過，繼續加油', 'oops'); }
+      if (event.kind === 'catch') {
+        tone(event.pitch); burst(event.lane, 'catch');
+        const tier = comboTier();
+        if ([5, 10, 20, 30, 40].includes(game.combo)) {
+          milestone(`${game.combo} 連擊！`, tier); hitstop(90); shakeStage('punch');
+        } else hitstop(tier >= 2 ? 60 : 40);
+        feedback(game.combo >= 5 ? `${game.combo} 連擊！` : `+${100 + Math.min(10, game.combo - 1) * 10}`, 'good');
+      }
+      if (event.kind === 'noise') { tone(0, true); burst(event.lane, 'noise'); hitstop(70); shakeStage('shake'); feedback('雜音飄過，繼續加油', 'oops'); }
       if (event.kind === 'miss') feedback('下一個音符等你', 'miss');
       if (event.kind === 'complete') finish();
     }

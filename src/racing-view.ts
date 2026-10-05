@@ -120,6 +120,9 @@ export class RacingView {
   private pickupAt = -10;
   private padSerial = 0;
   private padAt = -10;
+  private lastBoost = 0;
+  private boostAt = -10;
+  private boostChain = 0;
   private pickupBurst = new THREE.Group();
   private sky = new THREE.HemisphereLight("#fff5d6", "#48674e", 2.2);
   /** HD-2D look: golden haze, bloom, grading, tilt-shift focus band, motes. */
@@ -1018,9 +1021,19 @@ export class RacingView {
         ? Math.sin((s.seconds - s.impactTime) * 70) * s.impact * 0.2
         : 0;
     this.camera.lookAt(this.look.clone().addScaledVector(player.right, shake));
+    // A fresh boost (item, pad, drift, trick landing) kicks the FOV wide; boosts within 4s chain up.
+    if (s.boost > this.lastBoost + 0.3) {
+      this.boostChain = s.seconds - this.boostAt < 4 ? this.boostChain + 1 : 1;
+      this.boostAt = s.seconds;
+    }
+    this.lastBoost = s.boost;
+    const kickAge = s.seconds - this.boostAt;
+    const kick = kickAge >= 0 && kickAge < 0.6 ? (1 - kickAge / 0.6) * (8 + Math.min(this.boostChain, 4) * 2) : 0;
+    const hitAge = s.seconds - s.impactTime;
+    const punch = hitAge >= 0 && hitAge < 0.3 ? (1 - hitAge / 0.3) * s.impact * 7 : 0;
     const fov = this.reduced.matches
       ? 57
-      : 57 + Math.min(s.speed / 4800, 1) * 5;
+      : 57 + Math.min(s.speed / 4800, 1) * 5 + (s.boost > 0 ? 4 : 0) + kick - punch;
     if (Math.abs(this.camera.fov - fov) > 0.01) {
       this.camera.fov = fov;
       this.camera.updateProjectionMatrix();
@@ -1176,6 +1189,42 @@ export class RacingView {
     if (pickup >= 0 && pickup < 0.5) edge("#ffd45a", 1 - pickup / 0.5);
     const hit = s.seconds - s.impactTime;
     if (hit >= 0 && hit < 0.4) edge("#ff7a5c", (1 - hit / 0.4) * Math.min(1, 0.45 + s.impact));
+    // Speed lines stream in from the edges for as long as any boost lasts.
+    if (s.boost > 0 && !this.reduced.matches) {
+      const chain = Math.min(this.boostChain, 4);
+      c.strokeStyle = `rgba(255,248,214,${0.25 + chain * 0.1})`;
+      c.lineWidth = 2 + chain * 0.5;
+      for (let i = 0; i < 18 + chain * 4; i++) {
+        const a = i * 2.39996 + s.seconds * 0.5,
+          phase = (s.seconds * (2.2 + chain * 0.4) + i * 0.137) % 1,
+          r0 = 230 + phase * 220,
+          r1 = r0 + 40 + chain * 15;
+        c.beginPath();
+        c.moveTo(320 + Math.cos(a) * r0, h / 2 + Math.sin(a) * r0 * (h / 640));
+        c.lineTo(320 + Math.cos(a) * r1, h / 2 + Math.sin(a) * r1 * (h / 640));
+        c.stroke();
+      }
+    }
+    const chainAge = s.seconds - this.boostAt;
+    if (this.boostChain >= 2 && chainAge >= 0 && chainAge < 1.1) {
+      const grow = this.reduced.matches ? 1 : Math.min(1, chainAge / 0.18) * (chainAge < 0.3 ? 1 + (0.3 - chainAge) * 0.6 : 1);
+      c.save();
+      c.globalAlpha = chainAge > 0.8 ? (1.1 - chainAge) / 0.3 : 1;
+      c.translate(320, h * 0.3);
+      c.scale(grow, grow);
+      c.font = "900 34px sans-serif";
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.lineWidth = 7;
+      c.strokeStyle = "#1d3527";
+      const text = `加速連鎖 ×${this.boostChain}！`;
+      c.strokeText(text, 0, 0);
+      c.fillStyle = this.boostChain >= 4 ? "#ffffff" : this.boostChain >= 3 ? "#d6fcff" : "#fff3b3";
+      c.shadowColor = this.boostChain >= 3 ? "#7ff3ff" : "#ffd45a";
+      c.shadowBlur = 18;
+      c.fillText(text, 0, 0);
+      c.restore();
+    }
     const pad = s.seconds - this.padAt;
     if (pad >= 0 && pad < 0.55) {
       const k = 1 - pad / 0.55;
