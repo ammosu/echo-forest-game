@@ -118,6 +118,8 @@ export class RacingView {
   private renderKey = "";
   private pickupSerial = 0;
   private pickupAt = -10;
+  private padSerial = 0;
+  private padAt = -10;
   private pickupBurst = new THREE.Group();
   private sky = new THREE.HemisphereLight("#fff5d6", "#48674e", 2.2);
   /** HD-2D look: golden haze, bloom, grading, tilt-shift focus band, motes. */
@@ -1137,6 +1139,9 @@ export class RacingView {
     if (s.pickupSerial < this.pickupSerial) this.pickupAt = -10;
     if (s.pickupSerial > this.pickupSerial) this.pickupAt = s.seconds;
     this.pickupSerial = s.pickupSerial;
+    if (s.padSerial < this.padSerial) this.padAt = -10;
+    if (s.padSerial > this.padSerial) this.padAt = s.seconds;
+    this.padSerial = s.padSerial;
     const age = s.seconds - this.pickupAt;
     this.pickupBurst.visible = age >= 0 && age < 0.65;
     this.pickupBurst.position.copy(player.position);
@@ -1155,11 +1160,47 @@ export class RacingView {
     } else this.renderer.render(this.scene, this.camera);
     this.drawHUD(s);
   }
+  /** Screen-edge feedback for touches: gold for energy boxes, cyan streaks for boost pads, warm red for hits. */
+  private drawTouchFlash(s: RaceSnapshot) {
+    const c = this.ctx,
+      h = this.hudH;
+    const edge = (color: string, strength: number) => {
+      if (strength <= 0) return;
+      const g = c.createRadialGradient(320, h / 2, Math.min(320, h / 2) * 0.55, 320, h / 2, Math.hypot(320, h / 2));
+      g.addColorStop(0, `${color}00`);
+      g.addColorStop(1, color + Math.round(Math.min(1, strength) * 200).toString(16).padStart(2, "0"));
+      c.fillStyle = g;
+      c.fillRect(0, 0, 640, h);
+    };
+    const pickup = s.seconds - this.pickupAt;
+    if (pickup >= 0 && pickup < 0.5) edge("#ffd45a", 1 - pickup / 0.5);
+    const hit = s.seconds - s.impactTime;
+    if (hit >= 0 && hit < 0.4) edge("#ff7a5c", (1 - hit / 0.4) * Math.min(1, 0.45 + s.impact));
+    const pad = s.seconds - this.padAt;
+    if (pad >= 0 && pad < 0.55) {
+      const k = 1 - pad / 0.55;
+      edge("#7ff3ff", k * 0.7);
+      if (!this.reduced.matches) {
+        c.strokeStyle = `rgba(214,252,255,${k * 0.85})`;
+        c.lineWidth = 3;
+        for (let i = 0; i < 14; i++) {
+          const a = (i / 14) * Math.PI * 2 + 0.2,
+            r0 = 210 + pad * 260,
+            r1 = r0 + 70;
+          c.beginPath();
+          c.moveTo(320 + Math.cos(a) * r0, h / 2 + Math.sin(a) * r0 * (h / 640));
+          c.lineTo(320 + Math.cos(a) * r1, h / 2 + Math.sin(a) * r1 * (h / 640));
+          c.stroke();
+        }
+      }
+    }
+  }
   private drawHUD(s: RaceSnapshot) {
     const c = this.ctx;
     const h = this.hudH,
       mapTop = h - 125;
     c.clearRect(0, 0, 640, h);
+    this.drawTouchFlash(s);
     // Portrait stages are narrow, so grow the minimap from its bottom-right corner.
     const mapScale = h > 520 ? 1.5 : 1;
     c.save();

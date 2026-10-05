@@ -54,7 +54,9 @@ test('normal keyboard controls complete 48-second song and persist record', asyn
   for (let step = 0; step < 300; step++) {
     const s = await state(page); if (s.phase === 'complete') break;
     const next = s.upcoming.find(n => n.kind === 'note' && n.at - s.time > -.05);
-    if (next && next.at - s.time < .5) await page.keyboard.press(String(next.lane + 1));
+    // Like a player, wait for the previous beat's decoy to clear the line before moving on.
+    const decoyOnLine = next && s.upcoming.some(n => n.kind === 'noise' && n.at < next.at);
+    if (next && !decoyOnLine) await page.keyboard.press(String(next.lane + 1));
     await page.clock.runFor(180);
     if (s.time > 19 && !captured) { await page.screenshot({ path: 'tests/evidence/catch-playing.png', fullPage: true }); captured = true; }
   }

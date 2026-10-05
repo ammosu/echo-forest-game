@@ -97,6 +97,7 @@ export interface RaceSnapshot extends ImpactState {
   zone: string;
   checkpoints: number;
   pickupSerial: number;
+  padSerial: number;
 }
 export type RaceEvent =
   | { type: "ready" }
@@ -133,6 +134,7 @@ export class RacingEngine {
   boostsUsed = 0;
   driftBoosts = 0;
   pickupSerial = 0;
+  padSerial = 0;
   stun = 0;
   lateralVelocity = 0;
   impact = 0;
@@ -263,6 +265,7 @@ export class RacingEngine {
     this.boostsUsed = 0;
     this.driftBoosts = 0;
     this.pickupSerial = 0;
+    this.padSerial = 0;
     Object.assign(this, freshImpact());
     this.flight = freshFlight();
     this.trickPressedAt = -10;
@@ -801,6 +804,7 @@ export class RacingEngine {
         key = `pad-${lap}-${i}`;
       if (this.flight.height < .25 && hitProp(p, shapes.pad) && !this.consumed.has(key)) {
         this.consumed.add(key);
+        this.padSerial++;
         this.boost = Math.max(this.boost, 1.1);
         this.tone("boost");
       }
@@ -1023,6 +1027,7 @@ export class RacingEngine {
       ],
       checkpoints: this.reachedQuarter,
       pickupSerial: this.pickupSerial,
+      padSerial: this.padSerial,
     };
   }
   private sendState() {

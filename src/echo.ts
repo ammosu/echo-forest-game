@@ -95,6 +95,19 @@ function flash(index: number, duration = 470) {
   later(() => { if (flashId === flashes[index]) buttons[index].classList.remove('singing'); }, duration);
 }
 
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/** Touch feedback on a musician: sparks and a check for a right note, a grey shake for a wrong one. */
+function burst(index: number, kind: 'correct' | 'round' | 'wrong') {
+  const fx = document.createElement('span');
+  fx.className = `echo-fx ${kind}`; fx.setAttribute('aria-hidden', 'true');
+  const sparks = reducedMotion ? 0 : kind === 'round' ? 14 : kind === 'correct' ? 8 : 5;
+  fx.innerHTML = `<b class="wave"></b><b class="mark">${kind === 'wrong' ? '×' : kind === 'round' ? '♪♪' : '♪'}</b>` +
+    Array.from({ length: sparks }, (_, i) => `<i style="--a:${(i / sparks) * 360 + Math.random() * 20}deg;--d:${(kind === 'round' ? 90 : 60) + Math.random() * 25}px"></i>`).join('');
+  buttons[index].append(fx);
+  if (kind === 'wrong' && !reducedMotion) { buttons[index].classList.remove('echo-shake'); void buttons[index].offsetWidth; buttons[index].classList.add('echo-shake'); }
+  setTimeout(() => { fx.remove(); buttons[index].classList.remove('echo-shake'); }, 800);
+}
+
 function message(label: string, heading: string, detail: string) {
   el('phase-label').textContent = label; el('message').textContent = heading; el('detail').textContent = detail;
 }
@@ -142,6 +155,7 @@ function play(index: number) {
   if (game.phase !== 'answer') return;
   const outcome = game.answer(index);
   render();
+  if (outcome !== 'ignored') burst(index, outcome === 'wrong' ? 'wrong' : outcome === 'correct' ? 'correct' : 'round');
   if (outcome === 'wrong') message('再聽一遍就好', '沒關係，我們一起再試試。', '按「再試這一段」重聽相同旋律，已完成的段落會保留。');
   if (outcome === 'round') {
     saveBest();

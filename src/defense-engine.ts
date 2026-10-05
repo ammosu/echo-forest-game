@@ -1,5 +1,8 @@
 export type PlantKind = "shooter" | "wall" | "ice";
 export type Phase = "ready" | "build" | "wave" | "won" | "lost";
+/** Short-lived touch feedback for the view: a shot landing, a defeat, Anbo hit, a log broken. */
+export type SparkKind = "hit" | "ice" | "defeat" | "hurt" | "log";
+export const sparkLife: Record<SparkKind, number> = { hit: 0.3, ice: 0.3, defeat: 0.5, hurt: 0.5, log: 0.5 };
 export const seeds = {
   shooter: { name: "松果射手", cost: 40, hp: 100 },
   wall: { name: "樹樁守衛", cost: 25, hp: 260 },
@@ -37,7 +40,9 @@ export class DefenseEngine {
     maxHp: number;
     slow: number;
     attack: number;
+    hit: number;
   }[] = [];
+  sparks: { x: number; y: number; kind: SparkKind; life: number }[] = [];
   bombs: { x: number; y: number; fuse: number }[] = [];
   flames: { x: number; y: number; life: number }[] = [];
   shots: { x: number; y: number; kind: PlantKind }[] = [];
@@ -122,6 +127,9 @@ export class DefenseEngine {
     this.spawn = 1;
     this.message = `第 ${this.wave} 波來襲！守住生命樹。`;
   }
+  private spark(x: number, y: number, kind: SparkKind) {
+    this.sparks.push({ x, y, kind, life: sparkLife[kind] });
+  }
   explode(b: { x: number; y: number; fuse: number }) {
     if (!this.bombs.includes(b)) return;
     this.bombs.splice(this.bombs.indexOf(b), 1);
@@ -140,6 +148,7 @@ export class DefenseEngine {
         const log = this.logs.find((p) => p.x === x && p.y === y);
         if (log) {
           this.logs.splice(this.logs.indexOf(log), 1);
+          this.spark(x, y, "log");
           this.resources += 20;
           this.score += 30;
           break;
@@ -148,7 +157,10 @@ export class DefenseEngine {
     for (const cell of cells) {
       this.flames.push({ ...cell, life: 0.45 });
       for (const e of this.enemies)
-        if (Math.abs(e.x - cell.x) < 0.65 && e.y === cell.y) e.hp -= 130;
+        if (Math.abs(e.x - cell.x) < 0.65 && e.y === cell.y) {
+          e.hp -= 130;
+          e.hit = 0.15;
+        }
       const linked = this.bombs.find((p) => p.x === cell.x && p.y === cell.y);
       if (linked) {
         this.chains++;
@@ -169,6 +181,8 @@ export class DefenseEngine {
     }
     this.flames.forEach((f) => (f.life -= dt));
     this.flames = this.flames.filter((f) => f.life > 0);
+    this.sparks.forEach((f) => (f.life -= dt));
+    this.sparks = this.sparks.filter((f) => f.life > 0);
     for (const b of [...this.bombs]) {
       b.fuse -= dt;
       if (b.fuse <= 0) this.explode(b);
@@ -178,6 +192,7 @@ export class DefenseEngine {
       this.flames.some((f) => f.x === this.player.x && f.y === this.player.y)
     ) {
       this.hearts--;
+      this.spark(this.player.x, this.player.y, "hurt");
       this.player.invincible = 2;
       this.message = "被爆風擊中了！閃爍時暫時無敵。";
     }
@@ -204,6 +219,7 @@ export class DefenseEngine {
           maxHp: hp,
           slow: 0,
           attack: 0,
+          hit: 0,
         });
         this.remaining--;
         this.spawn = [1.9, 1.9, 1.75, 1.6, 1.45][this.wave - 1];
@@ -227,6 +243,8 @@ export class DefenseEngine {
       );
       if (hit) {
         hit.hp -= s.kind === "ice" ? 12 : 26;
+        hit.hit = 0.15;
+        this.spark(hit.x, hit.y, s.kind === "ice" ? "ice" : "hit");
         if (s.kind === "ice") hit.slow = 3;
         return false;
       }
@@ -235,6 +253,7 @@ export class DefenseEngine {
     for (const e of this.enemies) {
       if (e.hp <= 0) continue;
       e.slow -= dt;
+      e.hit = Math.max(0, e.hit - dt);
       e.attack -= dt;
       const p = this.plants.find(
         (p) => p.y === e.y && e.x >= p.x - 0.2 && e.x - p.x < 0.65,
@@ -255,6 +274,7 @@ export class DefenseEngine {
     this.enemies = this.enemies.filter((e) => {
       if (e.hp > 0) return true;
       if (e.hp > -999) {
+        this.spark(e.x, e.y, "defeat");
         this.kills++;
         this.resources += 12;
         this.score += [100, 150, 250][e.kind];

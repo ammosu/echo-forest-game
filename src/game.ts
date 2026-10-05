@@ -45,7 +45,8 @@ class ForestScene extends Phaser.Scene {
   backdrop!: Phaser.GameObjects.Image;
   shafts!: Phaser.GameObjects.Graphics;
   warmth!: Phaser.GameObjects.Rectangle;
-  particles: { x:number; y:number; vx:number; vy:number; life:number; color:number }[] = [];
+  particles: { x:number; y:number; vx:number; vy:number; life:number; color:number; size?:number }[] = [];
+  rings: { x:number; y:number; life:number; color:number }[] = [];
   seconds = 0; notesCollected = 0; lives = 3; checkpoint = false;
   groundedAt = -1000; jumpQueuedAt = -1000; invulnerableUntil = 0;
   prevJump = false; tickAt = 0; simTime = 0; enemyRanges: {obj:Phaser.Physics.Arcade.Sprite; start:number; end:number; direction:number}[] = [];
@@ -99,7 +100,7 @@ class ForestScene extends Phaser.Scene {
     this.physics.add.overlap(this.player,this.enemies,(_p,e)=>{
       if(!this.owner.running || this.owner.paused) return;
       const enemy=e as Phaser.Physics.Arcade.Sprite, body=this.player.body as Phaser.Physics.Arcade.Body;
-      if(body.velocity.y>80 && body.bottom<enemy.y+2) { enemy.disableBody(true,true); body.setVelocityY(-265); this.burst(enemy.x,enemy.y,0xc3d396,10); this.owner.tone('bounce'); }
+      if(body.velocity.y>80 && body.bottom<enemy.y+2) { enemy.disableBody(true,true); body.setVelocityY(-265); this.burst(enemy.x,enemy.y,0xc3d396,10); this.impact(enemy.x,enemy.y,0xc3d396,'踩到了！','#e4f2c2'); this.owner.tone('bounce'); }
       else this.hurt();
     });
     this.owl=this.add.sprite(3140,FLOOR,this.hostFrame(false)).setOrigin(.5,1).setDepth(2);
@@ -176,7 +177,7 @@ class ForestScene extends Phaser.Scene {
   }
   start() {
     if(!this.ready)return;
-    this.owner.running=true;this.owner.paused=false;this.physics.resume();this.seconds=0;this.simTime=0;this.tickAt=0;this.notesCollected=0;this.lives=3;this.checkpoint=false;this.invulnerableUntil=0;this.particles=[];
+    this.owner.running=true;this.owner.paused=false;this.physics.resume();this.seconds=0;this.simTime=0;this.tickAt=0;this.notesCollected=0;this.lives=3;this.checkpoint=false;this.invulnerableUntil=0;this.particles=[];this.rings=[];
     this.notes.getChildren().forEach(child=>{const n=child as Phaser.Physics.Arcade.Image;n.enableBody(false,n.x,n.y,true,true);});
     this.enemyRanges.forEach(e=>{e.direction=1;e.obj.enableBody(true,e.start,294,true,true);});
     this.moving.setPosition(2135,234);(this.moving.body as Phaser.Physics.Arcade.Body).reset(2135,234);this.moving.setVelocityX(46);
@@ -194,14 +195,15 @@ class ForestScene extends Phaser.Scene {
       const note=child as Phaser.Physics.Arcade.Image;
       if(!note.active)continue;
       if(!Phaser.Geom.Intersects.RectangleToRectangle(reach,new Phaser.Geom.Rectangle(note.x-8,note.y-10,16,20)))continue;
-      note.disableBody(true,true);this.notesCollected++;this.burst(note.x,note.y,0xffdc7b,9);this.owner.tone('note');this.sync();
+      note.disableBody(true,true);this.notesCollected++;this.burst(note.x,note.y,0xffdc7b,9);this.impact(note.x,note.y,0xffdc7b,`♪ ${this.notesCollected}/${notePositions.length}`);this.owner.tone('note');this.sync();
     }
   }
   sync(){this.owner.emit({type:'tick',seconds:this.seconds,notes:this.notesCollected,total:notePositions.length});}
   hurt() {
     if(this.simTime<this.invulnerableUntil || !this.owner.running)return;
     this.lives--;this.owner.emit({type:'health',lives:this.lives});this.owner.tone('hurt');
-    if(!this.owner.reducedMotion)this.cameras.main.shake(100,.003);
+    if(!this.owner.reducedMotion){this.cameras.main.shake(100,.003);this.cameras.main.flash(160,240,120,100);}
+    this.impact(this.player.x,this.player.y-20,0xf0ab85,'-1 ♥','#ffd2c4');
     if(this.lives<=0){this.finish(false);return;}
     this.burst(this.player.x,this.player.y-20,0xf0ab85,12);this.respawn();this.invulnerableUntil=this.simTime+1400;
     this.owner.emit({type:'hint',message:this.checkpoint?'回到中途營地，再出發！':'沒關係！看準落腳處，再跳一次。'});
@@ -220,6 +222,14 @@ class ForestScene extends Phaser.Scene {
       }catch{best=current;}
     }
     this.owner.emit({type:'end',won,notes:this.notesCollected,total:notePositions.length,seconds:this.seconds,best});
+  }
+  /** Touch feedback: expanding ring, star sparks and a floating label at the point of contact. */
+  impact(x:number,y:number,color:number,label:string,labelColor='#fff3b3'){
+    const text=this.add.text(x,y-14,label,{fontFamily:'sans-serif',fontSize:'12px',fontStyle:'bold',color:labelColor,stroke:'#1d3527',strokeThickness:3}).setOrigin(.5).setDepth(6).setResolution(2);
+    this.tweens.add({targets:text,y:this.owner.reducedMotion?y-14:y-38,alpha:0,duration:700,ease:'Quad.easeOut',onComplete:()=>text.destroy()});
+    if(this.owner.reducedMotion)return;
+    this.rings.push({x,y,life:.4,color});
+    for(let i=0;i<10;i++){const a=i/10*Math.PI*2+Math.random()*.3,v=60+Math.random()*50;this.particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-30,life:.55,color:i%2?0xffffff:color,size:i%2?2:3});}
   }
   burst(x:number,y:number,color:number,count:number){if(this.owner.reducedMotion)return;for(let i=0;i<count;i++)this.particles.push({x,y,vx:Math.cos(i/count*Math.PI*2)*45,vy:Math.sin(i/count*Math.PI*2)*45-20,life:.5,color});}
   snapshot(){const b=this.player.body as Phaser.Physics.Arcade.Body;return {ready:this.ready,running:this.owner.running,paused:this.owner.paused,x:this.player.x,y:this.player.y,vx:b.velocity.x,vy:b.velocity.y,grounded:b.blocked.down||b.touching.down,seconds:this.seconds,notes:this.notesCollected,lives:this.lives,checkpoint:this.checkpoint,groundSpans,notePositions,enemies:this.enemyRanges.map(e=>({x:e.obj.x,active:e.obj.active})),movingX:this.moving.x};}
@@ -257,7 +267,8 @@ class ForestScene extends Phaser.Scene {
     this.enemyRanges.forEach(e=>{if(!e.obj.active)return;if(e.obj.x>e.end)e.direction=-1;if(e.obj.x<e.start)e.direction=1;e.obj.setVelocityX(e.direction*(e.start > 1700 ? 43 : 33));e.obj.setFlipX(e.direction<0);});
     if(this.moving.x>2240)this.moving.setVelocityX(-46);if(this.moving.x<2120)this.moving.setVelocityX(46);
     this.owl.setTexture(this.hostFrame(Math.floor(this.simTime/650)%2===1));
-    this.effects.clear();this.particles=this.particles.filter(p=>p.life>0);for(const p of this.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=70*dt;this.effects.fillStyle(p.color,Math.min(1,p.life*3));this.effects.fillRect(Math.round(p.x),Math.round(p.y),2,2);}
+    this.effects.clear();this.particles=this.particles.filter(p=>p.life>0);for(const p of this.particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=70*dt;this.effects.fillStyle(p.color,Math.min(1,p.life*3));const z=p.size??2;if(z>2){this.effects.fillRect(Math.round(p.x)-1,Math.round(p.y)-z+1,2,z*2-2);this.effects.fillRect(Math.round(p.x)-z+1,Math.round(p.y)-1,z*2-2,2);}else this.effects.fillRect(Math.round(p.x),Math.round(p.y),z,z);}
+    this.rings=this.rings.filter(r=>r.life>0);for(const r of this.rings){r.life-=dt;const k=1-r.life/.4;this.effects.lineStyle(2,r.color,Math.max(0,1-k));this.effects.strokeCircle(r.x,r.y,4+k*20);}
     if(this.simTime-this.tickAt>100){this.tickAt=this.simTime;this.sync();}
   }
 }

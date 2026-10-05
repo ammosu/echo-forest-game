@@ -10,16 +10,17 @@ import { HorizontalTiltShiftShader } from "three/examples/jsm/shaders/Horizontal
 import { HueSaturationShader } from "three/examples/jsm/shaders/HueSaturationShader.js";
 import { VerticalTiltShiftShader } from "three/examples/jsm/shaders/VerticalTiltShiftShader.js";
 import { VignetteShader } from "three/examples/jsm/shaders/VignetteShader.js";
-import { DefenseEngine, seeds, type PlantKind } from "./defense-engine";
+import { DefenseEngine, seeds, sparkLife, type PlantKind, type SparkKind } from "./defense-engine";
 
 type Cell = { x: number; y: number };
 /** Scene labels live on their own layer so HD-2D post effects skip them. */
 const LABEL_LAYER = 1;
 type Entity = Cell & {
-  kind?: PlantKind | number;
+  kind?: PlantKind | SparkKind | number;
   hp?: number;
   maxHp?: number;
   slow?: number;
+  hit?: number;
   fuse?: number;
   life?: number;
 };
@@ -804,6 +805,25 @@ export class DefenseView {
         flame.scale.y = 0.5 - Math.abs(i - 1) * 0.12;
       }
     }
+    if (type === "spark") {
+      const kind = entity.kind as SparkKind;
+      const colors = { hit: ["#ffe59b", "#fff8d6"], ice: ["#b5ffff", "#ffffff"], defeat: ["#ffd45a", "#fff8d6"], hurt: ["#f39a7f", "#ffd2c4"], log: ["#b98a55", "#e1c08a"] }[kind];
+      const count = kind === "hit" || kind === "ice" ? 6 : 12;
+      const star = this.geometry("spark", () => new THREE.OctahedronGeometry(1));
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2 + Math.random() * 0.4;
+        const piece = this.mesh(group, star, colors[i % 2], 0, 0.5, 0);
+        piece.castShadow = false;
+        piece.userData.dir = new THREE.Vector3(Math.cos(angle), 0.6 + Math.random() * 0.8, Math.sin(angle));
+      }
+      if (kind !== "hit" && kind !== "ice") {
+        const ring = this.mesh(group, this.geometry("spark-ring", () => new THREE.RingGeometry(0.85, 1, 28)), colors[0], 0, 0.12, 0);
+        ring.rotation.x = -Math.PI / 2;
+        ring.castShadow = false;
+        ring.name = "ring";
+      }
+      group.position.y = 0;
+    }
     if (entity.hp !== undefined) {
       this.box(group, 0, 0.99, 0, 0.56, 0.045, 0.075, "#31463c");
       const health = this.box(
@@ -821,6 +841,26 @@ export class DefenseView {
     this.scene.add(group);
     this.entities.set(entity, { group, type });
     return group;
+  }
+
+  /** Sparks fly out and shrink over the spark's life; a ground ring expands for big touches. */
+  private animateSpark(group: THREE.Group, entity: Entity) {
+    const kind = entity.kind as SparkKind;
+    const age = 1 - (entity.life ?? 0) / sparkLife[kind];
+    const still = this.reducedMotion.matches;
+    const reach = kind === "hit" || kind === "ice" ? 0.45 : 0.9;
+    for (const piece of group.children) {
+      if (piece.name === "ring") {
+        piece.scale.setScalar(still ? 0.6 : 0.2 + age * 0.7);
+        piece.visible = age < 0.85;
+        continue;
+      }
+      const dir = piece.userData.dir as THREE.Vector3;
+      const travel = still ? 0 : reach * Math.sin(age * Math.PI * 0.5);
+      piece.position.set(dir.x * travel, 0.5 + dir.y * travel - age * age * 0.4, dir.z * travel);
+      piece.scale.setScalar((kind === "hit" || kind === "ice" ? 0.11 : 0.15) * (1 - age * 0.7));
+      piece.rotation.y = age * 6;
+    }
   }
 
   private sizeComposer() {
@@ -892,6 +932,7 @@ export class DefenseView {
       ["bomb", game.bombs],
       ["shot", game.shots],
       ["flame", game.flames],
+      ["spark", game.sparks],
     ];
     for (const [type, list] of lists)
       for (const entity of list) {
@@ -909,6 +950,9 @@ export class DefenseView {
           health.position.x = -0.27 * (1 - ratio);
         }
         if (type === "enemy") {
+          // Squash briefly when struck so every landed shot reads as a touch.
+          const f = this.reducedMotion.matches ? 0 : entity.hit ?? 0;
+          group.scale.set(1 + f * 1.4, 1 - f * 1.4, 1 + f * 1.4);
           group.getObjectByName("frost")!.visible = (entity.slow ?? 0) > 0;
           if (!this.reducedMotion.matches)
             group.position.y =
@@ -924,6 +968,7 @@ export class DefenseView {
             group.getObjectByName(`fuse-${i}`)!.visible =
               i < Math.ceil(fuse * 5);
         }
+        if (type === "spark") this.animateSpark(group, entity);
         if (type === "flame")
           group.scale.y = this.reducedMotion.matches
             ? 1
