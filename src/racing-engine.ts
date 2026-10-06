@@ -1,4 +1,5 @@
 import { raceRecordKey } from './racing-courses';
+import { tr } from './i18n';
 import { freshFlight, stepFlight, tryTrick, ramps, type FlightState } from './racing-jumps';
 import {
   sweepContact,
@@ -29,6 +30,7 @@ import {
   boostPads,
   obstacles,
   zoneNames,
+  zoneNamesEn,
 } from "./racing-data";
 
 export type RacePhase =
@@ -182,7 +184,7 @@ export class RacingEngine {
   };
   private onContextLost = (event: Event) => {
     event.preventDefault();
-    this.fail("繪圖環境已中斷，比賽已停止。請重新載入賽道。");
+    this.fail(tr("繪圖環境已中斷，比賽已停止。請重新載入賽道。", "The graphics stopped working, so the race was halted. Please reload the track."));
   };
   private fail(message: string) {
     this.paused = true;
@@ -211,7 +213,7 @@ export class RacingEngine {
       .catch(() => {
         if (this.destroyed) return;
         this.fail(
-          "無法建立立體賽道。請確認瀏覽器支援 WebGL 2、開啟硬體加速，然後重新載入。",
+          tr("無法建立立體賽道。請確認瀏覽器支援 WebGL 2、開啟硬體加速，然後重新載入。", "Couldn\'t build the 3D track. Make sure your browser supports WebGL 2 and hardware acceleration is on, then reload."),
         );
       });
     canvas.addEventListener("webglcontextlost", this.onContextLost);
@@ -302,7 +304,7 @@ export class RacingEngine {
   setControl(control: Control, value: boolean) {
     if (control === 'drift' && value && !this.controls.drift && this.phase === 'racing' && !this.paused && this.stun <= 0) {
       this.trickPressedAt = this.seconds;
-      if (tryTrick(this.flight)) this.emit({ type: 'notice', message: '特技成功！穩定落地可獲得更長加速。' });
+      if (tryTrick(this.flight)) this.emit({ type: 'notice', message: tr('特技成功！穩定落地可獲得更長加速。', 'Trick landed! Touch down smoothly for a longer boost.') });
     }
     if (
       control === "item" &&
@@ -392,7 +394,7 @@ export class RacingEngine {
       if (this.countdown <= 0) {
         this.phase = "racing";
         this.countdown = 0;
-        this.emit({ type: "notice", message: "出發！循著晨光，跑完三圈。" });
+        this.emit({ type: "notice", message: tr("出發！循著晨光，跑完三圈。", "Go! Follow the morning light for three laps.") });
       }
       this.stateClock += dt;
       if (this.stateClock > 0.08) {
@@ -447,7 +449,7 @@ export class RacingEngine {
           1.1 + Math.min(this.driftCharge, 1.8) * 0.45,
         );
         this.driftBoosts++;
-        this.emit({ type: "notice", message: "甩尾加速！" });
+        this.emit({ type: "notice", message: tr("甩尾加速！", "Drift boost!") });
         this.tone("boost");
       }
       this.drifting = false;
@@ -503,7 +505,7 @@ export class RacingEngine {
       this.boost = 2.4;
       this.boostsUsed++;
       this.tone("boost");
-      this.emit({ type: "notice", message: "回聲能量啟動！" });
+      this.emit({ type: "notice", message: tr("回聲能量啟動！", "Echo energy on!") });
     }
     this.itemQueued = false;
     const before = this.distance;
@@ -512,11 +514,11 @@ export class RacingEngine {
     if (jumpEvent === 'launch') {
       this.drifting = false; this.driftCharge = 0;
       if (this.seconds - this.trickPressedAt <= .18) tryTrick(this.flight);
-      this.emit({ type: 'notice', message: this.flight.trick ? '特技成功！穩定落地可獲得更長加速。' : '展開滑翔翼！↑ 俯衝、↓ 拉升，起跳可按甩尾做特技。' });
+      this.emit({ type: 'notice', message: this.flight.trick ? tr('特技成功！穩定落地可獲得更長加速。', 'Trick landed! Touch down smoothly for a longer boost.') : tr('展開滑翔翼！↑ 俯衝、↓ 拉升，起跳可按甩尾做特技。', 'Glider out! ↑ dive, ↓ climb. Tap drift on takeoff for a trick.') });
       this.tone('boost');
     } else if (jumpEvent === 'land') {
       this.boost = Math.max(this.boost, this.flight.trick ? 1.4 : .8);
-      this.emit({ type: 'notice', message: this.flight.trick ? '特技落地！加速 1.4 秒。' : '漂亮落地！獲得短暫加速。' });
+      this.emit({ type: 'notice', message: this.flight.trick ? tr('特技落地！加速 1.4 秒。', 'Trick landing! 1.4 s boost.') : tr('漂亮落地！獲得短暫加速。', 'Nice landing! Quick boost.') });
       this.tone('boost');
     }
     const hitProp = (
@@ -565,7 +567,7 @@ export class RacingEngine {
         this.scrape();
         continue;
       }
-      this.hit("碰到樹樁！轉向繞過它再出發。");
+      this.hit(tr("碰到樹樁！轉向繞過它再出發。", "Hit a stump! Steer around it and go again."));
       if (contact.sign < 0) {
         const z = playerBefore.distance - signedGap(playerBefore.distance, p.z);
         this.distance = Math.max(
@@ -797,7 +799,7 @@ export class RacingEngine {
         this.pickupSerial++;
         this.boost = Math.max(this.boost, 1.1);
         this.tone("boost");
-        this.emit({ type: "notice", message: "能量已滿，箱子化為加速！" });
+        this.emit({ type: "notice", message: tr("能量已滿，箱子化為加速！", "Energy full, so the box became a boost!") });
       } else if (contact && !this.consumed.has(key)) {
         this.consumed.add(key);
         this.item = true;
@@ -805,7 +807,7 @@ export class RacingEngine {
         this.tone("item");
         this.emit({
           type: "notice",
-          message: "獲得回聲能量！按 E 或點道具按鈕加速。",
+          message: tr("獲得回聲能量！按 E 或點道具按鈕加速。", "Got echo energy! Press E or tap the item button to boost."),
         });
       }
     }
@@ -832,8 +834,8 @@ export class RacingEngine {
             type: "notice",
             message:
               this.reachedQuarter === 8
-                ? "最後一圈！把握每一個彎道。"
-                : "第二圈！繼續追上前面的夥伴。",
+                ? tr("最後一圈！把握每一個彎道。", "Final lap! Make every corner count.")
+                : tr("第二圈！繼續追上前面的夥伴。", "Lap two! Keep chasing your friends."),
           });
         }
       }
@@ -904,10 +906,10 @@ export class RacingEngine {
           type: "notice",
           message:
             kind === "wall"
-              ? "撞到護欄！暈了一下…"
+              ? tr("撞到護欄！暈了一下…", "Hit the rail! Dizzy…")
               : stunned
-                ? "重撞！暈了一下…"
-                : "碰撞推擠！穩住方向。",
+                ? tr("重撞！暈了一下…", "Big crash! Dizzy…")
+                : tr("碰撞推擠！穩住方向。", "Bump! Hold your line."),
         });
       }
     }
@@ -918,7 +920,7 @@ export class RacingEngine {
     if (this.hitCooldown > 0) return;
     this.hitCooldown = 0.6;
     this.tone("hit");
-    this.emit({ type: "notice", message: "擦過樹樁！" });
+    this.emit({ type: "notice", message: tr("擦過樹樁！", "Grazed a stump!") });
   }
   private hit(message: string) {
     // Every physical contact interrupts boost/charge; cooldown only gates repeated penalties.
@@ -1039,7 +1041,7 @@ export class RacingEngine {
         finished: o.finishTime !== null,
       })),
       autoGas: this.autoGas,
-      zone: zoneNames[
+      zone: tr(zoneNames, zoneNamesEn)[
         track[Math.floor(mod(this.distance, TRACK_LENGTH) / SEGMENT_LENGTH)]
           .zone
       ],

@@ -1,12 +1,13 @@
+import { tr } from "./i18n";
 export type PlantKind = "shooter" | "wall" | "ice";
 export type Phase = "ready" | "build" | "wave" | "won" | "lost";
 /** Short-lived touch feedback for the view: a shot landing, a defeat, Anbo hit, a log broken. */
 export type SparkKind = "hit" | "ice" | "defeat" | "hurt" | "log";
 export const sparkLife: Record<SparkKind, number> = { hit: 0.3, ice: 0.3, defeat: 0.5, hurt: 0.5, log: 0.5 };
 export const seeds = {
-  shooter: { name: "松果射手", cost: 40, hp: 100 },
-  wall: { name: "樹樁守衛", cost: 25, hp: 260 },
-  ice: { name: "冰霧蘑菇", cost: 50, hp: 90 },
+  shooter: { name: tr("松果射手", "Cone Shooter"), cost: 40, hp: 100 },
+  wall: { name: tr("樹樁守衛", "Stump Guard"), cost: 25, hp: 260 },
+  ice: { name: tr("冰霧蘑菇", "Frost Mushroom"), cost: 50, hp: 90 },
 };
 export class DefenseEngine {
   phase: Phase = "ready";
@@ -54,7 +55,7 @@ export class DefenseEngine {
     { x: 5, y: 4 },
     { x: 6, y: 2 },
   ];
-  message = "先種射手，再用炸彈守住缺口。";
+  message = tr("先種射手，再用炸彈守住缺口。", "Plant shooters first, then use bombs to plug the gaps.");
   start() {
     Object.assign(this, new DefenseEngine());
     this.phase = "build";
@@ -89,7 +90,7 @@ export class DefenseEngine {
       y < 0 ||
       y > 4
     ) {
-      this.message = "最右側是怪物入口，請種在草地上。";
+      this.message = tr("最右側是怪物入口，請種在草地上。", "The far right is the monster entrance. Plant on the grass.");
       return false;
     }
     if (
@@ -97,28 +98,28 @@ export class DefenseEngine {
         (p) => p.x === x && p.y === y,
       )
     ) {
-      this.message = "這格已被占用。";
+      this.message = tr("這格已被占用。", "That spot is already taken.");
       return false;
     }
     if (this.resources < seeds[kind].cost) {
-      this.message = "露珠不足，等待補給或擊退怪物。";
+      this.message = tr("露珠不足，等待補給或擊退怪物。", "Not enough dew. Wait for more or defeat monsters.");
       return false;
     }
     this.resources -= seeds[kind].cost;
     this.plants.push({ x, y, kind, hp: seeds[kind].hp, cooldown: 0.3 });
-    this.message = `${seeds[kind].name}已種下；角色可穿過植物。`;
+    this.message = tr(`${seeds[kind].name}已種下；角色可穿過植物。`, `${seeds[kind].name} planted! You can walk through plants.`);
     return true;
   }
   bomb() {
     if (!this.active) return;
     if (this.bombs.length >= 3) {
-      this.message = "最多同時放三顆炸彈。";
+      this.message = tr("最多同時放三顆炸彈。", "You can place at most three bombs at once.");
       return;
     }
     const { x, y } = this.player;
     if (this.bombs.some((b) => b.x === x && b.y === y)) return;
     this.bombs.push({ x, y, fuse: 2 });
-    this.message = "兩秒後爆炸！十字兩格，快離開爆風。";
+    this.message = tr("兩秒後爆炸！十字兩格，快離開爆風。", "Boom in two seconds! The blast reaches two tiles in a cross. Get clear!");
   }
   nextWave() {
     if (this.phase !== "build" || this.paused) return;
@@ -126,7 +127,7 @@ export class DefenseEngine {
     this.phase = "wave";
     this.remaining = 7 + this.wave * 2;
     this.spawn = 1;
-    this.message = `第 ${this.wave} 波來襲！守住生命樹。`;
+    this.message = tr(`第 ${this.wave} 波來襲！守住生命樹。`, `Wave ${this.wave} incoming! Protect the Life Tree.`);
   }
   private spark(x: number, y: number, kind: SparkKind) {
     this.sparks.push({ x, y, kind, life: sparkLife[kind] });
@@ -195,7 +196,7 @@ export class DefenseEngine {
       this.hearts--;
       this.spark(this.player.x, this.player.y, "hurt");
       this.player.invincible = 2;
-      this.message = "被爆風擊中了！閃爍時暫時無敵。";
+      this.message = tr("被爆風擊中了！閃爍時暫時無敵。", "Hit by the blast! You can\'t be hurt while blinking.");
     }
     if (this.phase === "build") {
       this.timer -= dt;
@@ -268,7 +269,7 @@ export class DefenseEngine {
       if (e.x < -0.5) {
         this.tree -= e.kind === 2 ? 2 : 1;
         e.hp = -999;
-        this.message = "怪物突破防線，生命樹受傷了！";
+        this.message = tr("怪物突破防線，生命樹受傷了！", "A monster broke through and hurt the Life Tree!");
       }
     }
     this.plants = this.plants.filter((p) => p.hp > 0);
@@ -286,8 +287,8 @@ export class DefenseEngine {
       this.phase = "lost";
       this.message =
         this.hearts <= 0
-          ? "Anbo 耗盡體力，下次記得躲開十字爆風。"
-          : "生命樹失守了，試著替每一行安排射手。";
+          ? tr("Anbo 耗盡體力，下次記得躲開十字爆風。", "Anbo is out of energy. Next time, dodge the cross-shaped blasts.")
+          : tr("生命樹失守了，試著替每一行安排射手。", "The Life Tree fell. Try putting a shooter in every row.");
     } else if (
       this.phase === "wave" &&
       this.remaining === 0 &&
@@ -296,12 +297,12 @@ export class DefenseEngine {
       if (this.wave === 5) {
         this.phase = "won";
         this.score += this.tree * 100 + this.hearts * 200;
-        this.message = "五波全數擊退，森林平安了！";
+        this.message = tr("五波全數擊退，森林平安了！", "All five waves beaten. The forest is safe!");
       } else {
         this.phase = "build";
         this.timer = this.wave < 2 ? 10 : this.wave < 4 ? 8 : 6;
         this.resources += 65;
-        this.message = "守住了！獲得 65 露珠，補好防線迎接下一波。";
+        this.message = tr("守住了！獲得 65 露珠，補好防線迎接下一波。", "Wave cleared! +65 dew. Patch up your defenses for the next one.");
       }
     }
   }

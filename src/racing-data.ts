@@ -7,6 +7,7 @@ export type VehicleId = "moss" | "ember" | "honey" | "breeze";
 export interface Vehicle {
   id: VehicleId;
   name: string;
+  nameEn: string;
   topSpeed: number;
   acceleration: number;
   handling: number;
@@ -18,6 +19,7 @@ export const vehicles: Record<VehicleId, Vehicle> = {
     id: "moss",
     mass: 160,
     name: "苔綠號",
+    nameEn: "Moss Racer",
     topSpeed: 3600,
     acceleration: 2100,
     handling: 1,
@@ -27,6 +29,7 @@ export const vehicles: Record<VehicleId, Vehicle> = {
     id: "ember",
     mass: 195,
     name: "紅葉號",
+    nameEn: "Maple Racer",
     topSpeed: 3360,
     acceleration: 1800,
     handling: 0.94,
@@ -36,6 +39,7 @@ export const vehicles: Record<VehicleId, Vehicle> = {
     id: "honey",
     mass: 140,
     name: "蜂蜜號",
+    nameEn: "Honey Racer",
     topSpeed: 3200,
     acceleration: 2400,
     handling: 1.1,
@@ -45,6 +49,7 @@ export const vehicles: Record<VehicleId, Vehicle> = {
     id: "breeze",
     mass: 115,
     name: "微風號",
+    nameEn: "Breeze Racer",
     topSpeed: 3430,
     acceleration: 1850,
     handling: 1.08,
@@ -144,6 +149,8 @@ export const obstacles = [
   { z: 45200, x: -0.92 },
 ];
 export const zoneNames = ["晨光林道", "蕨葉彎道", "金色花谷"];
+// English twins live here because tests import this module outside the browser, where i18n can't run.
+export const zoneNamesEn = ["Sunrise Trail", "Fern Bends", "Golden Meadow"];
 export const mod = (n: number, d: number) => ((n % d) + d) % d;
 export const curveAt = (distance: number) =>
   track[Math.floor(mod(distance, TRACK_LENGTH) / SEGMENT_LENGTH)].curve;

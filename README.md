@@ -19,6 +19,10 @@ npm run preview    # 檢視正式打包
 npm test           # Playwright 瀏覽器驗證，使用已安裝的 Google Chrome
 ```
 
+## 中英文版本
+
+每頁右上角的「EN／中文」按鈕切換語言，選擇會存在瀏覽器；也可在網址加 `?lang=en` 或 `?lang=zh`。沒有選過時依瀏覽器語言決定。字串以 `tr('中文', 'English')` 寫在使用處（`src/i18n.ts`）；Node 端測試會載入的賽道資料檔改用 `nameEn` 等欄位。
+
 ## 森林冒險操作
 
 - ← / → 或 A / D：移動。

@@ -11,6 +11,7 @@ import {
 } from "./racing-engine";
 import { entries, vehicles } from "./racing-data";
 import { mountJoystick } from "./joystick";
+import { localizeDocument, tr } from "./i18n";
 import itemArt from "../assets/ui/race-item-echo.png";
 import trophyArt from "../assets/ui/race-trophy.png";
 import flagIcon from "../assets/ui/race-hud-flag.png";
@@ -23,7 +24,9 @@ const portraits = import.meta.glob("../assets/sprites/1x/*.png", {
   import: "default",
 }) as Record<string, string>;
 const kartSheet = new URL("../assets/generated/anbo-kart-eight-directions.png", import.meta.url).href;
-const directions = ["正面", "右前", "右側", "右後", "背面", "左後", "左側", "左前"];
+localizeDocument("Echo Forest — Forest Race", "A pixel kart race with Anbo and forest friends. Corner, drift and boost through the three-lap Sunrise Cup!");
+const directions = tr(["正面", "右前", "右側", "右後", "背面", "左後", "左側", "左前"], ["Front", "Front right", "Right", "Back right", "Back", "Back left", "Left", "Front left"]);
+const courseName = tr(course.name, course.nameEn);
 const kartFrame = (i: number) => `${(i % 4) * 100 / 3}% ${Math.floor(i / 4) * 100}%`;
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
@@ -35,7 +38,7 @@ const time = (seconds: number) =>
     .padStart(2, "0")}.${Math.floor((seconds % 1) * 100)
     .toString()
     .padStart(2, "0")}`;
-let saved = "還沒有紀錄";
+let saved = tr("還沒有紀錄", "No record yet");
 try {
   const n = Number(localStorage.getItem(raceRecordKey));
   if (Number.isFinite(n) && n > 0) saved = time(n);
@@ -43,25 +46,25 @@ try {
 document.getElementById("app")!.innerHTML = `
 ${siteHeader("race")}
 <main class="race-main">
-  <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> ${course.name}・森林盃</p><h1 id="page-title">把晨光，甩在身後。</h1>${guideButton()}<p class="intro-copy">沿著林間彎道，和夥伴們一起衝向終點。</p></div><div class="race-intro-badge"><span class="checker" aria-hidden="true"></span><div><strong>3 圈 <span>／ 4 位車手</span></strong><small>三座跳台，展翼滑翔森林</small></div></div></section>
-  <nav class="course-board" aria-label="選擇賽道">${courses.map(c => `<a href="?course=${c.id}" class="course-option" ${c.id === course.id ? 'aria-current="page"' : ''}><svg viewBox="-135 -265 510 530" aria-hidden="true"><polygon points="${c.points.map(p => p.join(',')).join(' ')}"/></svg><span><strong>${c.name}<small>${c.style}</small></strong><span>${c.description}</span><em>${c.id === course.id ? '目前賽道' : '選擇這條路線'}</em></span></a>`).join('')}</nav>
-  <section class="game-shell race-shell is-locked" id="race-shell" aria-label="森林賽車">
-    <div class="game-toolbar"><div class="trail-name"><span aria-hidden="true">⚑</span> ${course.name} <span class="trail-en">Woodland circuit</span></div><div class="toolbar-actions"><button id="race-look" aria-pressed="false" title="切換畫面風格">✧ <span id="race-look-name">標準</span></button><button id="race-sound" aria-label="開啟音效" aria-pressed="false">♫ <span>音效關</span></button><button id="race-fullscreen" aria-label="全螢幕">⛶ <span>全螢幕</span></button><button id="race-pause" aria-label="暫停比賽" disabled>Ⅱ <span>暫停</span></button><button id="race-restart" aria-label="重新比賽" disabled>↻ <span>重來</span></button><button class="race-garage-bar" id="open-kart-bar" aria-label="賽車工坊">⚙ <span>工坊</span></button></div></div>
-    <div class="race-stage"><canvas id="race-canvas" tabindex="0" aria-label="森林賽車，方向鍵轉向，空白鍵甩尾，E 使用道具，Escape 暫停"></canvas>
-      <div class="race-hud" id="race-hud" hidden><div class="race-position"><span><img src="${flagIcon}" alt="">目前名次</span><strong><b id="race-position">4</b><small> / 4</small></strong></div><div class="race-progress"><span><img src="${lapIcon}" alt="">圈數 <b id="race-lap">1</b><small> / 3</small></span><strong><img src="${timerIcon}" alt=""><span id="race-time">00:00.00</span></strong></div></div>
-      <div class="race-speed" id="race-speed-panel" hidden><div><img src="${speedIcon}" alt=""><b id="race-speed">0</b><span>km/h</span><em id="race-boost-status">苔綠號</em></div><div class="drift-meter"><span id="drift-fill"></span></div><small id="drift-hint">按住空白鍵＋轉向甩尾</small></div>
-      <button class="race-item" id="race-item" disabled hidden aria-label="使用回聲能量"><span id="item-icon"><img src="${itemArt}" alt=""></span><span id="item-label">尋找道具箱</span><kbd>E</kbd></button>
+  <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> ${courseName}${tr('・森林盃', ' · Forest Cup')}</p><h1 id="page-title">${tr('把晨光，甩在身後。', 'Leave the sunrise behind.')}</h1>${guideButton()}<p class="intro-copy">${tr('沿著林間彎道，和夥伴們一起衝向終點。', 'Race your friends through the winding woods to the finish.')}</p></div><div class="race-intro-badge"><span class="checker" aria-hidden="true"></span><div><strong>${tr('3 圈 <span>／ 4 位車手</span>', '3 laps <span>/ 4 racers</span>')}</strong><small>${tr('三座跳台，展翼滑翔森林', 'Three ramps to glide over the forest')}</small></div></div></section>
+  <nav class="course-board" aria-label="${tr('選擇賽道', 'Choose a track')}">${courses.map(c => `<a href="?course=${c.id}" class="course-option" ${c.id === course.id ? 'aria-current="page"' : ''}><svg viewBox="-135 -265 510 530" aria-hidden="true"><polygon points="${c.points.map(p => p.join(',')).join(' ')}"/></svg><span><strong>${tr(c.name, c.nameEn)}<small>${tr(c.style, c.styleEn)}</small></strong><span>${tr(c.description, c.descriptionEn)}</span><em>${c.id === course.id ? tr('目前賽道', 'Current track') : tr('選擇這條路線', 'Pick this route')}</em></span></a>`).join('')}</nav>
+  <section class="game-shell race-shell is-locked" id="race-shell" aria-label="${tr('森林賽車', 'Forest Race')}">
+    <div class="game-toolbar"><div class="trail-name"><span aria-hidden="true">⚑</span> ${courseName} <span class="trail-en">Woodland circuit</span></div><div class="toolbar-actions"><button id="race-look" aria-pressed="false" title="${tr('切換畫面風格', 'Switch visual style')}">✧ <span id="race-look-name">${tr('標準', 'Standard')}</span></button><button id="race-sound" aria-label="${tr('開啟音效', 'Turn sound on')}" aria-pressed="false">♫ <span>${tr('音效關', 'Sound off')}</span></button><button id="race-fullscreen" aria-label="${tr('全螢幕', 'Full screen')}">⛶ <span>${tr('全螢幕', 'Full screen')}</span></button><button id="race-pause" aria-label="${tr('暫停比賽', 'Pause race')}" disabled>Ⅱ <span>${tr('暫停', 'Pause')}</span></button><button id="race-restart" aria-label="${tr('重新比賽', 'Restart race')}" disabled>↻ <span>${tr('重來', 'Restart')}</span></button><button class="race-garage-bar" id="open-kart-bar" aria-label="${tr('賽車工坊', 'Kart workshop')}">⚙ <span>${tr('工坊', 'Garage')}</span></button></div></div>
+    <div class="race-stage"><canvas id="race-canvas" tabindex="0" aria-label="${tr('森林賽車，方向鍵轉向，空白鍵甩尾，E 使用道具，Escape 暫停', 'Forest Race. Arrow keys steer, Space drifts, E uses an item, Escape pauses')}"></canvas>
+      <div class="race-hud" id="race-hud" hidden><div class="race-position"><span><img src="${flagIcon}" alt="">${tr('目前名次', 'Place')}</span><strong><b id="race-position">4</b><small> / 4</small></strong></div><div class="race-progress"><span><img src="${lapIcon}" alt="">${tr('圈數', 'Lap')} <b id="race-lap">1</b><small> / 3</small></span><strong><img src="${timerIcon}" alt=""><span id="race-time">00:00.00</span></strong></div></div>
+      <div class="race-speed" id="race-speed-panel" hidden><div><img src="${speedIcon}" alt=""><b id="race-speed">0</b><span>km/h</span><em id="race-boost-status">${tr(vehicles.moss.name, vehicles.moss.nameEn)}</em></div><div class="drift-meter"><span id="drift-fill"></span></div><small id="drift-hint">${tr('按住空白鍵＋轉向甩尾', 'Hold Space + steer to drift')}</small></div>
+      <button class="race-item" id="race-item" disabled hidden aria-label="${tr('使用回聲能量', 'Use echo energy')}"><span id="item-icon"><img src="${itemArt}" alt=""></span><span id="item-label">${tr('尋找道具箱', 'Find an item box')}</span><kbd>E</kbd></button>
       <div class="race-notice" id="race-notice" role="status" aria-live="polite"></div>
-      <div class="race-overlay" id="race-overlay"><div class="race-welcome" id="race-welcome"><p class="welcome-label">Echo Forest Kart</p><h2>下一個彎道，<br>換你領先。</h2><p>和 Angoo、Anmi、Anje 一起出發。<br>甩尾蓄力、抓住加速帶，跑出你的節奏。</p><div class="race-start-meta"><span>${course.name}</span><span>三圈決勝</span><span>單人競速</span></div><button class="primary" id="race-start" disabled>正在準備賽道…</button><span class="start-hint">← → 轉向 ／ 空白鍵特技 ／ 空中 ↑ 俯衝、↓ 拉升 ／ E 道具</span></div><div class="race-result" id="race-result" hidden></div></div>
+      <div class="race-overlay" id="race-overlay"><div class="race-welcome" id="race-welcome"><p class="welcome-label">Echo Forest Kart</p><h2>${tr('下一個彎道，<br>換你領先。', 'Next corner,<br>you take the lead.')}</h2><p>${tr('和 Angoo、Anmi、Anje 一起出發。<br>甩尾蓄力、抓住加速帶，跑出你的節奏。', 'Race with Angoo, Anmi and Anje.<br>Charge drifts, hit boost pads, find your rhythm.')}</p><div class="race-start-meta"><span>${courseName}</span><span>${tr('三圈決勝', 'Three laps')}</span><span>${tr('單人競速', 'Solo race')}</span></div><button class="primary" id="race-start" disabled>${tr('正在準備賽道…', 'Preparing the track…')}</button><span class="start-hint">${tr('← → 轉向 ／ 空白鍵特技 ／ 空中 ↑ 俯衝、↓ 拉升 ／ E 道具', '← → steer / Space trick / in air ↑ dive, ↓ climb / E item')}</span></div><div class="race-result" id="race-result" hidden></div></div>
     </div>
-    <div class="race-touch" aria-label="賽車觸控操作"><div class="touch-stick" id="race-stick"></div><div><button data-race-control="gas" id="touch-gas" aria-label="油門" hidden>油門</button><button data-race-control="brake" id="touch-brake" aria-label="煞車">煞車</button><button data-race-control="drift" class="drift-touch" aria-label="甩尾" title="地面按住甩尾；起跳時點一下做特技">甩尾／特技</button><button data-race-control="item" class="item-touch" aria-label="觸控使用道具"><img src="${itemArt}" alt="">道具</button></div></div>
-    <div class="race-caption"><div><kbd>←</kbd><kbd>→</kbd> 轉向 <kbd>Space</kbd> 甩尾 <kbd>E</kbd> 道具 <kbd>↓</kbd> 煞車</div><label><input id="auto-gas" type="checkbox" checked> 自動油門 <span>專心過彎就好</span></label></div>
+    <div class="race-touch" aria-label="${tr('賽車觸控操作', 'Race touch controls')}"><div class="touch-stick" id="race-stick"></div><div><button data-race-control="gas" id="touch-gas" aria-label="${tr('油門', 'Gas')}" hidden>${tr('油門', 'Gas')}</button><button data-race-control="brake" id="touch-brake" aria-label="${tr('煞車', 'Brake')}">${tr('煞車', 'Brake')}</button><button data-race-control="drift" class="drift-touch" aria-label="${tr('甩尾', 'Drift')}" title="${tr('地面按住甩尾；起跳時點一下做特技', 'Hold to drift on the ground; tap on takeoff for a trick')}">${tr('甩尾／特技', 'Drift / Trick')}</button><button data-race-control="item" class="item-touch" aria-label="${tr('觸控使用道具', 'Use item')}"><img src="${itemArt}" alt="">${tr('道具', 'Item')}</button></div></div>
+    <div class="race-caption"><div><kbd>←</kbd><kbd>→</kbd> ${tr('轉向', 'Steer')} <kbd>Space</kbd> ${tr('甩尾', 'Drift')} <kbd>E</kbd> ${tr('道具', 'Item')} <kbd>↓</kbd> ${tr('煞車', 'Brake')}</div><label><input id="auto-gas" type="checkbox" checked> ${tr('自動油門', 'Auto gas')} <span>${tr('專心過彎就好', 'Just focus on corners')}</span></label></div>
   </section>
-  <section class="race-details"><div class="race-racers"><div class="friends-heading"><h2>一起上場的夥伴</h2><p id="race-standings-label">你駕駛 Anbo 的苔綠號</p></div><div class="race-entry-list">${entries.map((entry, i) => `<div class="race-entry ${i === 0 ? "you" : ""}" data-racer="${entry.name}"><span class="entry-rank">${i === 0 ? "你" : i + 1}</span><img src="${portraits[`../assets/sprites/1x/${entry.characterId}.png`]}" alt="${entry.name}"><div><strong>${entry.name}</strong><small>${vehicles[entry.vehicleId].name}</small></div><span class="vehicle-dot" style="--vehicle:${vehicles[entry.vehicleId].color}"></span></div>`).join("")}</div></div><div class="race-record"><span>本機最快紀錄</span><strong id="best-time">${saved}</strong><small>三圈總時間</small></div><button class="race-garage" id="open-kart"><span class="kart-thumb" style="background-image:url('${kartSheet}');background-position:${kartFrame(1)}" aria-hidden="true"></span><span><strong>賽車工坊 <span aria-hidden="true">↗</span></strong><small>八個角度看看苔綠號</small></span></button></section>
-  <section class="race-tips" aria-label="駕駛技巧"><p><span>↝</span><strong>彎道裡蓄力</strong>按住甩尾並轉向，亮藍後放開，短暫加速。</p><p><span>✦</span><strong>抓住超車時機</strong>吃到道具箱後，按 E 啟動回聲能量。</p><p><span>⚑</span><strong>選擇飛躍路線</strong>跳台自動展翼；↑ 俯衝、↓ 拉升。起跳按甩尾做特技，落地加速更久。</p></section>
-  <footer><span>小小像素，大大冒險。</span><span>Echo Forest <span aria-hidden="true">✦</span> 數讀房市</span></footer>
+  <section class="race-details"><div class="race-racers"><div class="friends-heading"><h2>${tr('一起上場的夥伴', 'Today\'s racers')}</h2><p id="race-standings-label">${tr('你駕駛 Anbo 的苔綠號', 'You drive Anbo\'s Moss Racer')}</p></div><div class="race-entry-list">${entries.map((entry, i) => `<div class="race-entry ${i === 0 ? "you" : ""}" data-racer="${entry.name}"><span class="entry-rank">${i === 0 ? tr("你", "You") : i + 1}</span><img src="${portraits[`../assets/sprites/1x/${entry.characterId}.png`]}" alt="${entry.name}"><div><strong>${entry.name}</strong><small>${tr(vehicles[entry.vehicleId].name, vehicles[entry.vehicleId].nameEn)}</small></div><span class="vehicle-dot" style="--vehicle:${vehicles[entry.vehicleId].color}"></span></div>`).join("")}</div></div><div class="race-record"><span>${tr('本機最快紀錄', 'Best on this device')}</span><strong id="best-time">${saved}</strong><small>${tr('三圈總時間', '3-lap total')}</small></div><button class="race-garage" id="open-kart"><span class="kart-thumb" style="background-image:url('${kartSheet}');background-position:${kartFrame(1)}" aria-hidden="true"></span><span><strong>${tr('賽車工坊', 'Kart workshop')} <span aria-hidden="true">↗</span></strong><small>${tr('八個角度看看苔綠號', 'See the Moss Racer from 8 angles')}</small></span></button></section>
+  <section class="race-tips" aria-label="${tr('駕駛技巧', 'Driving tips')}"><p><span>↝</span><strong>${tr('彎道裡蓄力', 'Charge in corners')}</strong>${tr('按住甩尾並轉向，亮藍後放開，短暫加速。', 'Hold drift and steer; let go when it glows blue for a quick boost.')}</p><p><span>✦</span><strong>${tr('抓住超車時機', 'Time your pass')}</strong>${tr('吃到道具箱後，按 E 啟動回聲能量。', 'After grabbing an item box, press E for echo energy.')}</p><p><span>⚑</span><strong>${tr('選擇飛躍路線', 'Pick your flight line')}</strong>${tr('跳台自動展翼；↑ 俯衝、↓ 拉升。起跳按甩尾做特技，落地加速更久。', 'Ramps open your glider; ↑ dive, ↓ climb. Drift on takeoff for a trick and a longer landing boost.')}</p></section>
+  <footer><span>${tr('小小像素，大大冒險。', 'Tiny pixels, big adventure.')}</span><span>Echo Forest <span aria-hidden="true">✦</span> ${tr('數讀房市', 'Housing Decoder')}</span></footer>
 </main>
-<dialog id="kart-dialog" aria-labelledby="kart-title"><div class="workshop-top"><span>Echo Forest Garage</span><button id="close-kart" aria-label="關閉賽車工坊">✕</button></div><div class="workshop-body"><p class="chapter">賽車工坊</p><h2 id="kart-title">Anbo 的苔綠號</h2><p>森林綠車身、黃銅細節，還有熟悉的橘色耳朵。<br>點選角度，看看小車的模樣。</p><div class="kart-turntable"><div class="kart-large" id="kart-large" role="img" aria-label="Anbo 賽車正面" style="background-image:url('${kartSheet}')"></div><span id="direction-label">正面</span></div><div class="direction-list">${directions.map((name, i) => `<button class="direction ${i === 0 ? "active" : ""}" data-direction="${i}" aria-pressed="${i === 0}"><span class="kart-thumb" style="background-image:url('${kartSheet}');background-position:${kartFrame(i)}"></span>${name}</button>`).join("")}</div><div class="workshop-note"><span>八方向美術樣張</span><p>看完了？回到賽道，帶著 Anbo 衝線吧。</p><a href="${kartSheet}" download="anbo-kart-eight-directions.png">下載完整樣張 ↓</a></div></div></dialog>`;
+<dialog id="kart-dialog" aria-labelledby="kart-title"><div class="workshop-top"><span>Echo Forest Garage</span><button id="close-kart" aria-label="${tr('關閉賽車工坊', 'Close kart workshop')}">✕</button></div><div class="workshop-body"><p class="chapter">${tr('賽車工坊', 'Kart workshop')}</p><h2 id="kart-title">${tr('Anbo 的苔綠號', 'Anbo\'s Moss Racer')}</h2><p>${tr('森林綠車身、黃銅細節，還有熟悉的橘色耳朵。<br>點選角度，看看小車的模樣。', 'Forest-green body, brass trim and those familiar orange ears.<br>Pick an angle to take a look.')}</p><div class="kart-turntable"><div class="kart-large" id="kart-large" role="img" aria-label="${tr('Anbo 賽車正面', 'Anbo\'s kart, front')}" style="background-image:url('${kartSheet}')"></div><span id="direction-label">${directions[0]}</span></div><div class="direction-list">${directions.map((name, i) => `<button class="direction ${i === 0 ? "active" : ""}" data-direction="${i}" aria-pressed="${i === 0}"><span class="kart-thumb" style="background-image:url('${kartSheet}');background-position:${kartFrame(i)}"></span>${name}</button>`).join("")}</div><div class="workshop-note"><span>${tr('八方向美術樣張', 'Eight-direction art sheet')}</span><p>${tr('看完了？回到賽道，帶著 Anbo 衝線吧。', 'All done? Head back to the track and race Anbo to the finish.')}</p><a href="${kartSheet}" download="anbo-kart-eight-directions.png">${tr('下載完整樣張 ↓', 'Download full sheet ↓')}</a></div></div></dialog>`;
 const start = el<HTMLButtonElement>("race-start"),
   pause = el<HTMLButtonElement>("race-pause"),
   restart = el<HTMLButtonElement>("race-restart");
@@ -112,7 +115,7 @@ function finish(r: RaceResult) {
   el("best-time").textContent = time(r.best);
   clearTimeout(noticeTimer);
   el("race-notice").classList.remove("visible");
-  result.innerHTML = `<img class="finish-badge ${r.position === 1 ? "is-champion" : ""}" src="${r.position === 1 ? trophyArt : flagIcon}" alt=""><p class="chapter">${course.name}・三圈完成</p><h2>${r.position === 1 ? "冠軍，是你！" : "漂亮地衝過終點！"}</h2><div class="finish-summary"><span class="finish-place">${r.position}<small> / 4</small></span><div><small>三圈總時間</small><strong>${time(r.time)}</strong><span>本機最快 ${time(r.best)}</span></div></div><div class="lap-splits">${r.lapTimes.map((t, i) => `<span>第 ${i + 1} 圈<strong>${time(t)}</strong></span>`).join("")}</div><ol class="finish-standings">${r.standings.map((s) => `<li class="${s.name === "Anbo" ? "is-you" : ""}"><span>${s.name}${s.name === "Anbo" ? "（你）" : ""}</span><span>${s.time !== null ? time(s.time) : "尚未完賽"}</span></li>`).join("")}</ol><button class="primary" id="race-again">再比一場 →</button><a class="text-button" href="./adventure.html">回森林冒險</a>`;
+  result.innerHTML = `<img class="finish-badge ${r.position === 1 ? "is-champion" : ""}" src="${r.position === 1 ? trophyArt : flagIcon}" alt=""><p class="chapter">${courseName}${tr('・三圈完成', ' · 3 laps done')}</p><h2>${r.position === 1 ? tr("冠軍，是你！", "You\'re the champion!") : tr("漂亮地衝過終點！", "What a finish!")}</h2><div class="finish-summary"><span class="finish-place">${r.position}<small> / 4</small></span><div><small>${tr('三圈總時間', '3-lap total')}</small><strong>${time(r.time)}</strong><span>${tr('本機最快', 'Best')} ${time(r.best)}</span></div></div><div class="lap-splits">${r.lapTimes.map((t, i) => `<span>${tr(`第 ${i + 1} 圈`, `Lap ${i + 1}`)}<strong>${time(t)}</strong></span>`).join("")}</div><ol class="finish-standings">${r.standings.map((s) => `<li class="${s.name === "Anbo" ? "is-you" : ""}"><span>${s.name}${s.name === "Anbo" ? tr("（你）", " (you)") : ""}</span><span>${s.time !== null ? time(s.time) : tr("尚未完賽", "Still racing")}</span></li>`).join("")}</ol><button class="primary" id="race-again">${tr('再比一場 →', 'Race again →')}</button><a class="text-button" href="./adventure.html">${tr('回森林冒險', 'Back to Forest Adventure')}</a>`;
   result.hidden = false;
   overlay.hidden = false;
   el("race-again").onclick = () => void begin();
@@ -121,7 +124,7 @@ function finish(r: RaceResult) {
 function onEvent(event: RaceEvent) {
   if (event.type === "ready") {
     start.disabled = false;
-    start.textContent = "上場比賽　→";
+    start.textContent = tr("上場比賽　→", "Start race  →");
   }
   if (event.type === "error") {
     start.disabled = true;
@@ -131,12 +134,12 @@ function onEvent(event: RaceEvent) {
     result.classList.add("race-error");
     result.replaceChildren();
     const title = document.createElement("h2");
-    title.textContent = "賽道暫時無法顯示";
+    title.textContent = tr("賽道暫時無法顯示", "The track can\'t be shown right now");
     const message = document.createElement("p");
     message.textContent = event.message;
     const retry = document.createElement("button");
     retry.className = "primary";
-    retry.textContent = "重新載入賽道";
+    retry.textContent = tr("重新載入賽道", "Reload track");
     retry.onclick = () => location.reload();
     result.append(title, message, retry);
     result.hidden = false;
@@ -152,34 +155,35 @@ function onEvent(event: RaceEvent) {
   el("race-speed").textContent = String(Math.round(s.speed / 30));
   const gliding = s.flight.gliding;
   el('touch-gas').hidden = race.autoGas && !gliding;
-  el('touch-gas').textContent = gliding ? '俯衝' : '油門';
-  el('touch-gas').setAttribute('aria-label', gliding ? '俯衝' : '油門');
-  el('touch-brake').textContent = gliding ? '拉升' : '煞車';
-  el('touch-brake').setAttribute('aria-label', gliding ? '拉升' : '煞車');
+  const gasLabel = gliding ? tr('俯衝', 'Dive') : tr('油門', 'Gas'), brakeLabel = gliding ? tr('拉升', 'Climb') : tr('煞車', 'Brake');
+  el('touch-gas').textContent = gasLabel;
+  el('touch-gas').setAttribute('aria-label', gasLabel);
+  el('touch-brake').textContent = brakeLabel;
+  el('touch-brake').setAttribute('aria-label', brakeLabel);
   el("drift-fill").style.width = `${(s.driftCharge / 1.8) * 100}%`;
   el("drift-fill").classList.toggle("charged", s.driftCharge >= 0.65);
   el("drift-hint").textContent = gliding
-    ? "↑ 俯衝加速 · ↓ 拉升延長滑翔"
+    ? tr("↑ 俯衝加速 · ↓ 拉升延長滑翔", "↑ dive for speed · ↓ climb to glide longer")
     : s.flight.airborne
-    ? s.flight.trick ? "特技成功，穩住落點！" : "起跳時按一下甩尾鍵做特技"
+    ? s.flight.trick ? tr("特技成功，穩住落點！", "Trick! Stick the landing!") : tr("起跳時按一下甩尾鍵做特技", "Tap drift on takeoff for a trick")
     : s.drifting
     ? s.driftCharge >= 0.65
-      ? "放開甩尾，釋放加速！"
-      : "彎道蓄力中…"
-    : "按住空白鍵＋轉向甩尾";
+      ? tr("放開甩尾，釋放加速！", "Let go of drift to boost!")
+      : tr("彎道蓄力中…", "Charging…")
+    : tr("按住空白鍵＋轉向甩尾", "Hold Space + steer to drift");
   el("race-boost-status").textContent =
     s.stun > 0
-      ? "撞暈中…"
+      ? tr("撞暈中…", "Dizzy…")
       : s.boost > 0
-        ? "加速中！"
+        ? tr("加速中！", "Boosting!")
         : s.offroad
-          ? "草地減速"
-          : "苔綠號";
+          ? tr("草地減速", "Grass slows you")
+          : tr(vehicles.moss.name, vehicles.moss.nameEn);
   el("race-speed-panel").classList.toggle("boosting", s.boost > 0);
   const item = el<HTMLButtonElement>("race-item");
   item.disabled = !s.item || s.paused || s.stun > 0 || s.phase !== "racing";
   item.classList.toggle("has-item", s.item);
-  el("item-label").textContent = s.item ? "回聲能量" : "尋找道具箱";
+  el("item-label").textContent = s.item ? tr("回聲能量", "Echo energy") : tr("尋找道具箱", "Find an item box");
   document
     .querySelectorAll<HTMLButtonElement>('[data-race-control="item"]')
     .forEach((b) => {
@@ -197,7 +201,7 @@ function onEvent(event: RaceEvent) {
       row.style.order = String(i);
       row.querySelector(".entry-rank")!.textContent = String(i + 1);
     });
-    el("race-standings-label").textContent = `${s.zone}・即時名次`;
+    el("race-standings-label").textContent = tr(`${s.zone}・即時名次`, `${s.zone} · Live standings`);
   }
   if (s.paused !== lastPaused) {
     lastPaused = s.paused;
@@ -205,11 +209,11 @@ function onEvent(event: RaceEvent) {
       "is-locked",
       s.paused || s.phase === "finished",
     );
-    pause.innerHTML = s.paused ? "▶ <span>繼續</span>" : "Ⅱ <span>暫停</span>";
-    pause.setAttribute("aria-label", s.paused ? "繼續比賽" : "暫停比賽");
+    pause.innerHTML = s.paused ? tr("▶ <span>繼續</span>", "▶ <span>Resume</span>") : tr("Ⅱ <span>暫停</span>", "Ⅱ <span>Pause</span>");
+    pause.setAttribute("aria-label", s.paused ? tr("繼續比賽", "Resume race") : tr("暫停比賽", "Pause race"));
     if (s.paused) {
       result.innerHTML =
-        '<span class="result-symbol">☾</span><p class="chapter">在林間暫停一下</p><h2>下一個彎道，等你。</h2><p>比賽與計時都已暫停。</p><button class="primary" id="race-resume">繼續比賽 →</button>';
+        tr('<span class="result-symbol">☾</span><p class="chapter">在林間暫停一下</p><h2>下一個彎道，等你。</h2><p>比賽與計時都已暫停。</p><button class="primary" id="race-resume">繼續比賽 →</button>', '<span class="result-symbol">☾</span><p class="chapter">A short break in the woods</p><h2>The next corner will wait.</h2><p>The race and the clock are paused.</p><button class="primary" id="race-resume">Resume race →</button>');
       result.hidden = false;
       overlay.hidden = false;
       el("race-resume").onclick = () => {
@@ -240,7 +244,7 @@ function initialLook(): Look {
 const race = new RacingEngine(canvas, onEvent, initialLook());
 function showLook() {
   const hd = race.lookName === "hd2d";
-  el("race-look-name").textContent = hd ? "HD-2D" : "標準";
+  el("race-look-name").textContent = hd ? "HD-2D" : tr("標準", "Standard");
   el("race-look").setAttribute("aria-pressed", String(hd));
 }
 showLook();
@@ -260,15 +264,15 @@ pause.onclick = () => {
 };
 el("race-sound").onclick = () => {
   const on = race.toggleSound();
-  el("race-sound").innerHTML = `♫ <span>音效${on ? "開" : "關"}</span>`;
+  el("race-sound").innerHTML = `♫ <span>${on ? tr("音效開", "Sound on") : tr("音效關", "Sound off")}</span>`;
   el("race-sound").setAttribute("aria-pressed", String(on));
-  el("race-sound").setAttribute("aria-label", on ? "關閉音效" : "開啟音效");
+  el("race-sound").setAttribute("aria-label", on ? tr("關閉音效", "Turn sound off") : tr("開啟音效", "Turn sound on"));
   focus();
 };
 el<HTMLInputElement>("auto-gas").onchange = (e) => {
   race.autoGas = (e.target as HTMLInputElement).checked;
   el("touch-gas").hidden = race.autoGas && !race.flight.gliding;
-  notice(race.autoGas ? "自動油門已開啟" : "自動油門已關閉，按 ↑ 或 W 加速。");
+  notice(race.autoGas ? tr("自動油門已開啟", "Auto gas on") : tr("自動油門已關閉，按 ↑ 或 W 加速。", "Auto gas off. Press ↑ or W to speed up."));
   focus();
 };
 el("race-item").onclick = () => {
@@ -294,7 +298,7 @@ document
     button.onpointercancel = release;
     button.onlostpointercapture = release;
   });
-mountJoystick(el("race-stick"), (x) => race.setStick(x), "方向搖桿");
+mountJoystick(el("race-stick"), (x) => race.setStick(x), tr("方向搖桿", "Steering stick"));
 const fullscreen = el<HTMLButtonElement>("race-fullscreen");
 fullscreen.hidden = !document.fullscreenEnabled;
 fullscreen.onclick = async () => {
@@ -303,7 +307,7 @@ fullscreen.onclick = async () => {
     else await el("race-shell").requestFullscreen();
     focus();
   } catch {
-    notice("這個瀏覽器無法切換全螢幕，仍可直接遊玩。");
+    notice(tr("這個瀏覽器無法切換全螢幕，仍可直接遊玩。", "This browser can\'t go full screen, but you can still play."));
   }
 };
 window.addEventListener("pagehide", () => race.setPaused(true));
@@ -332,7 +336,7 @@ for (const type of ["keydown", "keyup"] as const)
 document.querySelectorAll<HTMLButtonElement>("[data-direction]").forEach((button) => (button.onclick = () => {
   const index = Number(button.dataset.direction);
   el("kart-large").style.backgroundPosition = kartFrame(index);
-  el("kart-large").setAttribute("aria-label", `Anbo 賽車${directions[index]}`);
+  el("kart-large").setAttribute("aria-label", tr(`Anbo 賽車${directions[index]}`, `Anbo\'s kart, ${directions[index].toLowerCase()}`));
   el("direction-label").textContent = directions[index];
   document.querySelectorAll("[data-direction]").forEach((b) => {
     b.classList.toggle("active", b === button);
@@ -341,14 +345,20 @@ document.querySelectorAll<HTMLButtonElement>("[data-direction]").forEach((button
 }));
 // On phones the crew, record and driving tips live in this swipeable guide instead of below the track.
 mountGuide({
-  id: "race", title: "森林賽車",
+  id: "race", title: tr("森林賽車", "Forest Race"),
   // Like the other games, the race stays paused after the guide closes; the player resumes when ready.
   onOpen: () => { if (race.active && !race.paused) race.setPaused(true); },
-  pages: [
+  pages: tr([
     { icon: portraits["../assets/sprites/1x/angoo.png"], title: "三圈決勝", body: `<p>和 <b>Angoo、Anmi、Anje</b> 一起跑 <b>3 圈</b>，搶第一個衝線。</p><p>上方可以換賽道：${courses.map(c => c.name).join("、")}。</p>` },
     { icon: "🕹", title: "轉向與油門", body: "<p>手機：左邊<b>搖桿</b>左右推來轉向，推越多轉越急；右邊有<b>煞車</b>。</p><p>鍵盤：<kbd>←</kbd><kbd>→</kbd> 轉向、<kbd>↓</kbd> 煞車。預設<b>自動油門</b>，專心過彎就好。</p>" },
     { icon: "↝", title: "甩尾蓄力", body: "<p>彎道裡<b>按住甩尾並轉向</b>，計量條亮藍後放開，就能短暫加速。</p><p>鍵盤用 <kbd>Space</kbd>。</p>" },
     { icon: itemArt, title: "回聲能量", body: "<p>撞開<b>道具箱</b>拿到回聲能量，按<b>道具</b>鈕或 <kbd>E</kbd> 啟動，抓住超車時機。</p>" },
     { icon: "⚑", title: "跳台與滑翔", body: "<p>衝上跳台會<b>自動展翼</b>：空中 <kbd>↑</kbd> 俯衝、<kbd>↓</kbd> 拉升；手機按住<b>煞車</b>也能拉升。</p><p>起跳時點一下<b>甩尾／特技</b>，落地加速更久。</p>" },
-  ],
+  ], [
+    { icon: portraits["../assets/sprites/1x/angoo.png"], title: "Three laps to win", body: `<p>Race <b>Angoo, Anmi and Anje</b> for <b>3 laps</b> and cross the line first.</p><p>Switch tracks up top: ${courses.map(c => c.nameEn).join(", ")}.</p>` },
+    { icon: "🕹", title: "Steering and gas", body: "<p>Phone: push the <b>stick</b> on the left to steer. The further you push, the sharper you turn. <b>Brake</b> is on the right.</p><p>Keyboard: <kbd>←</kbd><kbd>→</kbd> steer, <kbd>↓</kbd> brake. <b>Auto gas</b> is on, so just focus on the corners.</p>" },
+    { icon: "↝", title: "Drift to charge", body: "<p>In a corner, <b>hold drift and steer</b>. Let go when the meter glows blue for a quick boost.</p><p>On a keyboard, use <kbd>Space</kbd>.</p>" },
+    { icon: itemArt, title: "Echo energy", body: "<p>Smash an <b>item box</b> for echo energy, then tap <b>Item</b> or press <kbd>E</kbd> to boost past others.</p>" },
+    { icon: "⚑", title: "Ramps and gliding", body: "<p>Ramps <b>open your glider</b>: in the air, <kbd>↑</kbd> dives and <kbd>↓</kbd> climbs. On a phone, hold <b>Brake</b> to climb.</p><p>Tap <b>Drift / Trick</b> on takeoff for a longer landing boost.</p>" },
+  ]),
 });

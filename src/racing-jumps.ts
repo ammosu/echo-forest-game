@@ -2,9 +2,9 @@ import { TRACK_LENGTH, clamp, mod } from './racing-data';
 
 /** z is the start of the slope, in the same distance units as the circuit. */
 export const ramps = [
-  { z: 6500, x: .65, length: 650, height: .85, halfWidth: .28, name: '晨光小跳台' },
-  { z: 18600, x: -.65, length: 700, height: 1.05, halfWidth: .28, name: '蕨葉飛躍' },
-  { z: 35200, x: .55, length: 750, height: 1.2, halfWidth: .30, name: '花谷大跳台' },
+  { z: 6500, x: .65, length: 650, height: .85, halfWidth: .28, name: '晨光小跳台', nameEn: 'Sunrise Hop' },
+  { z: 18600, x: -.65, length: 700, height: 1.05, halfWidth: .28, name: '蕨葉飛躍', nameEn: 'Fern Leap' },
+  { z: 35200, x: .55, length: 750, height: 1.2, halfWidth: .30, name: '花谷大跳台', nameEn: 'Meadow Big Air' },
 ];
 export type FlightState = { height: number; velocity: number; airborne: boolean; clean: boolean; jumps: number; landings: number; trick: boolean; trickWindow: number; trickAge: number; gliding: boolean; airAge: number; pitch: number };
 export const freshFlight = (): FlightState => ({ height: 0, velocity: 0, airborne: false, clean: false, jumps: 0, landings: 0, trick: false, trickWindow: 0, trickAge: 0, gliding: false, airAge: 0, pitch: 0 });
