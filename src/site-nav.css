@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Outfit:wght@500;600&display=swap');
+/* Shared top bar. Self-contained so every page (map and games) renders it identically. */
+.topbar{border-bottom:1px solid #355048;background:#132d29;font-family:'Outfit','Noto Sans TC',sans-serif;color:#e2ebd9;position:relative;z-index:10}
+.topbar-inner{max-width:1280px;margin:auto;min-height:76px;padding:12px 32px;display:flex;align-items:center;gap:28px}
+.topbar a{color:inherit;text-decoration:none;-webkit-tap-highlight-color:transparent}
+.topbar a:focus-visible{outline:3px solid #f4d480;outline-offset:3px;border-radius:8px}
+.topbar-brand{display:flex;align-items:center;gap:11px;font-size:22px;font-weight:600;letter-spacing:-.6px;line-height:1.1;flex-shrink:0}
+.topbar-brand small{display:block;font:500 9px 'Noto Sans TC',sans-serif;letter-spacing:3px;margin-top:5px;color:#acc6ad}
+.topbar-tree{display:block;width:24px;height:30px;flex-shrink:0;background:#f4d480;clip-path:polygon(43% 0,57% 0,57% 10%,68% 10%,68% 23%,79% 23%,79% 35%,68% 35%,68% 42%,89% 42%,89% 55%,100% 55%,100% 69%,61% 69%,61% 100%,39% 100%,39% 69%,0 69%,0 55%,11% 55%,11% 42%,32% 42%,32% 35%,21% 35%,21% 23%,32% 23%,32% 10%,43% 10%)}
+.topbar-nav{margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0}
+.topbar-games{display:flex;gap:2px;min-width:0}
+.topbar-map,.topbar-game{display:flex;align-items:center;gap:7px;height:40px;padding:0 12px;border-radius:20px;font-size:13px;font-weight:500;color:#c4d1c2;white-space:nowrap;border:1px solid transparent;transition:background .15s,color .15s,border-color .15s}
+.topbar-map{border-color:#4d6a58;margin-right:8px;color:#e8e2b8}
+.topbar-map-icon{font-size:16px;line-height:1;color:#f4d480}
+.topbar-game img{width:24px;height:24px;object-fit:cover;object-position:50% 12%;image-rendering:pixelated;border-radius:50%;background:#24453b;opacity:.8}
+.topbar-map:hover,.topbar-game:hover{background:#1f3d34;color:#ffe7a1}
+.topbar .is-current{background:#f4d480;color:#24372c;border-color:#f4d480;font-weight:700}
+.topbar .is-current .topbar-map-icon{color:#24372c}
+.topbar .is-current img{opacity:1;background:#fff1c6}
+@media(max-width:1100px){.topbar-inner{padding:12px 20px;gap:18px}.topbar-map,.topbar-game{padding:0 9px;font-size:12px}.topbar-game img{display:none}}
+/* Phones: brand + map on one row, the five games in a sideways strip below. */
+@media(max-width:760px){
+  .topbar-inner{flex-wrap:wrap;min-height:0;padding:10px 14px 0;gap:8px 12px}
+  .topbar-brand{font-size:19px;gap:9px}.topbar-tree{width:20px;height:25px}.topbar-brand small{font-size:8px;letter-spacing:2px;margin-top:3px}
+  .topbar-nav{display:contents}
+  .topbar-map{margin:0 0 0 auto;height:36px;font-size:12px;padding:0 12px}
+  .topbar-games{order:3;width:calc(100% + 28px);margin:0 -14px;padding:2px 14px 10px;overflow-x:auto;scrollbar-width:none;gap:6px;scroll-padding:0 14px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+  .topbar-games::-webkit-scrollbar{display:none}
+  .topbar-game{height:36px;padding:0 12px 0 5px;font-size:12px;background:#1b3a31;border-color:#2f4f43}
+  .topbar-game img{display:block;width:26px;height:26px}
+}
+@media(prefers-reduced-motion:reduce){.topbar a{transition:none}}

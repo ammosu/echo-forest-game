@@ -7,8 +7,10 @@ export default defineConfig(({ command, isPreview }) => ({
   build: {
     rollupOptions: {
       input: {
-        forest: resolve(import.meta.dirname, "forest.html"),
-        adventure: resolve(import.meta.dirname, "index.html"),
+        forest: resolve(import.meta.dirname, "index.html"),
+        adventure: resolve(import.meta.dirname, "adventure.html"),
+        // Old map URL kept as a redirect for existing bookmarks.
+        forestRedirect: resolve(import.meta.dirname, "forest.html"),
         defense: resolve(import.meta.dirname, "defense.html"),
         race: resolve(import.meta.dirname, "race.html"),
         echo: resolve(import.meta.dirname, "echo.html"),

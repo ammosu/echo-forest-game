@@ -1,11 +1,12 @@
 import './forest.css';
+import { siteHeader } from './site-nav';
 
 const portraits = import.meta.glob('../assets/sprites/1x/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const sprite = (id: string) => portraits[`../assets/sprites/1x/${id}.png`];
 const landmarks = import.meta.glob('../assets/ui/forest/landmark-*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const landmark = (id: string) => landmarks[`../assets/ui/forest/landmark-${id}.png`];
 const places = [
-  { id: 'adventure', title: '森林冒險', place: '晨光小徑', hero: 'anbo', name: 'Anbo', x: 24, y: 32, kind: '跳躍探索', detail: '沿著樹枝與蘑菇向前跳，收集散落的音符，找到森林深處的朋友。', controls: '方向鍵移動，空白鍵跳躍；手機使用觸控按鈕。', href: './', icon: '♧' },
+  { id: 'adventure', title: '森林冒險', place: '晨光小徑', hero: 'anbo', name: 'Anbo', x: 24, y: 32, kind: '跳躍探索', detail: '沿著樹枝與蘑菇向前跳，收集散落的音符，找到森林深處的朋友。', controls: '方向鍵移動，空白鍵跳躍；手機使用觸控按鈕。', href: './adventure.html', icon: '♧' },
   { id: 'race', title: '森林賽車', place: '風之賽車場', hero: 'angoo', name: 'Angoo', x: 73, y: 24, kind: '三圈競速', detail: '選一條喜歡的賽道，甩尾過彎、飛越跳台，再展開滑翔翼追上夥伴。', controls: '左右轉向、空白鍵甩尾；空中 ↑ 俯衝、↓ 拉升。', href: './race.html', icon: '⚑' },
   { id: 'defense', title: '爆破保衛戰', place: '生命樹營地', hero: 'anji', name: 'Anji', x: 49, y: 49, kind: '種植守線', detail: '種下植物、安排炸彈，守住生命樹。準備好迎接逐漸變強的五波挑戰。', controls: '點選種子與空地種植，用方向鍵移動、空白鍵放炸彈。', href: './defense.html', icon: '✦' },
   { id: 'echo', title: '森林回音', place: '回音樹屋', hero: 'owl', name: 'Owl', x: 22, y: 70, kind: '旋律記憶', detail: '聽聽朋友的合奏，記住亮起的順序，再把旋律一個音、一個音接回來。', controls: '點選亮過的夥伴，或用畫面標示的數字鍵回答。', href: './echo.html', icon: '♫' },
@@ -17,7 +18,7 @@ const trees = [[55,95,1.2],[135,82,1],[265,63,1.15],[348,90,.8],[458,60,1.1],[52
 const greens = ['#3d7352', '#467c55', '#3a6d4f'];
 const tree = ([x,y,s]: number[], i: number) => `<g transform="translate(${x} ${y}) scale(${(s * .86).toFixed(2)})" opacity="${s < .9 ? .8 : .92}"><ellipse cy="14" rx="27" ry="10" fill="#315e43" opacity=".18"/><path d="M-5 10V-40H5V10" fill="#7d6c4b"/><path d="M0-89L-29-37H-19L-37-9H37L19-37H29Z" fill="${greens[i % 3]}" stroke="#3a6a4c" stroke-width="2" stroke-linejoin="round"/><path d="M0-78L-19-40H0Z" fill="#8aab69" opacity=".85"/></g>`;
 document.querySelector('#app')!.innerHTML = `
-<header class="map-header"><a class="map-brand" href="./forest.html" aria-label="Echo Forest 森林地圖"><span aria-hidden="true">♧</span><div>echo forest<small>回聲森林遊樂場</small></div></a><span class="map-edition">五個地方，隨時出發。</span></header>
+${siteHeader("map")}
 <main class="forest-main"><div class="map-heading"><div><p>歡迎回到森林</p><h1>今天，想去哪裡玩？</h1></div><p class="map-help" id="map-help">點選地圖上的路牌，讓夥伴帶你出發。</p></div>
 <div class="forest-layout"><section class="world" aria-label="森林入口地圖" aria-describedby="map-help">
 <svg class="terrain" viewBox="0 0 1000 650" preserveAspectRatio="none" aria-hidden="true">

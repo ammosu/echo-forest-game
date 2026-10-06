@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 type Snapshot = { ready:boolean; running:boolean; paused:boolean; x:number; y:number; vx:number; vy:number; grounded:boolean; seconds:number; notes:number; lives:number; big:boolean; scale:number; thornSpans:number[][]; checkpoint:boolean; enemies:{x:number;active:boolean}[]; movingX:number };
 const snapshot = (page:Page):Promise<Snapshot> => page.evaluate(() => (window as any).__forest.snapshot());
-async function start(page:Page) { await page.goto('/'); await page.getByRole('button',{name:'開始冒險'}).click(); await expect.poll(async()=> (await snapshot(page)).grounded).toBe(true); }
+async function start(page:Page) { await page.goto('/adventure.html'); await page.getByRole('button',{name:'開始冒險'}).click(); await expect.poll(async()=> (await snapshot(page)).grounded).toBe(true); }
 async function walkUntil(page:Page, target:number, jumpStumps=true) {
   let held=false,releaseAt=0;
   const began=Date.now();
@@ -17,7 +17,7 @@ async function walkUntil(page:Page, target:number, jumpStumps=true) {
 test('loads all assets, collects notes, supports jump height, pause and reset',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await start(page);
-  await expect(page.locator('img')).toHaveCount(24);
+  await expect(page.locator('main img')).toHaveCount(24);
   expect(await page.locator('img').evaluateAll(imgs=>imgs.every(i=>i.complete&&i.naturalWidth>0))).toBe(true);
   // Stop before the stump without the helper jumping; this test presses jump itself.
   await walkUntil(page,196,false);expect((await snapshot(page)).notes).toBe(1);
@@ -80,7 +80,7 @@ test('complete the actual level using keyboard input and save the result',async(
   await page.getByRole('button',{name:'再冒險一次'}).click();expect((await snapshot(page)).checkpoint).toBe(false);expect((await snapshot(page)).notes).toBe(0);
 });
 test('character select swaps the hero sprite, host and labels, and is remembered',async({page})=>{
-  await page.goto('/');await expect(page.getByRole('button',{name:'開始冒險'})).toBeEnabled();
+  await page.goto('/adventure.html');await expect(page.getByRole('button',{name:'開始冒險'})).toBeEnabled();
   await expect(page.getByRole('radio')).toHaveCount(11);
   await page.getByRole('radio',{name:/^Anka/}).click();
   await expect(page.getByRole('radio',{name:/^Anka/})).toHaveAttribute('aria-checked','true');
@@ -97,7 +97,7 @@ test('character select swaps the hero sprite, host and labels, and is remembered
   expect(await page.evaluate(()=>(window as any).__forest.hero())).toEqual({player:'owl_stand',host:'anboHost'});
 });
 test('mobile touch controls move, jump and release without layout overflow',async({browser,baseURL})=>{
-  const context=await browser.newContext({baseURL,viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2});const page=await context.newPage();await page.goto('/');
+  const context=await browser.newContext({baseURL,viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2});const page=await context.newPage();await page.goto('/adventure.html');
   await page.getByRole('button',{name:'開始冒險'}).click();await expect(page.getByRole('slider',{name:'移動搖桿'})).toBeVisible();
   const right=page.getByRole('slider',{name:'移動搖桿'}),jump=page.getByRole('button',{name:'跳躍',exact:true});
   // Real simultaneous touch contacts validate pointer capture, not synthetic unregistered IDs.

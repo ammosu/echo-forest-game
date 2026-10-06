@@ -1,6 +1,7 @@
 import { courses, course, raceRecordKey } from './racing-courses';
 import "./style.css";
 import "./race.css";
+import { siteHeader } from "./site-nav";
 import {
   RacingEngine,
   type RaceEvent,
@@ -39,7 +40,7 @@ try {
   if (Number.isFinite(n) && n > 0) saved = time(n);
 } catch {}
 document.getElementById("app")!.innerHTML = `
-<header class="site-header"><a class="brand" href="./forest.html" aria-label="Echo Forest 森林地圖"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a><nav aria-label="遊戲選單"><a class="nav-button" href="./forest.html">森林地圖</a><a class="nav-button" href="./">森林冒險</a><span class="nav-current">森林賽車</span><a class="nav-button" href="./defense.html">爆破保衛戰</a><a class="nav-button" href="./echo.html">森林回音</a><a class="nav-button" href="./catch.html">音符接接樂</a></nav><span class="edition">四位夥伴，一場森林裡的追逐</span></header>
+${siteHeader("race")}
 <main class="race-main">
   <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> ${course.name}・森林盃</p><h1 id="page-title">把晨光，甩在身後。</h1><p class="intro-copy">沿著林間彎道，和夥伴們一起衝向終點。</p></div><div class="race-intro-badge"><span class="checker" aria-hidden="true"></span><div><strong>3 圈 <span>／ 4 位車手</span></strong><small>三座跳台，展翼滑翔森林</small></div></div></section>
   <nav class="course-board" aria-label="選擇賽道">${courses.map(c => `<a href="?course=${c.id}" class="course-option" ${c.id === course.id ? 'aria-current="page"' : ''}><svg viewBox="-135 -265 510 530" aria-hidden="true"><polygon points="${c.points.map(p => p.join(',')).join(' ')}"/></svg><span><strong>${c.name}<small>${c.style}</small></strong><span>${c.description}</span><em>${c.id === course.id ? '目前賽道' : '選擇這條路線'}</em></span></a>`).join('')}</nav>
@@ -110,7 +111,7 @@ function finish(r: RaceResult) {
   el("best-time").textContent = time(r.best);
   clearTimeout(noticeTimer);
   el("race-notice").classList.remove("visible");
-  result.innerHTML = `<img class="finish-badge ${r.position === 1 ? "is-champion" : ""}" src="${r.position === 1 ? trophyArt : flagIcon}" alt=""><p class="chapter">${course.name}・三圈完成</p><h2>${r.position === 1 ? "冠軍，是你！" : "漂亮地衝過終點！"}</h2><div class="finish-summary"><span class="finish-place">${r.position}<small> / 4</small></span><div><small>三圈總時間</small><strong>${time(r.time)}</strong><span>本機最快 ${time(r.best)}</span></div></div><div class="lap-splits">${r.lapTimes.map((t, i) => `<span>第 ${i + 1} 圈<strong>${time(t)}</strong></span>`).join("")}</div><ol class="finish-standings">${r.standings.map((s) => `<li class="${s.name === "Anbo" ? "is-you" : ""}"><span>${s.name}${s.name === "Anbo" ? "（你）" : ""}</span><span>${s.time !== null ? time(s.time) : "尚未完賽"}</span></li>`).join("")}</ol><button class="primary" id="race-again">再比一場 →</button><a class="text-button" href="./">回森林冒險</a>`;
+  result.innerHTML = `<img class="finish-badge ${r.position === 1 ? "is-champion" : ""}" src="${r.position === 1 ? trophyArt : flagIcon}" alt=""><p class="chapter">${course.name}・三圈完成</p><h2>${r.position === 1 ? "冠軍，是你！" : "漂亮地衝過終點！"}</h2><div class="finish-summary"><span class="finish-place">${r.position}<small> / 4</small></span><div><small>三圈總時間</small><strong>${time(r.time)}</strong><span>本機最快 ${time(r.best)}</span></div></div><div class="lap-splits">${r.lapTimes.map((t, i) => `<span>第 ${i + 1} 圈<strong>${time(t)}</strong></span>`).join("")}</div><ol class="finish-standings">${r.standings.map((s) => `<li class="${s.name === "Anbo" ? "is-you" : ""}"><span>${s.name}${s.name === "Anbo" ? "（你）" : ""}</span><span>${s.time !== null ? time(s.time) : "尚未完賽"}</span></li>`).join("")}</ol><button class="primary" id="race-again">再比一場 →</button><a class="text-button" href="./adventure.html">回森林冒險</a>`;
   result.hidden = false;
   overlay.hidden = false;
   el("race-again").onclick = () => void begin();

@@ -3,14 +3,14 @@ import { build, preview } from 'vite';
 
 test('map selection supports keyboard, remembers destination and enters each game', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/forest.html');
+  await page.goto('/');
   await expect(page.locator('.map-pin')).toHaveCount(5);
   await page.locator('[data-place=adventure]').focus(); await page.keyboard.press('ArrowRight');
   await expect(page.locator('[data-place=race]')).toBeFocused();
   await expect(page.locator('#destination-title')).toHaveText('森林賽車');
   await page.reload(); await expect(page.locator('[data-place=race]')).toHaveAttribute('aria-pressed', 'true');
   await page.screenshot({ path: 'tests/evidence/forest-map.png', fullPage: true });
-  for (const [id, path] of [['adventure','/'], ['race','/race.html'], ['defense','/defense.html'], ['echo','/echo.html'], ['catch','/catch.html']]) {
+  for (const [id, path] of [['adventure','/adventure.html'], ['race','/race.html'], ['defense','/defense.html'], ['echo','/echo.html'], ['catch','/catch.html']]) {
     await page.locator(`[data-place=${id}]`).click();
     await page.locator('#depart').click(); await expect(page).toHaveURL(new RegExp(`${path.replaceAll('.', '\\.')}$$`));
     await page.getByRole('link', { name: '森林地圖', exact: true }).click();
@@ -23,7 +23,7 @@ test('phone map has reachable touch targets with storage blocked and no page ove
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile:true, hasTouch:true, reducedMotion:'reduce' });
   const page = await context.newPage();
   await page.addInitScript(() => { Storage.prototype.getItem = () => { throw Error('blocked'); }; Storage.prototype.setItem = () => { throw Error('blocked'); }; });
-  await page.goto('http://127.0.0.1:5173/forest.html');
+  await page.goto('http://127.0.0.1:5173/');
   for (const pin of await page.locator('.map-pin').all()) {
     await pin.tap(); await expect(pin).toHaveAttribute('aria-pressed', 'true');
   }
@@ -33,7 +33,7 @@ test('phone map has reachable touch targets with storage blocked and no page ove
     await page.setViewportSize({width, height:width === 844 ? 390 : 844});
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
-  for (const path of ['/', '/race.html', '/defense.html', '/echo.html', '/catch.html']) {
+  for (const path of ['/adventure.html', '/race.html', '/defense.html', '/echo.html', '/catch.html']) {
     await page.setViewportSize({width:390,height:844}); await page.goto(`http://127.0.0.1:5173${path}`);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
     await page.getByRole('link',{name:'森林地圖',exact:true}).click();
@@ -47,13 +47,36 @@ test('production map works under the Pages subpath with loaded portraits and gam
   const server = await preview({logLevel:'silent', preview:{host:'127.0.0.1',port:0,open:false}});
   const errors: string[]=[];page.on('pageerror', e=>errors.push(e.message));
   try {
-    const base = server.resolvedUrls!.local[0]; await page.goto(`${base}forest.html`);
+    const base = server.resolvedUrls!.local[0]; await page.goto(base);
     await expect(page.locator('.map-pin')).toHaveCount(5);
     expect(await page.locator('.map-pin img').evaluateAll(imgs=>imgs.every(img=>(img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth>0))).toBe(true);
     await page.locator('[data-place=catch]').click();await page.locator('#depart').click();
     await expect(page.locator('#start')).toBeVisible();
     await page.getByRole('link',{name:'森林地圖',exact:true}).click();
-    await expect(page).toHaveURL(`${base}forest.html`);
+    await expect(page).toHaveURL(base);
     expect(errors).toEqual([]);
   } finally { await page.goto('about:blank'); await new Promise<void>(resolve=>server.httpServer.close(()=>resolve())); }
+});
+
+test('every page shares the same top bar on desktop and phone, and the old map URL redirects home', async ({ browser }) => {
+  const pages: [string, string][] = [['/', '森林地圖'], ['/adventure.html', '森林冒險'], ['/race.html', '森林賽車'], ['/defense.html', '爆破保衛戰'], ['/echo.html', '森林回音'], ['/catch.html', '音符接接樂']];
+  for (const [w, h, mobile] of [[1280, 900, false], [390, 844, true]] as const) {
+    const context = await browser.newContext({ baseURL: 'http://127.0.0.1:5173', viewport: { width: w, height: h }, isMobile: mobile, hasTouch: mobile });
+    const page = await context.newPage();
+    const boxes: string[] = [];
+    for (const [path, label] of pages) {
+      await page.goto(path);
+      await expect(page.locator('.topbar [aria-current=page]')).toContainText(label);
+      await expect(page.locator('.topbar-game')).toHaveCount(5);
+      const b = await page.locator('.topbar').boundingBox();
+      boxes.push(`${Math.round(b!.height)}`);
+      if (mobile) await page.screenshot({ path: `tests/evidence/nav-mobile-${label}.png`, clip: { x: 0, y: 0, width: w, height: 140 } });
+    }
+    expect(new Set(boxes).size, `${w}px header heights ${boxes}`).toBe(1);
+    await context.close();
+  }
+  const page = await browser.newPage();
+  await page.goto('http://127.0.0.1:5173/forest.html');
+  await expect(page.locator('h1')).toHaveText('今天，想去哪裡玩？');
+  await page.close();
 });

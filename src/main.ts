@@ -1,5 +1,6 @@
 import './style.css';
 import './adventure.css';
+import { siteHeader } from './site-nav';
 import { ForestGame, hostOf, playableIds, type GameEvent, type Look } from './game';
 import { mountJoystick } from './joystick';
 import characters from '../assets/characters.json';
@@ -16,11 +17,7 @@ const cast = characters.characters.filter(c => playableIds.includes(c.id));
 const byId = (id: string) => cast.find(c => c.id === id) ?? cast.find(c => c.id === 'anbo')!;
 let hero = byId(new URLSearchParams(location.search).get('hero') ?? (() => { try { return localStorage.getItem('echo-adventure-hero') ?? 'anbo'; } catch { return 'anbo'; } })());
 app.innerHTML = `
-  <header class="site-header">
-    <a class="brand" href="./forest.html" aria-label="Echo Forest 森林地圖"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a>
-    <nav aria-label="遊戲選單"><a class="nav-button" href="./forest.html">森林地圖</a><span class="nav-current">森林冒險</span><a class="nav-button" href="./race.html">森林賽車</a><a class="nav-button" href="./defense.html">爆破保衛戰</a><a class="nav-button" href="./echo.html">森林回音</a><a class="nav-button" href="./catch.html">音符接接樂</a></nav>
-    <span class="edition">一段小小的森林旅程</span>
-  </header>
+  ${siteHeader("adventure")}
   <main>
     <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> 第一章・晨光小徑</p><h1 id="page-title">森林裡，出發。</h1><p class="intro-copy">跟著 <span class="hero-name">Anbo</span> 的腳步，找回散落在林間的旋律。</p></div><div class="player-badge"><img id="badge-img" src="${front('anbo')}" alt=""/><div><small>今天的冒險夥伴</small><strong><span class="hero-name">Anbo</span> <span id="badge-species">柴犬</span></strong></div></div></section>
     <section class="game-shell is-locked" aria-label="森林音符冒險">

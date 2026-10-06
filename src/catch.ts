@@ -1,5 +1,6 @@
 import './style.css';
 import './catch.css';
+import { siteHeader } from './site-nav';
 import { CatchGame, CATCH_REACH, inReach } from './catch-engine';
 import characters from '../assets/characters.json';
 import forest from '../assets/generated/forest-background.png';
@@ -16,7 +17,7 @@ let hero = cast[0];
 let best = 0;
 try { const saved = Number(localStorage.getItem('echo-catch-best')); if (Number.isFinite(saved) && saved > 0) best = saved; } catch {}
 document.querySelector('#app')!.innerHTML = `
-<header class="site-header"><a class="brand" href="./forest.html"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a><nav aria-label="遊戲選單"><a class="nav-button" href="./forest.html">森林地圖</a><a class="nav-button" href="./">森林冒險</a><a class="nav-button" href="./race.html">森林賽車</a><a class="nav-button" href="./defense.html">爆破保衛戰</a><a class="nav-button" href="./echo.html">森林回音</a><span class="nav-current" aria-current="page">音符接接樂</span></nav></header>
+${siteHeader("catch")}
 <main class="catch-main"><section class="catch-intro"><div><p class="chapter">晨光音樂會・48 秒的小小演出</p><h1>接住森林的旋律。</h1><p>左右移動，讓每一個音符都找到歸處。</p></div><div class="catch-record">本機最高分<strong id="best">${best.toLocaleString()}</strong></div></section>
 <section class="catch-shell" aria-label="音符接接樂遊戲" data-phase="ready">
   <div class="catch-toolbar"><span id="phrase">準備開演</span><div><button id="sound" aria-pressed="true">♫ 聲音開</button><button id="pause" disabled>暫停</button><button id="restart" disabled>重來</button></div></div>

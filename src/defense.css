@@ -307,23 +307,8 @@ button:disabled {
   .defense-controls > span {
     display: none;
   }
-  .site-header {
-    gap: 25px;
-  }
-  .site-header nav {
-    gap: 18px;
-  }
 }
 @media (max-width: 700px) {
-  .site-header {
-    flex-wrap: wrap;
-    gap: 20px;
-    padding: 18px 16px;
-  }
-  .site-header nav {
-    display: flex;
-    gap: 22px;
-  }
   .defense-main {
     padding: 22px 10px;
   }

@@ -55,24 +55,6 @@
   color: #c6d3b4;
 }
 @media (max-width: 750px) {
-  /* Header: brand on one row, nav scrolls sideways instead of stacking text. */
-  .site-header {
-    flex-wrap: wrap;
-    gap: 10px 0;
-    padding: 16px 18px 10px;
-  }
-  .site-header nav {
-    margin-left: 0;
-    width: 100%;
-    overflow-x: auto;
-    white-space: nowrap;
-    gap: 20px;
-    font-size: 13px;
-    padding-bottom: 6px;
-  }
-  .nav-current:after {
-    bottom: -8px;
-  }
   .hud {
     top: 8px;
     left: 8px;
