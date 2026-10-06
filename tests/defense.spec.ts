@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { DefenseEngine } from "../src/defense-engine";
+import { DefenseEngine, balance } from "../src/defense-engine";
 const tick = (g: DefenseEngine, seconds: number) => {
   for (let i = 0; i < seconds * 60; i++) g.update(1 / 60);
 };
@@ -7,14 +7,14 @@ test("engine: planting costs, occupancy, slowing and blocking enemies", () => {
   const g = new DefenseEngine();
   g.start();
   expect(g.plant(0, 0, "shooter")).toBe(true);
-  expect(g.resources).toBe(140);
+  expect(g.resources).toBe(balance.startDew - 40);
   expect(g.plant(0, 0, "ice")).toBe(false);
   expect(g.plant(4, 0, "wall")).toBe(false);
   expect(g.plant(8, 0, "wall")).toBe(false);
   g.resources = 0;
   expect(g.plant(1, 0, "wall")).toBe(false);
-  tick(g, 3.1);
-  expect(g.resources).toBe(15);
+  tick(g, balance.income.every + 0.1);
+  expect(g.resources).toBe(balance.income.amount);
   const h = new DefenseEngine();
   h.start();
   h.plant(0, 0, "ice");
@@ -56,39 +56,26 @@ test("engine: chain reactions, obstacle rewards, escape, friendly plants and dam
   tick(h, 2.1);
   expect(h.hearts).toBe(2);
   expect(h.logs.some((l) => l.x === 4 && l.y === 0)).toBe(false);
-  expect(h.resources).toBe(200);
+  expect(h.resources).toBe(balance.startDew + balance.logReward);
   expect(h.flames.some((f) => f.x === 5 && f.y === 0)).toBe(false);
   h.paused = true;
   const t = h.elapsed;
   tick(h, 3);
   expect(h.elapsed).toBe(t);
 });
-test("engine: all five waves are winnable with earned resources, failure and reset", () => {
+test("engine: a passive shooter-ice-shooter wall no longer clears five waves, failure and reset", () => {
   const g = new DefenseEngine();
   g.start();
   let iterations = 0;
-  const kinds = new Set<number>();
-  while (g.active && iterations++ < 240 * 60) {
-    for (let y = 0; y < 5; y++)
-      if (!g.plants.some((p) => p.x === 0 && p.y === y))
-        g.plant(0, y, "shooter");
-    if (g.plants.filter((p) => p.x === 0).length === 5) {
+  while (g.active && iterations++ < 600 * 60) {
+    for (const [x, kind] of [[0, "shooter"], [1, "ice"], [2, "shooter"]] as const) {
       for (let y = 0; y < 5; y++)
-        if (!g.plants.some((p) => p.x === 1 && p.y === y)) g.plant(1, y, "ice");
+        if (!g.plants.some((p) => p.x === x && p.y === y)) g.plant(x, y, kind);
+      if (g.plants.filter((p) => p.x === x).length < 5) break;
     }
-    if (g.plants.filter((p) => p.x === 1).length === 5) {
-      for (let y = 0; y < 5; y++)
-        if (!g.plants.some((p) => p.x === 2 && p.y === y))
-          g.plant(2, y, "shooter");
-    }
-    g.enemies.forEach((e) => kinds.add(e.kind));
     g.update(1 / 60);
   }
-  expect(g.phase).toBe("won");
-  expect(g.wave).toBe(5);
-  expect(g.kills).toBe(65);
-  expect([...kinds].sort()).toEqual([0, 1, 2]);
-  expect(g.elapsed).toBeLessThan(240);
+  expect(g.phase).toBe("lost");
   const h = new DefenseEngine();
   h.start();
   tick(h, 240);
@@ -182,18 +169,23 @@ test("mobile: seeds, board placement, touch movement and bomb button", async ({
   expect(
     await page.evaluate(() => (window as any).__defense.plants[0].kind),
   ).toBe("wall");
-  await page.getByRole("button", { name: "向上移動" }).scrollIntoViewIfNeeded();
-  const up = (await page
-    .getByRole("button", { name: "向上移動" })
-    .boundingBox())!;
+  const stick = (await page.locator("#defense-stick").boundingBox())!;
+  const cx = stick.x + stick.width / 2,
+    cy = stick.y + stick.height / 2;
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchStart",
-    touchPoints: [{ x: up.x + 20, y: up.y + 20 }],
+    touchPoints: [{ x: cx, y: cy }],
+  });
+  // Mostly up with a little drift right: the grid stick snaps to the stronger axis.
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [{ x: cx + 8, y: cy - 34 }],
   });
   await expect
     .poll(() => page.evaluate(() => (window as any).__defense.player.y))
     .toBeLessThan(2);
+  expect(await page.evaluate(() => (window as any).__defense.player.x)).toBe(2);
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
     touchPoints: [],
@@ -222,15 +214,17 @@ test("mobile: seeds, board placement, touch movement and bomb button", async ({
     fullPage: true,
   });
 });
-test("browser: earned-resource five-wave playthrough renders result and persists best score", async ({
+test("browser: five-wave playthrough renders result and persists best score", async ({
   page,
 }) => {
   await page.goto("/defense.html");
   await page.getByRole("button", { name: "開始守護", exact: true }).click();
   const result = await page.evaluate(() => {
     const g = (window as any).__defense;
+    // Balance is covered by defense-balance.spec.ts; here a rich bot just reaches the result screen.
+    g.resources = 5000;
     let n = 0;
-    while (g.active && n++ < 240 * 60) {
+    while (g.active && n++ < 400 * 60) {
       for (let y = 0; y < 5; y++)
         if (!g.plants.some((p: any) => p.x === 0 && p.y === y))
           g.plant(0, y, "shooter");

@@ -12,7 +12,8 @@
 .joystick.active .joystick-knob{transition:none}
 .joystick-arrow{position:absolute;top:50%;transform:translateY(-50%);font-size:13px;color:#8fa580;pointer-events:none;transition:color .1s}
 .joystick-arrow.left{left:11px}.joystick-arrow.right{right:11px}
-.joystick.held-left .joystick-arrow.left,.joystick.held-right .joystick-arrow.right{color:#ffe7a1}
+.joystick-arrow.up,.joystick-arrow.down{top:auto;left:50%;transform:translateX(-50%)}.joystick-arrow.up{top:7px}.joystick-arrow.down{bottom:7px}
+.joystick.held-left .joystick-arrow.left,.joystick.held-right .joystick-arrow.right,.joystick.held-up .joystick-arrow.up,.joystick.held-down .joystick-arrow.down{color:#ffe7a1}
 @media(max-height:550px) and (orientation:landscape){.joystick{width:96px;height:96px}.joystick-knob{width:42px;height:42px;margin:-21px 0 0 -21px}}
 .touch-controls .touch-jump{height:64px;min-width:96px;font-size:16px}
 /* Phone landscape: stick and jump float over the letterbox bands beside the game instead of below it. */

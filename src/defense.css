@@ -228,9 +228,17 @@
   gap: 12px;
   padding: 12px 0 0;
 }
-.direction-pad {
-  display: flex;
-  gap: 5px;
+.defense-controls .joystick {
+  width: 76px;
+  height: 76px;
+}
+.defense-controls .joystick.disabled {
+  opacity: 0.5;
+}
+.defense-controls .joystick-knob {
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
 }
 .defense-controls button {
   touch-action: none;
@@ -1136,33 +1144,15 @@ img.seed-art {
     border-top: 1px solid #355a43;
     border-radius: 0 0 14px 14px;
   }
-  .direction-pad {
-    display: grid;
-    grid-template-columns: repeat(3, 44px);
-    grid-template-rows: repeat(2, 40px);
-    gap: 4px;
+  .defense-controls .joystick {
+    width: 88px;
+    height: 88px;
+    margin: -2px 26px -2px 0;
   }
-  .direction-pad button {
-    min-width: 0;
-    width: 44px;
+  .defense-controls .joystick-knob {
+    width: 40px;
     height: 40px;
-    font-size: 13px;
-  }
-  .direction-pad [data-move="0,-1"] {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .direction-pad [data-move="-1,0"] {
-    grid-column: 1;
-    grid-row: 2;
-  }
-  .direction-pad [data-move="0,1"] {
-    grid-column: 2;
-    grid-row: 2;
-  }
-  .direction-pad [data-move="1,0"] {
-    grid-column: 3;
-    grid-row: 2;
+    margin: -20px 0 0 -20px;
   }
   .defense-controls > button {
     height: 84px;
@@ -1297,8 +1287,7 @@ img.seed-art {
 img.seed-art{width:30px;height:30px}
 .seed{padding:3px 3px 5px}
 .seed.selected{padding:2px 2px 4px}
-.direction-pad{grid-template-rows:repeat(2,34px)}
-.direction-pad button{height:34px}
+.defense-controls .joystick{width:72px;height:72px}
 .defense-controls>button{height:72px}
 .defense-controls .bomb-button img{width:30px;height:30px}
 .defense-controls{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}
@@ -1310,7 +1299,7 @@ img.seed-art{width:30px;height:30px}
 #field{aspect-ratio:1.5}
 .defense-controls>button{height:64px}
 .defense-controls .bomb-button img{width:26px;height:26px}
-.direction-pad{grid-template-rows:repeat(2,30px)}
-.direction-pad button{height:30px}
+.defense-controls .joystick{width:64px;height:64px}
+.defense-controls .joystick-knob{width:30px;height:30px;margin:-15px 0 0 -15px}
 .defense-cover .cover-note{display:none}
 }

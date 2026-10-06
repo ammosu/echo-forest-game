@@ -8,13 +8,32 @@ export const seeds = {
   wall: { name: "樹樁守衛", cost: 25, hp: 260 },
   ice: { name: "冰霧蘑菇", cost: 50, hp: 90 },
 };
+/** Every tuning number in one place; tests/defense-balance.spec.ts plays bot strategies against it. */
+export const balance = {
+  startDew: 150,
+  income: { every: 5, amount: 10 },
+  killReward: [3, 2, 8],
+  logReward: 25,
+  waveBonus: 30,
+  /** Enemies per wave and seconds between spawns. */
+  waveSize: [10, 14, 18, 22, 26],
+  spawnGap: [1.7, 1.45, 1.25, 1.1, 0.95],
+  /** Enemy HP grows each wave: hp × (1 + hpGrowth × (wave − 1)). */
+  enemyHp: [75, 50, 200],
+  hpGrowth: 0.9,
+  /** Share of each wave sent down its two focus lanes. */
+  focusShare: 0.7,
+  bombDamage: 90,
+};
+/** The two lanes a wave leans on; the build-phase message warns the player about them. */
+export const focusLanes = (wave: number) => [(wave * 2 + 1) % 5, (wave * 2 + 3) % 5];
 export class DefenseEngine {
   phase: Phase = "ready";
   paused = false;
   wave = 0;
   timer = 12;
   elapsed = 0;
-  resources = 180;
+  resources = balance.startDew;
   tree = 10;
   hearts = 3;
   score = 0;
@@ -54,7 +73,9 @@ export class DefenseEngine {
     { x: 5, y: 4 },
     { x: 6, y: 2 },
   ];
-  message = "先種射手，再用炸彈守住缺口。";
+  message = `先種射手，再用炸彈守住缺口。第 1 波集中在第 ${focusLanes(1)
+    .map((y) => y + 1)
+    .join("、")} 行！`;
   start() {
     Object.assign(this, new DefenseEngine());
     this.phase = "build";
@@ -124,7 +145,7 @@ export class DefenseEngine {
     if (this.phase !== "build" || this.paused) return;
     this.wave++;
     this.phase = "wave";
-    this.remaining = 7 + this.wave * 2;
+    this.remaining = balance.waveSize[this.wave - 1];
     this.spawn = 1;
     this.message = `第 ${this.wave} 波來襲！守住生命樹。`;
   }
@@ -150,7 +171,7 @@ export class DefenseEngine {
         if (log) {
           this.logs.splice(this.logs.indexOf(log), 1);
           this.spark(x, y, "log");
-          this.resources += 20;
+          this.resources += balance.logReward;
           this.score += 30;
           break;
         }
@@ -159,7 +180,7 @@ export class DefenseEngine {
       this.flames.push({ ...cell, life: 0.45 });
       for (const e of this.enemies)
         if (Math.abs(e.x - cell.x) < 0.65 && e.y === cell.y) {
-          e.hp -= 130;
+          e.hp -= balance.bombDamage;
           e.hit = 0.15;
         }
       const linked = this.bombs.find((p) => p.x === cell.x && p.y === cell.y);
@@ -176,9 +197,9 @@ export class DefenseEngine {
     this.moveCooldown -= dt;
     this.player.invincible -= dt;
     this.income += dt;
-    if (this.income >= 3) {
-      this.income -= 3;
-      this.resources += 15;
+    if (this.income >= balance.income.every) {
+      this.income -= balance.income.every;
+      this.resources += balance.income.amount;
     }
     this.flames.forEach((f) => (f.life -= dt));
     this.flames = this.flames.filter((f) => f.life > 0);
@@ -211,10 +232,18 @@ export class DefenseEngine {
               : this.wave >= 2 && n % (this.wave >= 4 ? 2 : 3) === 0
                 ? 1
                 : 0;
-        const hp = [75, 50, 200][kind];
+        const hp = Math.round(
+          balance.enemyHp[kind] * (1 + balance.hpGrowth * (this.wave - 1)),
+        );
+        const focus = focusLanes(this.wave);
+        // Deterministic spread: most spawns hit the focus lanes, the rest cycle through all five.
+        const y =
+          (n * 7) % 10 < balance.focusShare * 10
+            ? focus[n % 2]
+            : (n * 3 + this.wave) % 5;
         this.enemies.push({
           x: 8.7,
-          y: (n * 3 + this.wave) % 5,
+          y,
           kind,
           hp,
           maxHp: hp,
@@ -223,7 +252,7 @@ export class DefenseEngine {
           hit: 0,
         });
         this.remaining--;
-        this.spawn = [1.9, 1.9, 1.75, 1.6, 1.45][this.wave - 1];
+        this.spawn = balance.spawnGap[this.wave - 1];
       }
     }
     for (const p of this.plants) {
@@ -277,7 +306,7 @@ export class DefenseEngine {
       if (e.hp > -999) {
         this.spark(e.x, e.y, "defeat");
         this.kills++;
-        this.resources += 12;
+        this.resources += balance.killReward[e.kind];
         this.score += [100, 150, 250][e.kind];
       }
       return false;
@@ -300,8 +329,9 @@ export class DefenseEngine {
       } else {
         this.phase = "build";
         this.timer = this.wave < 2 ? 10 : this.wave < 4 ? 8 : 6;
-        this.resources += 65;
-        this.message = "守住了！獲得 65 露珠，補好防線迎接下一波。";
+        this.resources += balance.waveBonus;
+        const [a, b] = focusLanes(this.wave + 1).map((y) => y + 1);
+        this.message = `守住了！獲得 ${balance.waveBonus} 露珠。下一波集中在第 ${a}、${b} 行！`;
       }
     }
   }
