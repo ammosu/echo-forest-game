@@ -73,6 +73,30 @@ test('countdown holds the start; gates, trees, fences and late flips are judged'
   game.start(); expect(game.z).toBe(0); expect(game.gatesMissed).toBe(0); expect(game.course.gates.every(g => !g.result)).toBe(true);
 });
 
+test('never stuck: crashes push you clear, you skate out of powder and can back up', () => {
+  const game = new SkiGame(); game.start(); game.time = 1;
+  // A tree hit leaves you beside the trunk and you get going again on your own.
+  const tree = game.course.obstacles.find(o => o.kind === 'tree')!;
+  game.x = tree.x; game.z = tree.z - 1.5; game.speed = 15;
+  for (let i = 0; i < 300; i++) game.update(1 / 60);
+  expect(game.crashes).toBe(1); expect(Math.hypot(game.x - tree.x, game.z - tree.z)).toBeGreaterThan(tree.r + .45);
+  expect(game.speed).toBeGreaterThan(3); expect(game.z).toBeGreaterThan(tree.z + 5);
+
+  // Powder is slower than gravity alone can beat from a standstill; the skating push still gets you out.
+  game.x = 10; game.z = 160; game.speed = 0; game.stun = 0; game.heading = 0;
+  expect(game.surface).toBe('powder');
+  for (let i = 0; i < 120; i++) game.update(1 / 60);
+  expect(game.speed).toBeGreaterThan(2);
+
+  // Stopped facing something: hold brake to side-step back up the hill and steer round it.
+  game.x = 0; game.z = 300; game.speed = 0; game.input = { steer: 1, tuck: false, brake: true };
+  for (let i = 0; i < 60; i++) game.update(1 / 60);
+  expect(game.z).toBeLessThan(299); expect(game.x).toBeGreaterThan(1); expect(game.speed).toBeLessThan(.4);
+  game.input = { steer: 0, tuck: false, brake: false };
+  for (let i = 0; i < 120; i++) game.update(1 / 60);
+  expect(game.z).toBeGreaterThan(300);
+});
+
 test('keyboard run reaches the finish, shows results and keeps the best time', async ({ page }) => {
   test.setTimeout(150000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));

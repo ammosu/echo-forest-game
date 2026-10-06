@@ -6,6 +6,7 @@ export const MISS_PENALTY = 3;
 export const COUNTDOWN = 3;
 export const PLAYER_RADIUS = 0.45;
 export const MAX_HEADING = 1.2;
+export const SKATE_SPEED = 5;
 const G = 9.8;
 const STEP = 1 / 120;
 
@@ -220,12 +221,19 @@ export class SkiGame {
       if (brake) accel -= 6.5;
       if (surface === 'powder') accel -= 3.2;
       if (this.stun > 0) accel -= 4;
+      // Skating push: below walking pace you can always pole yourself going again, even in powder.
+      else if (!brake && this.speed < SKATE_SPEED) accel = Math.max(accel, 3 * (1 - this.speed / SKATE_SPEED));
       this.speed = Math.max(0, this.speed + accel * dt);
     }
     this.topSpeed = Math.max(this.topSpeed, this.speed);
     const prevZ = this.z;
     this.x += this.speed * Math.sin(this.heading) * dt;
     this.z += this.speed * Math.cos(this.heading) * dt;
+    // Holding brake while stopped side-steps back up the hill, steering sideways to get round whatever is in front.
+    if (!air && brake && this.speed < .4) {
+      this.z = Math.max(0, this.z - 1.6 * dt);
+      this.x += this.input.steer * 1.4 * dt;
+    }
 
     if (air) {
       this.airTime += dt;
@@ -287,7 +295,13 @@ export class SkiGame {
     }
     if (this.height < 1.2) for (const o of obstacles) {
       if (o.hit || Math.abs(o.z - this.z) > 2) continue;
-      if (Math.hypot(o.x - this.x, o.z - this.z) < o.r + PLAYER_RADIUS) { o.hit = true; this.crash(events, 'crash', o.x, o.z); }
+      if (Math.hypot(o.x - this.x, o.z - this.z) < o.r + PLAYER_RADIUS) {
+        o.hit = true; this.crash(events, 'crash', o.x, o.z);
+        // Tumble out beside the trunk, towards the middle of the piste, so you never stand inside it.
+        const side = Math.sign(this.x - o.x) || -Math.sign(o.x) || 1;
+        const out = o.x + side * (o.r + PLAYER_RADIUS + .35);
+        this.x = Math.abs(out) <= HALF_WIDTH - PLAYER_RADIUS ? out : o.x - side * (o.r + PLAYER_RADIUS + .35);
+      }
     }
 
     const section = sectionAt(this.z);
