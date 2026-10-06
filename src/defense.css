@@ -1327,3 +1327,12 @@ button.view-badge{border:0;font:inherit;font-size:10px;font-weight:700;line-heig
 @media(max-width:700px){button.view-badge{cursor:pointer;padding:3px 7px;box-shadow:0 2px #8c7a43}}
 /* Phones plant by tapping a seed card, so the "plant here" button goes. */
 @media(max-width:700px){#plant-here{display:none}}
+/* Phones: bomb closes the seed row, set apart; "next wave" rides the countdown; notice sits by the stick. */
+@media(max-width:700px){
+.seed-shelf .bomb-button{position:relative;margin:0 0 0 7px;flex-direction:column;gap:2px;font-size:13px;background:linear-gradient(#93633d,#6c4429);color:#fff0cc;border:1px solid #e8b56f;border-radius:12px}
+.seed-shelf .bomb-button::before{content:"";position:absolute;left:-8px;top:12%;bottom:12%;border-left:1px dashed #6f8c6a}
+.seed-shelf .bomb-button img{width:40px;height:40px}
+.hud-wave #next{height:24px;min-height:0;margin:0 auto 0 8px;padding:0 10px;font-size:11px;border-radius:999px;white-space:nowrap;line-height:1}
+.hud-wave #next:disabled{visibility:hidden}
+.defense-controls .defense-notice{display:flex;align-items:center;margin:0;min-height:0;align-self:stretch;white-space:normal;font-size:12px;line-height:1.45}
+}

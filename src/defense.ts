@@ -85,13 +85,20 @@ function mountGame() {
     return;
   }
   const phone = matchMedia("(max-width: 700px)");
-  function placeBomb() {
-    if (phone.matches)
-      document.querySelector(".defense-controls")!.append($("bomb"));
-    else document.querySelector(".bomb-note")!.before($("bomb"));
+  // Phones: the bomb sits at the end of the seed row, "next wave" beside the wave countdown, and
+  // the notice beside the stick. Desktop keeps the side shelf.
+  function placeControls() {
+    const controls = document.querySelector(".defense-controls")!;
+    if (phone.matches) {
+      $("wave").after($("next"));
+      controls.append($("notice"));
+    } else {
+      document.querySelector(".bomb-note")!.after($("next"));
+      controls.before($("notice"));
+    }
   }
-  placeBomb();
-  phone.addEventListener("change", placeBomb);
+  placeControls();
+  phone.addEventListener("change", placeControls);
   let hover: { x: number; y: number } | null = null;
   const keys = new Set<string>();
   /** Held direction plus step pace in seconds. */
