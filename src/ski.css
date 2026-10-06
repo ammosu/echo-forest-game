@@ -1,0 +1,113 @@
+.ski-main{max-width:1100px;padding-top:30px}
+.ski-intro{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:20px}
+.ski-intro h1{font-size:35px;letter-spacing:2px}
+.ski-intro .guide-open{margin-top:10px}
+.ski-intro p:last-child{font-size:13px;color:#b9cbb7;margin:12px 0 0}
+.ski-record{color:#afc7b1;font-size:11px;text-align:right;white-space:nowrap}
+.ski-record strong{display:block;color:#f4d480;font-size:28px;margin-top:5px;font-variant-numeric:tabular-nums}
+.ski-shell{border:1px solid #6d8064;border-radius:12px;background:#18362e;overflow:hidden;box-shadow:0 20px 50px #061b2544}
+.ski-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 22px;color:#f4d480;font-size:12px}
+.ski-toolbar>div{display:flex;gap:20px}
+.ski-toolbar button{background:none;border:0;padding:6px 0;color:#d2e1c8;font-size:12px}
+.ski-toolbar button:disabled{opacity:.4;cursor:default}
+.ski-hud{display:grid;grid-template-columns:repeat(4,1fr);background:#213e32;padding:12px 24px;border-top:1px solid #48614a;border-bottom:1px solid #48614a}
+.ski-hud>div{padding-left:22px;border-left:1px solid #68836455;position:relative}
+.ski-hud>div:first-child{padding-left:0;border:0}
+.ski-hud small{font-size:10px;color:#b3c8af;display:block;font-weight:400}
+.ski-hud strong{font-size:25px;display:block;color:#eff1ce;font-weight:500;margin-top:3px;line-height:1.1;font-variant-numeric:tabular-nums}
+.ski-hud strong small{display:inline;margin-left:2px}
+.ski-hud em{position:absolute;right:12px;top:2px;font-style:normal;font-size:12px;font-weight:700;color:#ff9c86}
+.ski-stage{position:relative;height:clamp(360px,calc(100svh - 370px),600px);overflow:hidden;background:linear-gradient(#8fb8de,#e8f1f8 55%,#f7faff);touch-action:none;user-select:none;-webkit-user-select:none;outline-offset:-4px}
+.ski-stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ski-stage.no-webgl:after{content:'這個瀏覽器無法顯示 3D 雪道 · 3D is not available in this browser';position:absolute;inset:auto 0 18px;text-align:center;color:#24453b;font-size:12px}
+.ski-countdown{position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);font-size:96px;font-weight:900;color:#fff8e0;text-shadow:0 4px 0 #24453b,0 0 30px #24453b88;pointer-events:none}
+.ski-feedback{position:absolute;left:50%;top:18%;transform:translate(-50%,8px);padding:8px 16px;border-radius:20px;font-size:16px;font-weight:800;background:#17372fe6;color:#fff3c4;border:1px solid #f4d48088;opacity:0;transition:opacity .15s,transform .15s;pointer-events:none;white-space:nowrap}
+.ski-feedback.show{opacity:1;transform:translate(-50%,0)}
+.ski-feedback.bad{color:#ffd0c4;border-color:#ff8f7a99;background:#4a2723e6}
+.ski-air{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);padding:6px 14px;border-radius:16px;background:#2f7fd8e6;color:#fff;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .12s;white-space:nowrap}
+.ski-air.show{opacity:1}
+.ski-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(ellipse at center,#10302acc,#0b2621ee)}
+.ski-panel{text-align:center;max-width:560px;color:#e6eacb}
+.ski-panel h2{color:#ffe5a1;font-size:32px;margin:8px 0 12px;letter-spacing:1px}
+.ski-panel p:not(.chapter){font-size:13px;color:#c5d5bb;line-height:1.7;margin:8px 0}
+.ski-panel>small{display:block;margin-top:12px;color:#9fb79f;font-size:11px}
+.ski-legend{display:flex;justify-content:center;gap:18px;flex-wrap:wrap}
+.ski-legend span{display:inline-flex;align-items:center;gap:6px}
+.ski-legend img{width:22px;height:22px;image-rendering:pixelated}
+.flag{display:inline-block;width:18px;height:20px;background:linear-gradient(90deg,#e2453c 0 46%,transparent 46% 54%,#2f7fd8 54%);clip-path:polygon(0 0,46% 0,46% 100%,0 60%,0 0,54% 0,100% 0,100% 60%,54% 100%)}
+.tree{display:inline-block;width:16px;height:20px;background:#3b7d58;clip-path:polygon(50% 0,100% 80%,60% 80%,60% 100%,40% 100%,40% 80%,0 80%)}
+.ski-picks{display:flex;justify-content:center;gap:10px;margin:16px 0}
+.ski-picks button{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:76px;padding:10px 8px;border-radius:10px;border:1px solid #58705a;background:#1d3d33;color:#d7e3cc;font-size:12px}
+.ski-picks button img{width:40px;height:48px;image-rendering:pixelated}
+.ski-picks button[aria-pressed=true]{border-color:#f4d480;background:#2c5940;color:#fff3c4;box-shadow:0 0 0 2px #f4d48066}
+.ski-primary{display:block;margin:6px auto 0;background:#f3d587;border:1px solid #ffedb1;box-shadow:0 4px 0 #967b43;color:#24372c;font-weight:800;padding:12px 30px;font-size:15px;letter-spacing:1px;border-radius:8px}
+.ski-primary:hover{background:#ffeba9}
+.ski-primary:active{transform:translateY(2px);box-shadow:0 2px 0 #967b43}
+.ski-secondary{display:block;margin:12px auto 0;background:none;border:0;color:#c3d4b8;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+.ski-stars{display:flex;justify-content:center;gap:8px;margin-top:6px}
+.ski-stars img{width:46px;height:46px;image-rendering:pixelated;filter:grayscale(1) brightness(.5);opacity:.6}
+.ski-stars img.on{filter:none;opacity:1}
+.ski-results{display:flex;justify-content:center;gap:34px;margin:6px 0}
+.ski-results span{font-size:11px;color:#b4c3a9}
+.ski-results strong{display:block;font-size:24px;color:#f4d480;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+.ski-next{color:#fff3c4!important;font-weight:700}
+.ski-progress{position:relative;height:8px;background:#2a4a3d;margin:0}
+.ski-progress>span{position:absolute;top:0;bottom:0;width:2px;background:#f4d48066}
+.ski-progress>i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#9fd3f5,#f4d480)}
+.ski-progress>b{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#fff8e0;border:2px solid #24453b}
+.ski-touch{display:none}
+.ski-caption{display:flex;justify-content:space-between;gap:12px;padding:12px 22px;font-size:11px;color:#a8bba2}
+.ski-guide{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:28px}
+.ski-guide>div{display:flex;gap:14px;align-items:flex-start}
+.ski-guide b{flex:0 0 40px;height:40px;display:grid;place-items:center;border-radius:10px;background:#24453b}
+.ski-guide b.flag{flex-basis:28px;height:30px;border-radius:0;margin:5px 6px 0}
+.ski-guide b img{width:26px;height:26px;image-rendering:pixelated}
+.ski-guide p{margin:0;font-size:12px;line-height:1.7;color:#a9bea8}
+.ski-guide strong{display:block;color:#e8e2b8;font-size:13px;margin-bottom:3px}
+.ski-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media(pointer:coarse),(max-width:900px){
+  .ski-touch{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;touch-action:none}
+  .ski-touch>span{font-size:10px;color:#a8bba2;text-align:center;flex:1}
+  .ski-touch button{width:84px;height:84px;border-radius:50%;border:2px solid #fff0b8;background:#3d6b8f;color:#fff;font-size:16px;font-weight:800;box-shadow:0 4px #10291f;touch-action:none;user-select:none;-webkit-user-select:none;transition:background .1s,transform .1s}
+  .ski-touch button.ready{background:#2f7fd8;transform:scale(1.06);box-shadow:0 0 0 4px #9fd3f588,0 4px #10291f}
+  .ski-caption>span:first-child{display:none}
+  .ski-caption{justify-content:center}
+}
+@media(max-width:760px){
+  .ski-main{padding:14px 14px 12px}
+  .ski-intro{margin-bottom:12px}
+  .ski-intro>div:first-child{display:flex;flex-wrap:wrap;align-items:center;column-gap:12px}
+  .ski-intro>div:first-child>.chapter{flex-basis:100%;margin-bottom:2px;font-size:9px}
+  .ski-intro h1{font-size:22px;letter-spacing:0}
+  .ski-intro .guide-open{margin-top:0}
+  .ski-intro p:last-child{display:none}
+  .ski-record{font-size:9px}.ski-record strong{font-size:20px}
+  .ski-toolbar{padding:8px 14px;font-size:11px}.ski-toolbar>div{gap:14px}.ski-toolbar button{font-size:11px}
+  .ski-hud{padding:8px 14px}.ski-hud>div{padding-left:10px}.ski-hud strong{font-size:18px}.ski-hud em{right:2px;top:0;font-size:10px}
+  .ski-stage{height:clamp(200px,calc(100svh - 405px),460px)}
+  .ski-touch{padding:6px 14px}
+  /* Before and after a run the stick has nothing to do: give its room to the picker and results. */
+  .ski-shell:is([data-phase=ready],[data-phase=complete]) :is(.ski-touch,.ski-progress){display:none}
+  .ski-shell[data-phase=ready] .ski-hud{display:none}
+  .ski-shell:is([data-phase=ready],[data-phase=complete]) .ski-stage{height:auto;min-height:0}
+  .ski-shell:is([data-phase=ready],[data-phase=complete]) .ski-overlay{position:relative;padding:14px 12px}
+  .ski-legend{gap:10px;font-size:12px}
+  .ski-shell:is([data-phase=ready],[data-phase=complete]) canvas{position:absolute}
+  .ski-panel h2{font-size:24px}.ski-panel p:not(.chapter){font-size:12px}
+  .ski-picks{gap:6px}.ski-picks button{min-width:64px;padding:8px 4px}
+  .ski-results{gap:18px}.ski-results strong{font-size:19px}.ski-stars img{width:38px;height:38px}
+  .ski-countdown{font-size:72px}.ski-feedback{font-size:14px}
+  .ski-guide,.ski-caption,.ski-main>footer{display:none}
+}
+@media(max-width:360px){.ski-picks button{min-width:54px}.ski-hud small{font-size:9px}.ski-hud strong{font-size:16px}}
+@media(max-height:550px) and (orientation:landscape){
+  .topbar,.ski-intro,.ski-guide,.ski-main>footer,.ski-caption{display:none}
+  .ski-main{padding:6px;max-width:900px}
+  .ski-toolbar{padding:4px 14px}.ski-hud{padding:4px 14px}.ski-hud strong{font-size:16px}
+  .ski-stage{aspect-ratio:auto;height:calc(100dvh - 92px)}
+  .ski-touch{position:absolute;left:16px;right:16px;bottom:16px;padding:0;pointer-events:none;z-index:5}
+  .ski-touch>*{pointer-events:auto}.ski-touch>span{display:none}
+  .ski-shell{position:relative}
+  .ski-panel h2{font-size:22px;margin:4px 0}.ski-panel p:not(.chapter){margin:4px 0}.ski-picks{margin:8px 0}
+}
+@media(prefers-reduced-motion:reduce){.ski-feedback,.ski-air,.ski-touch button{transition:none}}

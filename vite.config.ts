@@ -15,6 +15,7 @@ export default defineConfig(({ command, isPreview }) => ({
         race: resolve(import.meta.dirname, "race.html"),
         echo: resolve(import.meta.dirname, "echo.html"),
         catch: resolve(import.meta.dirname, "catch.html"),
+        ski: resolve(import.meta.dirname, "ski.html"),
       },
     },
   },

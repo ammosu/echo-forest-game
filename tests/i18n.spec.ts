@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 // English pages: every visible string is translated and still fits a phone screen without sideways scrolling.
-const pages = ['./', './adventure.html', './race.html', './defense.html', './echo.html', './catch.html'];
+const pages = ['./', './adventure.html', './race.html', './defense.html', './echo.html', './catch.html', './ski.html'];
 const han = /\p{Script=Han}/u;
 
 for (const path of pages) {

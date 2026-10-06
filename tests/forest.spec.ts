@@ -4,13 +4,13 @@ import { build, preview } from 'vite';
 test('map selection supports keyboard, remembers destination and enters each game', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
-  await expect(page.locator('.map-pin')).toHaveCount(5);
+  await expect(page.locator('.map-pin')).toHaveCount(6);
   await page.locator('[data-place=adventure]').focus(); await page.keyboard.press('ArrowRight');
   await expect(page.locator('[data-place=race]')).toBeFocused();
   await expect(page.locator('#destination-title')).toHaveText('森林賽車');
   await page.reload(); await expect(page.locator('[data-place=race]')).toHaveAttribute('aria-pressed', 'true');
   await page.screenshot({ path: 'tests/evidence/forest-map.png', fullPage: true });
-  for (const [id, path] of [['adventure','/adventure.html'], ['race','/race.html'], ['defense','/defense.html'], ['echo','/echo.html'], ['catch','/catch.html']]) {
+  for (const [id, path] of [['adventure','/adventure.html'], ['race','/race.html'], ['defense','/defense.html'], ['echo','/echo.html'], ['catch','/catch.html'], ['ski','/ski.html']]) {
     await page.locator(`[data-place=${id}]`).click();
     await page.locator('#depart').click(); await expect(page).toHaveURL(new RegExp(`${path.replaceAll('.', '\\.')}$$`));
     await page.getByRole('link', { name: '森林地圖', exact: true }).click();
@@ -30,9 +30,9 @@ test('phone map has reachable touch targets with storage blocked and no page ove
     await pin.tap(); await expect(pin).toHaveAttribute('aria-pressed', 'true');
     await expect(sheet).toBeInViewport({ ratio: 1 }); await expect(page.locator('#depart')).toBeInViewport();
     await expect(close).toBeFocused();
-    if (await pin.getAttribute('data-place') !== 'catch') { await close.tap(); await expect(sheet).toBeHidden(); await expect(pin).toBeFocused(); }
+    if (await pin.getAttribute('data-place') !== 'ski') { await close.tap(); await expect(sheet).toBeHidden(); await expect(pin).toBeFocused(); }
   }
-  await expect(page.locator('#destination-title')).toHaveText('音符接接樂');
+  await expect(page.locator('#destination-title')).toHaveText('雪林滑降');
   await page.screenshot({ path:'tests/evidence/forest-map-mobile.png' });
   await page.locator('#sheet-backdrop').tap({ position: { x: 20, y: 20 } }); await expect(sheet).toBeHidden();
   await page.locator('[data-place=echo]').tap(); await page.keyboard.press('Escape'); await expect(sheet).toBeHidden();
@@ -42,7 +42,7 @@ test('phone map has reachable touch targets with storage blocked and no page ove
     await page.setViewportSize({width, height:width === 844 ? 390 : 844});
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
-  for (const path of ['/adventure.html', '/race.html', '/defense.html', '/echo.html', '/catch.html']) {
+  for (const path of ['/adventure.html', '/race.html', '/defense.html', '/echo.html', '/catch.html', '/ski.html']) {
     await page.setViewportSize({width:390,height:844}); await page.goto(`http://127.0.0.1:5173${path}`);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
     await page.locator('.topbar-menu').tap();
@@ -58,7 +58,7 @@ test('production map works under the Pages subpath with loaded portraits and gam
   const errors: string[]=[];page.on('pageerror', e=>errors.push(e.message));
   try {
     const base = server.resolvedUrls!.local[0]; await page.goto(base);
-    await expect(page.locator('.map-pin')).toHaveCount(5);
+    await expect(page.locator('.map-pin')).toHaveCount(6);
     expect(await page.locator('.map-pin img').evaluateAll(imgs=>imgs.every(img=>(img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth>0))).toBe(true);
     await page.locator('[data-place=catch]').click();await page.locator('#depart').click();
     await expect(page.locator('#start')).toBeVisible();
@@ -69,7 +69,7 @@ test('production map works under the Pages subpath with loaded portraits and gam
 });
 
 test('every page shares the same top bar on desktop and phone, and the old map URL redirects home', async ({ browser }) => {
-  const pages: [string, string][] = [['/', '森林地圖'], ['/adventure.html', '森林冒險'], ['/race.html', '森林賽車'], ['/defense.html', '爆破保衛戰'], ['/echo.html', '森林回音'], ['/catch.html', '音符接接樂']];
+  const pages: [string, string][] = [['/', '森林地圖'], ['/adventure.html', '森林冒險'], ['/race.html', '森林賽車'], ['/defense.html', '爆破保衛戰'], ['/echo.html', '森林回音'], ['/catch.html', '音符接接樂'], ['/ski.html', '雪林滑降']];
   for (const [w, h, mobile] of [[1280, 900, false], [390, 844, true]] as const) {
     const context = await browser.newContext({ baseURL: 'http://127.0.0.1:5173', viewport: { width: w, height: h }, isMobile: mobile, hasTouch: mobile });
     const page = await context.newPage();
@@ -77,7 +77,7 @@ test('every page shares the same top bar on desktop and phone, and the old map U
     for (const [path, label] of pages) {
       await page.goto(path);
       await expect(page.locator('.topbar [aria-current=page]')).toContainText(label);
-      await expect(page.locator('.topbar-game')).toHaveCount(5);
+      await expect(page.locator('.topbar-game')).toHaveCount(6);
       const b = await page.locator('.topbar').boundingBox();
       boxes.push(`${Math.round(b!.height)}`);
       if (mobile) await page.screenshot({ path: `tests/evidence/nav-mobile-${label}.png`, clip: { x: 0, y: 0, width: w, height: 140 } });
@@ -86,7 +86,7 @@ test('every page shares the same top bar on desktop and phone, and the old map U
         await expect(page.locator('.topbar-menu')).toContainText(label);
         await expect(page.locator('.topbar-game').first()).toBeHidden();
         await page.locator('.topbar-menu').click();
-        await expect(page.locator('.topbar-game')).toHaveCount(5);
+        await expect(page.locator('.topbar-game')).toHaveCount(6);
         await expect(page.locator('.topbar-game').first()).toBeVisible();
         await page.keyboard.press('Escape');
         await expect(page.locator('.topbar-game').first()).toBeHidden();
@@ -105,7 +105,7 @@ test('on phones every page fits one screen and each game explains itself in a sw
   for (const [w, h] of [[390, 844], [375, 667]]) {
     const context = await browser.newContext({ baseURL: 'http://127.0.0.1:5173', viewport: { width: w, height: h }, isMobile: true, hasTouch: true, storageState: { cookies: [], origins: [] } });
     const page = await context.newPage();
-    for (const path of ['/', '/adventure.html', '/race.html', '/defense.html', '/echo.html', '/catch.html']) {
+    for (const path of ['/', '/adventure.html', '/race.html', '/defense.html', '/echo.html', '/catch.html', '/ski.html']) {
       await page.goto(path);
       const guide = page.locator('.guide');
       if (path !== '/') {

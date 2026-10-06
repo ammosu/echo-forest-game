@@ -1,16 +1,17 @@
 import './site-nav.css';
 import { isEn, setLang, tr } from './i18n';
 
-// One header for every page: the forest map is home, the five games sit beside it.
-export type NavPage = 'map' | 'adventure' | 'race' | 'defense' | 'echo' | 'catch';
+// One header for every page: the forest map is home, the six games sit beside it.
+export type NavPage = 'map' | 'adventure' | 'race' | 'defense' | 'echo' | 'catch' | 'ski';
 
-const sprites = import.meta.glob('../assets/sprites/1x/{anbo,angoo,anji,owl,anmi}.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const sprites = import.meta.glob('../assets/sprites/1x/{anbo,angoo,anji,owl,anmi,anje}.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const games: { id: NavPage; label: string; href: string; hero: string }[] = [
   { id: 'adventure', label: tr('森林冒險', 'Forest Adventure'), href: './adventure.html', hero: 'anbo' },
   { id: 'race', label: tr('森林賽車', 'Forest Race'), href: './race.html', hero: 'angoo' },
   { id: 'defense', label: tr('爆破保衛戰', 'Bomb Defense'), href: './defense.html', hero: 'anji' },
   { id: 'echo', label: tr('森林回音', 'Forest Echo'), href: './echo.html', hero: 'owl' },
   { id: 'catch', label: tr('音符接接樂', 'Note Catch'), href: './catch.html', hero: 'anmi' },
+  { id: 'ski', label: tr('雪林滑降', 'Snowy Run'), href: './ski.html', hero: 'anje' },
 ];
 
 const item = (current: NavPage, id: NavPage, href: string, inner: string, cls: string) =>
