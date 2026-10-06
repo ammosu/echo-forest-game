@@ -83,9 +83,7 @@ export class DefenseView {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.35;
     this.scene.background = new THREE.Color();
-    this.camera.position.set(7.2, 12.8, 15.8);
-    this.camera.lookAt(-0.35, 0, 0);
-    this.camera.updateMatrixWorld();
+    this.aimCamera();
     this.sky = new THREE.HemisphereLight("#edf5dd", "#526948", 2.5);
     this.scene.add(this.sky);
     const sun = (this.sun = new THREE.DirectionalLight("#ffe2a1", 3.2));
@@ -883,7 +881,8 @@ export class DefenseView {
   private applyKick() {
     const k = Math.max(0, 1 - (performance.now() - this.kickAt) / 300);
     const shake = this.kickShake * k * k;
-    this.camera.position.set(7.2 + (Math.random() - 0.5) * shake, 12.8 + (Math.random() - 0.5) * shake * 0.5, 15.8 + (Math.random() - 0.5) * shake);
+    const { x, y, z } = this.cameraHome;
+    this.camera.position.set(x + (Math.random() - 0.5) * shake, y + (Math.random() - 0.5) * shake * 0.5, z + (Math.random() - 0.5) * shake);
     const zoom = 1 + this.kickZoom * Math.sin(k * Math.PI);
     if (this.camera.zoom !== zoom) {
       this.camera.zoom = zoom;
@@ -904,6 +903,35 @@ export class DefenseView {
         THREE.MathUtils.clamp(this.width / 160, 2.5, 6);
   }
 
+  /** Desktop keeps the angled diorama; phones look at the board head-on and steeper so cells read larger. */
+  private cameraHome = new THREE.Vector3(7.2, 12.8, 15.8);
+  private compact = false;
+  private aimCamera() {
+    this.cameraHome.set(...((this.compact ? [0, 15, 9.5] : [7.2, 12.8, 15.8]) as [number, number, number]));
+    this.camera.position.copy(this.cameraHome);
+    if (this.compact) this.camera.lookAt(0.1, 0, 0);
+    else this.camera.lookAt(-0.35, 0, 0);
+    this.camera.updateMatrixWorld();
+  }
+  /** Fit the frustum tightly around the 9×5 grid (plus spawn lane and sprite height) for small screens. */
+  private fitBoard(aspect: number) {
+    const inverse = this.camera.matrixWorldInverse;
+    let [l, r, b, t] = [Infinity, -Infinity, Infinity, -Infinity];
+    for (const x of [-4.95, 4.9])
+      for (const z of [-2.6, 2.6])
+        for (const y of [0, 0.9]) {
+          const v = new THREE.Vector3(x, y, z).applyMatrix4(inverse);
+          [l, r, b, t] = [Math.min(l, v.x), Math.max(r, v.x), Math.min(b, v.y), Math.max(t, v.y)];
+        }
+    const cx = (l + r) / 2,
+      cy = (b + t) / 2;
+    const halfWidth = Math.max((r - l) / 2, ((t - b) / 2) * aspect);
+    this.camera.left = cx - halfWidth;
+    this.camera.right = cx + halfWidth;
+    this.camera.top = cy + halfWidth / aspect;
+    this.camera.bottom = cy - halfWidth / aspect;
+  }
+
   private resize() {
     const { width, height } = this.canvas.getBoundingClientRect();
     if (!width || !height || (width === this.width && height === this.height))
@@ -913,11 +941,19 @@ export class DefenseView {
     this.renderer.setSize(width, height, false);
     this.sizeComposer();
     const aspect = width / height;
-    const halfWidth = Math.max(7.25, 4.75 * aspect);
-    this.camera.left = -halfWidth;
-    this.camera.right = halfWidth;
-    this.camera.top = halfWidth / aspect;
-    this.camera.bottom = -halfWidth / aspect;
+    const compact = width < 640;
+    if (compact !== this.compact) {
+      this.compact = compact;
+      this.aimCamera();
+    }
+    if (compact) this.fitBoard(aspect);
+    else {
+      const halfWidth = Math.max(7.25, 4.75 * aspect);
+      this.camera.left = -halfWidth;
+      this.camera.right = halfWidth;
+      this.camera.top = halfWidth / aspect;
+      this.camera.bottom = -halfWidth / aspect;
+    }
     this.camera.updateProjectionMatrix();
   }
 

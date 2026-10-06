@@ -382,6 +382,8 @@ function mountGame() {
     document
       .querySelector(".defense-shell")!
       .classList.toggle("ended", game.phase === "won" || game.phase === "lost");
+    // Phones hide the site bar and title while a round is live; pausing brings them back.
+    document.body.classList.toggle("defense-playing", game.active);
     document.querySelectorAll<HTMLButtonElement>("[data-seed]").forEach((b) => {
       b.classList.toggle(
         "unaffordable",
