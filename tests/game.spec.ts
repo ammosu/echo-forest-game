@@ -106,13 +106,17 @@ test('eight kart views are selectable and workshop pauses then resumes play',asy
 });
 test('mobile touch controls move, jump and release without layout overflow',async({browser,baseURL})=>{
   const context=await browser.newContext({baseURL,viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2});const page=await context.newPage();await page.goto('/');
-  await page.getByRole('button',{name:'開始冒險'}).click();await expect(page.getByRole('button',{name:'向右移動'})).toBeVisible();
-  const right=page.getByRole('button',{name:'向右移動'}),jump=page.getByRole('button',{name:'跳躍',exact:true});
+  await page.getByRole('button',{name:'開始冒險'}).click();await expect(page.getByRole('slider',{name:'移動搖桿'})).toBeVisible();
+  const right=page.getByRole('slider',{name:'移動搖桿'}),jump=page.getByRole('button',{name:'跳躍',exact:true});
   // Real simultaneous touch contacts validate pointer capture, not synthetic unregistered IDs.
   await right.scrollIntoViewIfNeeded();
   const rb=(await right.boundingBox())!,jb=(await jump.boundingBox())!;
   const cdp=await context.newCDPSession(page);
-  const r={x:rb.x+rb.width/2,y:rb.y+rb.height/2,id:1};
+  // A light push walks slowly; pushing to the rim runs at full speed.
+  const r={x:rb.x+rb.width*.92,y:rb.y+rb.height/2,id:1};
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...r,x:rb.x+rb.width*.68}]});
+  await page.waitForTimeout(300);const slow=(await snapshot(page)).vx;expect(slow).toBeGreaterThan(20);expect(slow).toBeLessThan(150);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(300);
   const j={x:jb.x+jb.width/2,y:jb.y+jb.height/2,id:2};
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[r]});
   await page.waitForTimeout(450);expect((await snapshot(page)).x).toBeGreaterThan(140);

@@ -315,7 +315,7 @@ class ForestScene extends Phaser.Scene {
       body.setVelocityY(-380);this.jumpQueuedAt=-1000;this.groundedAt=-1000;this.owner.tone('jump');this.burst(this.player.x,this.player.y,0xbacc86,5);
     }
     this.prevJump=jump;
-    const axis=Number(right)-Number(left);
+    const axis=Number(right)-Number(left)||this.owner.stickX;
     body.setVelocityX(Phaser.Math.Linear(body.velocity.x,axis*180,Math.min(1,dt*(axis?14:20))));
     if(Math.abs(body.velocity.x)<2 && !axis)body.setVelocityX(0);
     if(axis)this.player.setFlipX(axis<0);
@@ -339,7 +339,7 @@ class ForestScene extends Phaser.Scene {
   }
 }
 export class ForestGame {
-  controls:Controls={left:false,right:false,jump:false};running=false;paused=false;
+  controls:Controls={left:false,right:false,jump:false};stickX=0;running=false;paused=false;
   look:Look='standard';character='anbo';
   readonly compact=window.matchMedia('(max-width: 750px) and (orientation: portrait)').matches;
   readonly reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -352,8 +352,10 @@ export class ForestGame {
   setCharacter(id:string){if(!playableIds.includes(id)||this.running)return;this.character=id;if(this.scene.ready)this.scene.applyCharacter();}
   setLook(look:Look){this.look=look;if(this.scene.ready)this.scene.applyLook();}
   setPaused(paused:boolean){if(!this.running || this.paused===paused)return;this.paused=paused;this.releaseControls();if(paused)this.scene.physics.pause();else this.scene.physics.resume();this.emit({type:'pause',paused});}
-  releaseControls(){this.controls={left:false,right:false,jump:false};if(this.scene.cursor)Object.values(this.scene.cursor).forEach(k=>k.reset());document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
+  releaseControls(){this.controls={left:false,right:false,jump:false};this.stickX=0;if(this.scene.cursor)Object.values(this.scene.cursor).forEach(k=>k.reset());document.querySelectorAll('.held').forEach(e=>e.classList.remove('held'));}
   setControl(key:keyof Controls,down:boolean){this.controls[key]=down;}
+  /** Analog horizontal input from the touch stick, in [-1, 1]. */
+  setStick(x:number){this.stickX=x;}
   toggleSound(){this.sound=!this.sound;if(this.sound){this.ensureAudio();this.tone('note');}return this.sound;}
   ensureAudio(){if(!this.sound)return;try{this.audio??=new AudioContext();if(this.audio.state==='suspended')void this.audio.resume().catch(()=>{});}catch{this.sound=false;}}
   tone(kind:string){if(!this.sound)return;this.ensureAudio();if(!this.audio)return;const a=this.audio;const notes:Record<string,number[]>={note:[660,880],jump:[260,400],bounce:[320,640],hurt:[180,110],checkpoint:[523,659,784],grow:[392,523,659,784,1047],shrink:[523,392,262],win:[523,659,784,1047]};(notes[kind]||[440]).forEach((freq,i)=>{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+i*.085;o.type='triangle';o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.06,t+.012);g.gain.exponentialRampToValueAtTime(.001,t+.13);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.15);});}

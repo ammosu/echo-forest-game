@@ -1,6 +1,7 @@
 import './style.css';
 import './adventure.css';
 import { ForestGame, hostOf, playableIds, type GameEvent, type Look } from './game';
+import { mountJoystick } from './joystick';
 import characters from '../assets/characters.json';
 import restBadge from '../assets/ui/adv-rest.png';
 import winBadge from '../assets/ui/adv-win.png';
@@ -35,7 +36,7 @@ app.innerHTML = `
         </div>
         <div class="toast" id="toast" role="status" aria-live="polite"></div>
       </div>
-      <div class="touch-controls" aria-label="觸控操作"><div><button data-control="left" aria-label="向左移動">◀</button><button data-control="right" aria-label="向右移動">▶</button></div><span>按住跳躍可以跳得更高</span><button data-control="jump" class="touch-jump" aria-label="跳躍">跳躍 ↑</button></div>
+      <div class="touch-controls" aria-label="觸控操作"><div class="touch-stick" id="adventure-stick"></div><span>左手推搖桿移動，按住跳躍跳得更高</span><button data-control="jump" class="touch-jump" aria-label="跳躍">跳躍 ↑</button></div>
       <div class="game-caption"><span><kbd>←</kbd><kbd>→</kbd> 移動 <i></i><kbd>Space</kbd> 跳躍 <i></i><kbd>Esc</kbd> 暫停</span><span class="caption-tip">小提示：踩上紅蘑菇，會有驚喜。</span></div>
     </section>
     <section class="forest-friends" aria-label="森林夥伴"><div class="friends-heading"><h2>森林裡的朋友們</h2><p>點選朋友，就能換他帶路。</p></div><div class="friend-list">${cast.map(c => `<button class="friend" data-hero="${c.id}" aria-pressed="false"><img src="${front(c.id)}" alt="${c.species} ${c.name}"/><span>${c.name}</span><small>本次主角</small></button>`).join('')}</div></section>
@@ -149,6 +150,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-control]').forEach(button =>
   const release = () => { game.setControl(control, false); button.classList.remove('held'); };
   button.onpointerup = release; button.onpointercancel = release; button.onlostpointercapture = release;
 });
+mountJoystick(el('adventure-stick'), x => game.setStick(x), '移動搖桿');
 window.addEventListener('blur', () => { game.releaseControls(); if (game.running) game.setPaused(true); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { game.releaseControls(); if (game.running) game.setPaused(true); } });
 window.addEventListener('keydown', e => {

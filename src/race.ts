@@ -8,6 +8,7 @@ import {
   type RaceResult,
 } from "./racing-engine";
 import { entries, vehicles } from "./racing-data";
+import { mountJoystick } from "./joystick";
 import itemArt from "../assets/ui/race-item-echo.png";
 import trophyArt from "../assets/ui/race-trophy.png";
 import flagIcon from "../assets/ui/race-hud-flag.png";
@@ -48,7 +49,7 @@ document.getElementById("app")!.innerHTML = `
       <div class="race-notice" id="race-notice" role="status" aria-live="polite"></div>
       <div class="race-overlay" id="race-overlay"><div class="race-welcome" id="race-welcome"><p class="welcome-label">Echo Forest Kart</p><h2>下一個彎道，<br>換你領先。</h2><p>和 Angoo、Anmi、Anje 一起出發。<br>甩尾蓄力、抓住加速帶，跑出你的節奏。</p><div class="race-start-meta"><span>${course.name}</span><span>三圈決勝</span><span>單人競速</span></div><button class="primary" id="race-start" disabled>正在準備賽道…</button><span class="start-hint">← → 轉向 ／ 空白鍵特技 ／ 空中 ↑ 俯衝、↓ 拉升 ／ E 道具</span></div><div class="race-result" id="race-result" hidden></div></div>
     </div>
-    <div class="race-touch" aria-label="賽車觸控操作"><div><button data-race-control="left" aria-label="向左轉">◀</button><button data-race-control="right" aria-label="向右轉">▶</button></div><div><button data-race-control="gas" id="touch-gas" aria-label="油門" hidden>油門</button><button data-race-control="brake" id="touch-brake" aria-label="煞車">煞車</button><button data-race-control="drift" class="drift-touch" aria-label="甩尾" title="地面按住甩尾；起跳時點一下做特技">甩尾／特技</button><button data-race-control="item" class="item-touch" aria-label="觸控使用道具"><img src="${itemArt}" alt="">道具</button></div></div>
+    <div class="race-touch" aria-label="賽車觸控操作"><div class="touch-stick" id="race-stick"></div><div><button data-race-control="gas" id="touch-gas" aria-label="油門" hidden>油門</button><button data-race-control="brake" id="touch-brake" aria-label="煞車">煞車</button><button data-race-control="drift" class="drift-touch" aria-label="甩尾" title="地面按住甩尾；起跳時點一下做特技">甩尾／特技</button><button data-race-control="item" class="item-touch" aria-label="觸控使用道具"><img src="${itemArt}" alt="">道具</button></div></div>
     <div class="race-caption"><div><kbd>←</kbd><kbd>→</kbd> 轉向 <kbd>Space</kbd> 甩尾 <kbd>E</kbd> 道具 <kbd>↓</kbd> 煞車</div><label><input id="auto-gas" type="checkbox" checked> 自動油門 <span>專心過彎就好</span></label></div>
   </section>
   <section class="race-details"><div class="race-racers"><div class="friends-heading"><h2>一起上場的夥伴</h2><p id="race-standings-label">你駕駛 Anbo 的苔綠號</p></div><div class="race-entry-list">${entries.map((entry, i) => `<div class="race-entry ${i === 0 ? "you" : ""}" data-racer="${entry.name}"><span class="entry-rank">${i === 0 ? "你" : i + 1}</span><img src="${portraits[`../assets/sprites/1x/${entry.characterId}.png`]}" alt="${entry.name}"><div><strong>${entry.name}</strong><small>${vehicles[entry.vehicleId].name}</small></div><span class="vehicle-dot" style="--vehicle:${vehicles[entry.vehicleId].color}"></span></div>`).join("")}</div></div><div class="race-record"><span>本機最快紀錄</span><strong id="best-time">${saved}</strong><small>三圈總時間</small></div></section>
@@ -287,6 +288,7 @@ document
     button.onpointercancel = release;
     button.onlostpointercapture = release;
   });
+mountJoystick(el("race-stick"), (x) => race.setStick(x), "方向搖桿");
 const fullscreen = el<HTMLButtonElement>("race-fullscreen");
 fullscreen.hidden = !document.fullscreenEnabled;
 fullscreen.onclick = async () => {

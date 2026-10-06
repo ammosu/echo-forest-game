@@ -191,7 +191,7 @@ test("mobile real multitouch steering and drift, cancellation and landscape layo
   });
   const page = await context.newPage();
   await start(page);
-  const right = page.getByRole("button", { name: "向右轉", exact: true }),
+  const right = page.getByRole("slider", { name: "方向搖桿", exact: true }),
     drift = page.getByRole("button", { name: "甩尾", exact: true });
   await right.scrollIntoViewIfNeeded();
   await page.waitForTimeout(1000);
@@ -199,7 +199,7 @@ test("mobile real multitouch steering and drift, cancellation and landscape layo
     db = (await drift.boundingBox())!,
     cdp = await context.newCDPSession(page);
   const touches = [
-    { x: rb.x + rb.width / 2, y: rb.y + rb.height / 2, id: 1 },
+    { x: rb.x + rb.width * 0.92, y: rb.y + rb.height / 2, id: 1 },
     { x: db.x + db.width / 2, y: db.y + db.height / 2, id: 2 },
   ];
   await cdp.send("Input.dispatchTouchEvent", {

@@ -291,6 +291,14 @@ export class RacingEngine {
     this.audioVolume();
     this.sendState();
   }
+  /** Analog steering from the touch stick, in [-1, 1]; keys and buttons take priority. */
+  stick = 0;
+  setStick(x: number) {
+    this.stick = x;
+  }
+  private steerAxis() {
+    return Number(this.controls.right) - Number(this.controls.left) || this.stick;
+  }
   setControl(control: Control, value: boolean) {
     if (control === 'drift' && value && !this.controls.drift && this.phase === 'racing' && !this.paused && this.stun <= 0) {
       this.trickPressedAt = this.seconds;
@@ -310,6 +318,7 @@ export class RacingEngine {
   release() {
     this.trickPressedAt = -10;
     this.itemQueued = false;
+    this.stick = 0;
     for (const k of Object.keys(this.controls) as Control[])
       this.controls[k] = false;
     document
@@ -366,7 +375,7 @@ export class RacingEngine {
       this.view?.render(
         this.snapshot(),
         dt,
-        Number(this.controls.right) - Number(this.controls.left),
+        this.steerAxis(),
         this.hitCooldown,
         this.consumed,
       );
@@ -416,7 +425,7 @@ export class RacingEngine {
       axis =
         this.stun > 0
           ? 0
-          : Number(this.controls.right) - Number(this.controls.left);
+          : this.steerAxis();
     const wasDrifting = this.drifting;
     if (
       this.flight.airborne ||
@@ -446,12 +455,12 @@ export class RacingEngine {
       this.driftDirection = 0;
     } else {
       if (!wasDrifting) {
-        this.driftDirection = axis;
+        this.driftDirection = Math.sign(axis);
         this.driftCharge = 0;
       }
       this.drifting = true;
-      if (axis !== this.driftDirection) {
-        this.driftDirection = axis;
+      if (Math.sign(axis) !== this.driftDirection) {
+        this.driftDirection = Math.sign(axis);
         this.driftCharge = 0;
       }
       // Charge only while negotiating a corner, not by spinning on a straight.

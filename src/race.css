@@ -1386,3 +1386,32 @@
 .course-option svg{width:64px;height:68px;flex:none}.course-option polygon{fill:none;stroke:#b6c895;stroke-width:18;stroke-linejoin:round}.course-option[aria-current] polygon{stroke:#e8c66a}
 .course-option>span{min-width:0}.course-option strong{display:flex;align-items:center;gap:10px;font-size:15px;color:#f4e6ba}.course-option small{font-size:10px;font-weight:400;color:#bbceb1}.course-option span>span{display:block;margin-top:7px;font-size:11px;line-height:1.7;color:#bbceb1}.course-option em{display:block;margin-top:6px;font-style:normal;font-size:10px;color:#e8c66a}
 @media(max-width:760px){.course-board{grid-template-columns:1fr}.course-option{padding:10px 14px;border-right:0;border-bottom:1px solid #698165;gap:16px}.course-option:last-child{border-bottom:0}.course-option svg{width:44px;height:48px}.course-option span>span{margin-top:3px}.course-option em{margin-top:3px}}
+/* The race stick sits on the left; action buttons stay on the right. */
+@media (pointer: coarse), (max-width: 900px) {
+  .race-touch { align-items: center; }
+  .race-touch > div.joystick { display: block; }
+}
+/* Phone landscape: stick and action buttons float over the side bands beside the track. */
+@media (max-height: 550px) and (orientation: landscape) and (pointer: coarse) {
+  .race-shell { position: relative; }
+  .race-stage { height: calc(100dvh - 76px); }
+  .race-shell:fullscreen .race-stage { height: calc(100dvh - 60px); }
+  .race-touch {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 40px;
+    padding: 0;
+    pointer-events: none;
+    z-index: 6;
+    align-items: flex-end;
+  }
+  .race-touch > * { pointer-events: auto; }
+  .race-touch > div:not(.joystick) {
+    display: grid;
+    grid-template-columns: repeat(2, 66px);
+    gap: 6px;
+  }
+  .race-touch button { height: 46px; min-width: 0; padding: 0 4px; }
+  .race-touch .drift-touch { padding: 0 4px; font-size: 11px; }
+}
