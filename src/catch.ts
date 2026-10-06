@@ -5,6 +5,7 @@ import { tr, localizeDocument } from './i18n';
 import { mountGuide, guideButton } from './game-guide';
 import { CatchGame, CATCH_REACH, inReach } from './catch-engine';
 import characters from '../assets/characters.json';
+import { mascotLabel, mascotTag } from './mascots';
 import forest from '../assets/generated/forest-background.png';
 import noteIcon from '../assets/ui/catch/note.png';
 import noiseIcon from '../assets/ui/catch/noise.png';
@@ -12,7 +13,7 @@ import starIcon from '../assets/ui/catch/star.png';
 
 const sprites = import.meta.glob('../assets/sprites/1x/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const sprite = (id: string) => sprites[`../assets/sprites/1x/${id}.png`];
-const cast = ['anbo', 'anmi', 'anka', 'anzo'].map(id => characters.characters.find(c => c.id === id)!);
+const cast = ['anbo', 'anmi', 'anka', 'anzo'].map(id => characters.characters.find(c => c.id === id)!).map(c => ({ ...c, name: mascotLabel(c.id) }));
 localizeDocument('Echo Forest — Note Catch', 'Move left and right with your forest friends to catch golden notes and finish a three-part morning song.');
 const game = new CatchGame();
 const phrases = tr(['晨光落下', '林間追光', '一起合奏'], ['Morning light', 'Chasing light', 'All together']);
@@ -84,7 +85,7 @@ function setPhase() {
 }
 function showPicker() {
   game.phase = 'ready'; release(); stopAudio(); overlay.hidden = false; setPhase();
-  panel.innerHTML = `<p class="chapter">${tr('選一位夥伴，接住晨光', 'Pick a friend and catch the morning light')}</p><h2>${tr('音符接接樂', 'Note Catch')}</h2><p class="catch-legend"><span><img src="${noteIcon}" alt="">${tr('接住金色音符', 'Catch golden notes')}</span><span><img src="${noiseIcon}" alt="">${tr('避開灰色雜音', 'Dodge grey noise')}</span></p><p>${tr('後兩段需要跨格接音，留意旁邊的雜音。', 'In the last two parts you\'ll reach across lanes — watch for noise nearby.')}</p><div class="catch-picks" role="group" aria-label="${tr('選擇演奏夥伴', 'Pick a friend')}">${cast.map(c => `<button data-hero="${c.id}" aria-pressed="${c.id === hero.id}"><img src="${sprite(c.id)}" alt=""><span>${c.name}</span></button>`).join('')}</div><button class="catch-primary" id="start">${tr('開始演奏', 'Start playing')}</button><small>${tr('角色能力相同 · 音效會在開始後播放', 'All friends play the same · sound starts after you begin')}</small>`;
+  panel.innerHTML = `<p class="chapter">${tr('選一位夥伴，接住晨光', 'Pick a friend and catch the morning light')}</p><h2>${tr('音符接接樂', 'Note Catch')}</h2><p class="catch-legend"><span><img src="${noteIcon}" alt="">${tr('接住金色音符', 'Catch golden notes')}</span><span><img src="${noiseIcon}" alt="">${tr('避開灰色雜音', 'Dodge grey noise')}</span></p><p>${tr('後兩段需要跨格接音，留意旁邊的雜音。', 'In the last two parts you\'ll reach across lanes — watch for noise nearby.')}</p><div class="catch-picks" role="group" aria-label="${tr('選擇演奏夥伴', 'Pick a friend')}">${cast.map(c => `<button data-hero="${c.id}" aria-pressed="${c.id === hero.id}"><img src="${sprite(c.id)}" alt=""><span>${mascotTag(c.id)}</span></button>`).join('')}</div><button class="catch-primary" id="start">${tr('開始演奏', 'Start playing')}</button><small>${tr('角色能力相同 · 音效會在開始後播放', 'All friends play the same · sound starts after you begin')}</small>`;
   panel.querySelectorAll<HTMLButtonElement>('[data-hero]').forEach(b => b.onclick = () => {
     hero = cast.find(c => c.id === b.dataset.hero)!; el<HTMLImageElement>('hero').src = sprite(hero.id);
     panel.querySelectorAll('[data-hero]').forEach(p => p.setAttribute('aria-pressed', String(p === b)));

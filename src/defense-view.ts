@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { tr } from "./i18n";
+import { mascotName } from "./mascots";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
@@ -151,7 +152,7 @@ export class DefenseView {
     this.player.add(ring);
     this.buildAnbo();
     this.player.add(this.anbo);
-    this.label("Anbo", 0, 1.42, 0, 0.65, this.player);
+    this.label(mascotName("anbo"), 0, 1.42, 0, 0.65, this.player);
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(canvas);
     this.resize();

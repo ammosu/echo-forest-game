@@ -7,6 +7,7 @@ import { mountJoystick } from './joystick';
 import { SkiGame, COURSE_LENGTH, MISS_PENALTY, sections, autopilot, type SkiEvent } from './ski-engine';
 import { SkiView } from './ski-view';
 import characters from '../assets/characters.json';
+import { mascotLabel, mascotTag } from './mascots';
 import noteIcon from '../assets/ui/catch/note.png';
 import starIcon from '../assets/ui/catch/star.png';
 
@@ -14,7 +15,7 @@ const fronts = import.meta.glob('../assets/sprites/1x/{anje,anbo,anmi,anbi}.png'
 const backs = import.meta.glob('../assets/sprites/extras/{anje_ski_back,anbo_back,anmi_back,anbi_back}.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const front = (id: string) => fronts[`../assets/sprites/1x/${id}.png`];
 const back = (id: string) => backs[`../assets/sprites/extras/${id === 'anje' ? 'anje_ski' : id}_back.png`];
-const cast = ['anje', 'anbo', 'anmi', 'anbi'].map(id => characters.characters.find(c => c.id === id)!);
+const cast = ['anje', 'anbo', 'anmi', 'anbi'].map(id => characters.characters.find(c => c.id === id)!).map(c => ({ ...c, name: mascotLabel(c.id) }));
 localizeDocument('Echo Forest — Snowy Forest Run', 'Ski down the snowy forest with a friend: carve through gates, collect notes and fly off the icefall jumps.');
 
 const game = new SkiGame();
@@ -102,7 +103,7 @@ function setPhase() {
 }
 function showPicker() {
   game.phase = 'ready'; release(); overlay.hidden = false; setPhase(); setWind(0);
-  panel.innerHTML = `<p class="chapter">${tr('選一位夥伴，從山頂出發', 'Pick a friend and head down the mountain')}</p><h2>${tr('雪林滑降', 'Snowy Forest Run')}</h2><p class="ski-legend"><span><b class="flag"></b>${tr('穿過旗門', 'Pass the gates')}</span><span><img src="${noteIcon}" alt="">${tr('收集音符', 'Collect notes')}</span><span><b class="tree"></b>${tr('避開樹和岩石', 'Dodge trees and rocks')}</span></p><p>${tr('三段賽道：林間緩坡、雪松旗門、冰瀑跳台。', 'Three parts: forest glide, cedar gates and icefall jumps.')}</p><div class="ski-picks" role="group" aria-label="${tr('選擇滑雪夥伴', 'Pick a friend')}">${cast.map(c => `<button data-hero="${c.id}" aria-pressed="${c.id === hero.id}"><img src="${front(c.id)}" alt=""><span>${c.name}</span></button>`).join('')}</div><button class="ski-primary" id="start">${tr('出發！', 'Go!')}</button><small>${tr('角色能力相同 · 音效會在出發後播放', 'All friends ski the same · sound starts when you go')}</small>`;
+  panel.innerHTML = `<p class="chapter">${tr('選一位夥伴，從山頂出發', 'Pick a friend and head down the mountain')}</p><h2>${tr('雪林滑降', 'Snowy Forest Run')}</h2><p class="ski-legend"><span><b class="flag"></b>${tr('穿過旗門', 'Pass the gates')}</span><span><img src="${noteIcon}" alt="">${tr('收集音符', 'Collect notes')}</span><span><b class="tree"></b>${tr('避開樹和岩石', 'Dodge trees and rocks')}</span></p><p>${tr('三段賽道：林間緩坡、雪松旗門、冰瀑跳台。', 'Three parts: forest glide, cedar gates and icefall jumps.')}</p><div class="ski-picks" role="group" aria-label="${tr('選擇滑雪夥伴', 'Pick a friend')}">${cast.map(c => `<button data-hero="${c.id}" aria-pressed="${c.id === hero.id}"><img src="${front(c.id)}" alt=""><span>${mascotTag(c.id)}</span></button>`).join('')}</div><button class="ski-primary" id="start">${tr('出發！', 'Go!')}</button><small>${tr('角色能力相同 · 音效會在出發後播放', 'All friends ski the same · sound starts when you go')}</small>`;
   panel.querySelectorAll<HTMLButtonElement>('[data-hero]').forEach(b => b.onclick = () => {
     hero = cast.find(c => c.id === b.dataset.hero)!; view?.setHero(back(hero.id));
     panel.querySelectorAll('[data-hero]').forEach(p => p.setAttribute('aria-pressed', String(p === b)));

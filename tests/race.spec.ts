@@ -26,7 +26,7 @@ test("kart workshop lives on the race page and pauses then resumes the race", as
     await page.getByRole("button", { name: view, exact: true }).click();
     await expect(page.locator("#direction-label")).toHaveText(view);
     await expect(page.getByRole("button", { name: view, exact: true })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.locator("#kart-large")).toHaveAttribute("aria-label", `Anbo 賽車${view}`);
+    await expect(page.locator("#kart-large")).toHaveAttribute("aria-label", `安寶賽車${view}`);
   }
   const imageUrl = await page.locator(".workshop-note a[download]").getAttribute("href");
   expect((await page.request.get(imageUrl!)).ok()).toBe(true);

@@ -82,17 +82,17 @@ test('complete the actual level using keyboard input and save the result',async(
 test('character select swaps the hero sprite, host and labels, and is remembered',async({page})=>{
   await page.goto('/adventure.html');await expect(page.getByRole('button',{name:'開始冒險'})).toBeEnabled();
   await expect(page.getByRole('radio')).toHaveCount(11);
-  await page.getByRole('radio',{name:/^Anka/}).click();
-  await expect(page.getByRole('radio',{name:/^Anka/})).toHaveAttribute('aria-checked','true');
-  await expect(page.locator('#picker-title')).toHaveText('Anka・水豚');
-  await page.keyboard.press('ArrowRight');await expect(page.getByRole('radio',{name:/^Anzo/})).toHaveAttribute('aria-checked','true');
+  await page.getByRole('radio',{name:/^安卡 Anka/}).click();
+  await expect(page.getByRole('radio',{name:/^安卡 Anka/})).toHaveAttribute('aria-checked','true');
+  await expect(page.locator('#picker-title')).toHaveText('安卡 Anka・水豚');
+  await page.keyboard.press('ArrowRight');await expect(page.getByRole('radio',{name:/^安佐 Anzo/})).toHaveAttribute('aria-checked','true');
   await page.screenshot({path:'tests/evidence/character-select.png'});
   await page.keyboard.press('Enter');await expect.poll(async()=> (await snapshot(page)).grounded).toBe(true);
   expect(await page.evaluate(()=>(window as any).__forest.hero())).toEqual({player:'anzo_stand',host:'owlDown'});
   await page.keyboard.down('ArrowRight');await page.waitForTimeout(300);
   expect((await page.evaluate(()=>(window as any).__forest.hero())).player).toMatch(/^anzo_run_/);await page.keyboard.up('ArrowRight');
-  await page.reload();await expect(page.getByRole('radio',{name:/^Anzo/})).toHaveAttribute('aria-checked','true');
-  await page.getByRole('radio',{name:/^Owl/}).click();await expect(page.locator('#checkpoint-label')).toHaveText('目標：找到 Anbo');
+  await page.reload();await expect(page.getByRole('radio',{name:/^安佐 Anzo/})).toHaveAttribute('aria-checked','true');
+  await page.getByRole('radio',{name:/^貓頭鷹老師 Owl/}).click();await expect(page.locator('#checkpoint-label')).toHaveText('目標：找到 安寶');
   await page.getByRole('button',{name:'開始冒險'}).click();await expect.poll(async()=> (await snapshot(page)).grounded).toBe(true);
   expect(await page.evaluate(()=>(window as any).__forest.hero())).toEqual({player:'owl_stand',host:'anboHost'});
 });

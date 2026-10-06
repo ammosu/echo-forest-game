@@ -9,6 +9,7 @@
     {
       "id": "owl",
       "name": "Owl",
+      "nameZh": "貓頭鷹老師",
       "species": "貓頭鷹",
       "identity": "指揮棒・書本",
       "size": [
@@ -25,6 +26,7 @@
     {
       "id": "anji",
       "name": "Anji",
+      "nameZh": "安吉",
       "species": "雪鴞",
       "identity": "小鼓",
       "size": [
@@ -41,6 +43,7 @@
     {
       "id": "anje",
       "name": "Anje",
+      "nameZh": "安婕",
       "species": "銀喉長尾山雀",
       "identity": "月弧五鈴",
       "size": [
@@ -57,6 +60,7 @@
     {
       "id": "anbo",
       "name": "Anbo",
+      "nameZh": "安寶",
       "species": "柴犬",
       "identity": "鈴鼓",
       "size": [
@@ -73,6 +77,7 @@
     {
       "id": "ansey",
       "name": "Ansey",
+      "nameZh": "安希",
       "species": "俄羅斯藍貓",
       "identity": "小提琴",
       "size": [
@@ -89,6 +94,7 @@
     {
       "id": "angoo",
       "name": "Angoo",
+      "nameZh": "安咕",
       "species": "赤狐",
       "identity": "圍巾・蝴蝶結",
       "size": [
@@ -105,6 +111,7 @@
     {
       "id": "anmi",
       "name": "Anmi",
+      "nameZh": "安米",
       "species": "水獺",
       "identity": "沙鈴",
       "size": [
@@ -121,6 +128,7 @@
     {
       "id": "anka",
       "name": "Anka",
+      "nameZh": "安卡",
       "species": "水豚",
       "identity": "烏克麗麗",
       "size": [
@@ -137,6 +145,7 @@
     {
       "id": "anzo",
       "name": "Anzo",
+      "nameZh": "安佐",
       "species": "守宮",
       "identity": "拇指琴",
       "size": [
@@ -153,6 +162,7 @@
     {
       "id": "anbi",
       "name": "Anbi",
+      "nameZh": "安比",
       "species": "白尾鹿",
       "identity": "三角鐵",
       "size": [
@@ -169,6 +179,7 @@
     {
       "id": "anleo",
       "name": "Anleo",
+      "nameZh": "安力歐",
       "species": "亞洲雄獅",
       "identity": "手鼓",
       "size": [

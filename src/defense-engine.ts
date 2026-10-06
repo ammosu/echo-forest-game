@@ -318,7 +318,7 @@ export class DefenseEngine {
       this.phase = "lost";
       this.message =
         this.hearts <= 0
-          ? tr("Anbo 耗盡體力，下次記得躲開十字爆風。", "Anbo is out of energy. Next time, dodge the cross-shaped blasts.")
+          ? tr("安寶耗盡體力，下次記得躲開十字爆風。", "Anbo is out of energy. Next time, dodge the cross-shaped blasts.")
           : tr("生命樹失守了，試著替每一行安排射手。", "The Life Tree fell. Try putting a shooter in every row.");
     } else if (
       this.phase === "wave" &&

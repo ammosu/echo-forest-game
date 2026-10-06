@@ -5,6 +5,7 @@ import { tr, localizeDocument } from './i18n';
 import { mountGuide, guideButton } from './game-guide';
 import { EchoGame, echoTiming } from './echo-engine';
 import characters from '../assets/characters.json';
+import { mascotLabel } from './mascots';
 import forest from '../assets/generated/forest-background.png';
 import finaleBadge from '../assets/ui/echo/finale-badge.png';
 
@@ -15,7 +16,7 @@ const gem = (i: number) => gems[`../assets/ui/echo/gem-${i + 1}.png`];
 const ids = ['anje', 'ansey', 'anka', 'anzo'];
 const colors = ['#f3d484', '#bdb4ec', '#a9d5ad', '#91d5df'];
 const shapes = ['✦', '◆', '●', '▲'];
-const cast = ids.map(id => characters.characters.find(c => c.id === id)!);
+const cast = ids.map(id => characters.characters.find(c => c.id === id)!).map(c => ({ ...c, name: mascotLabel(c.id) }));
 const instrumentsEn: Record<string, string> = { anje: 'Moon bells', ansey: 'Violin', anka: 'Ukulele', anzo: 'Kalimba' };
 const instrument = (c: typeof cast[number]) => tr(c.identity, instrumentsEn[c.id]);
 localizeDocument('Echo Forest — Forest Echo', 'Listen to your forest friends play, answer in the same order, and finish the forest echo concert together.');
@@ -31,7 +32,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <div class="echo-toolbar"><span id="round">${tr('準備開演', 'Ready to begin')}</span><div><button id="sound" aria-pressed="true">${tr('♫ 聲音開', '♫ Sound on')}</button><button id="pause" disabled>${tr('暫停', 'Pause')}</button><button id="restart" disabled>${tr('重新開始', 'Restart')}</button></div></div>
       <div class="echo-stage" style="--forest:url('${forest}')">
         
-        <div class="echo-conductor"><img src="${sprite('owl')}" alt="${tr('指揮 Owl', 'Conductor Owl')}"><span>${tr('Owl 的林間音樂會', 'Owl\'s forest concert')}</span></div>
+        <div class="echo-conductor"><img src="${sprite('owl')}" alt="${tr('指揮 貓頭鷹老師', 'Conductor Owl')}"><span>${tr('貓頭鷹老師的林間音樂會', 'Owl\'s forest concert')}</span></div>
         <div class="echo-message" role="status" aria-live="polite" aria-atomic="true"><img class="echo-finale" src="${finaleBadge}" alt="" aria-hidden="true"><span id="phase-label">${tr('跟著夥伴，一起演奏', 'Play along with your friends')}</span><h2 id="message">${tr('每一道回音，都是一份默契。', 'Every echo is a little teamwork.')}</h2><p id="detail">${tr('記住亮起的夥伴，再依相同順序點選。從兩個音開始。', 'Remember who lights up, then tap them in the same order. We start with two notes.')}</p></div>
         <div class="echo-musicians">${cast.map((c, i) => `<button class="echo-musician" data-note="${i}" style="--note-color:${colors[i]}" aria-label="${i + 1} ${c.name} ${instrument(c)}" aria-disabled="false"><span class="echo-note" aria-hidden="true"><img src="${gem(i)}" alt=""></span><span class="echo-portrait"><img src="${sprite(c.id)}" alt=""></span><span class="echo-plinth" aria-hidden="true"></span><strong>${c.name}</strong><span class="echo-instrument">${instrument(c)}</span><kbd>${i + 1}</kbd></button>`).join('')}</div>
         <div class="echo-progress" id="progress" aria-label="${tr('尚未開始', 'Not started')}"></div>
@@ -236,7 +237,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Escape') { e.preventDefault(); togglePause(); }
 });
 mountGuide({ id: 'echo', title: tr('森林回音', 'Forest Echo'), onOpen: () => autoPause(), pages: [
-  { icon: sprite('owl'), title: tr('聽', 'Listen'), body: tr('<p>Owl 指揮時，四位夥伴會<b>依序亮起並發出聲音</b>。</p><p>專心記住誰先、誰後。</p>', '<p>When Owl conducts, four friends <b>light up and play one by one</b>.</p><p>Remember who goes first and who comes next.</p>') },
+  { icon: sprite('owl'), title: tr('聽', 'Listen'), body: tr('<p>貓頭鷹老師指揮時，四位夥伴會<b>依序亮起並發出聲音</b>。</p><p>專心記住誰先、誰後。</p>', '<p>When Owl conducts, four friends <b>light up and play one by one</b>.</p><p>Remember who goes first and who comes next.</p>') },
   { icon: '♫', title: tr('回應', 'Answer'), body: tr('<p>輪到你時，<b>照同樣順序點選夥伴</b>，或按鍵盤 <kbd>1</kbd>–<kbd>4</kbd>。</p><p>開始前可以先點夥伴試聽音色。</p>', '<p>On your turn, <b>tap the friends in the same order</b>, or press <kbd>1</kbd>–<kbd>4</kbd>.</p><p>Before starting, tap a friend to hear their sound.</p>') },
   { icon: gem(0), title: tr('合奏', 'Concert'), body: tr('<p>每完成一段就<b>多加一個音</b>，最多 8 段。</p><p>忘記也沒關係，按「再聽一次」隨時重聽。關閉聲音也能跟著燈光玩。</p>', '<p>Each round you finish <b>adds one more note</b>, up to 8 rounds.</p><p>Forgot? Press \"Listen again\" any time. You can also play with sound off by following the lights.</p>') },
 ] });
