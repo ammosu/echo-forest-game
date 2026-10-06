@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { tr } from './i18n';
 import background from '../assets/generated/forest-background.png?url';
 import anboHost from '../assets/sprites/1x/anbo.png?url';
 import anboHostBlink from '../assets/sprites/1x/anbo_blink.png?url';
@@ -64,7 +65,7 @@ class ForestScene extends Phaser.Scene {
   preload() {
     this.load.image('forest', background); this.load.image('owlUp', owlUp); this.load.image('owlDown', owlDown); this.load.image('anboHost', anboHost); this.load.image('anboHostBlink', anboHostBlink);
     for (const [path, url] of Object.entries(sideFrames)) this.load.image(path.split('/').pop()!.replace('.png', ''), url);
-    this.load.on('loaderror', () => { this.hasLoadError = true; this.owner.emit({ type:'error', message:'有素材尚未載入，請確認網路後重新整理。' }); });
+    this.load.on('loaderror', () => { this.hasLoadError = true; this.owner.emit({ type:'error', message:tr('有素材尚未載入，請確認網路後重新整理。', 'Some files didn\'t load. Check your connection and refresh.') }); });
   }
   create() {
     if (this.hasLoadError) return;
@@ -115,7 +116,7 @@ class ForestScene extends Phaser.Scene {
     this.physics.add.overlap(this.player,this.enemies,(_p,e)=>{
       if(!this.owner.running || this.owner.paused) return;
       const enemy=e as Phaser.Physics.Arcade.Sprite, body=this.player.body as Phaser.Physics.Arcade.Body;
-      if(body.velocity.y>80 && body.bottom<enemy.y+2) { enemy.disableBody(true,true); body.setVelocityY(-265); this.burst(enemy.x,enemy.y,0xc3d396,10); this.impact(enemy.x,enemy.y,0xc3d396,'踩到了！','#e4f2c2',2); this.hitstop(80); this.punch(.05,.005); this.owner.tone('bounce'); }
+      if(body.velocity.y>80 && body.bottom<enemy.y+2) { enemy.disableBody(true,true); body.setVelocityY(-265); this.burst(enemy.x,enemy.y,0xc3d396,10); this.impact(enemy.x,enemy.y,0xc3d396,tr('踩到了！', 'Stomp!'),'#e4f2c2',2); this.hitstop(80); this.punch(.05,.005); this.owner.tone('bounce'); }
       else this.hurt();
     });
     this.owl=this.add.sprite(3140,FLOOR,this.hostFrame(false)).setOrigin(.5,1).setDepth(2);
@@ -213,9 +214,9 @@ class ForestScene extends Phaser.Scene {
     for(const acorn of this.growers){
       if(!acorn.active||!Phaser.Geom.Intersects.RectangleToRectangle(reach,new Phaser.Geom.Rectangle(acorn.x-8,acorn.y-9,16,18)))continue;
       acorn.setActive(false).setVisible(false);
-      if(this.big){this.impact(acorn.x,acorn.y,0xffc94a,'已經很大了！','#fff3b3',1);this.owner.tone('note');continue;}
-      this.setBig(true);this.impact(acorn.x,acorn.y,0xffc94a,'變大了！','#ffe08a',3);this.banner('變大了！','#ffe08a');this.hitstop(120);this.punch(.07,.004);this.owner.tone('grow');
-      this.owner.emit({type:'hint',message:'變大了！被碰到只會變回原樣，不會少一顆心。'});
+      if(this.big){this.impact(acorn.x,acorn.y,0xffc94a,tr('已經很大了！', 'Already big!'),'#fff3b3',1);this.owner.tone('note');continue;}
+      this.setBig(true);this.impact(acorn.x,acorn.y,0xffc94a,tr('變大了！', 'Big!'),'#ffe08a',3);this.banner(tr('變大了！', 'Big!'),'#ffe08a');this.hitstop(120);this.punch(.07,.004);this.owner.tone('grow');
+      this.owner.emit({type:'hint',message:tr('變大了！被碰到只會變回原樣，不會少一顆心。', 'You\'re big! A hit just shrinks you back, no heart lost.')});
     }
     for(const child of this.notes.getChildren()){
       const note=child as Phaser.Physics.Arcade.Image;
@@ -223,7 +224,7 @@ class ForestScene extends Phaser.Scene {
       if(!Phaser.Geom.Intersects.RectangleToRectangle(reach,new Phaser.Geom.Rectangle(note.x-8,note.y-10,16,20)))continue;
       note.disableBody(true,true);this.notesCollected++;this.burst(note.x,note.y,0xffdc7b,9);this.noteChain=this.simTime-this.lastNoteAt<2200?this.noteChain+1:1;this.lastNoteAt=this.simTime;
       const tier=this.noteChain>=5?3:this.noteChain>=3?2:this.noteChain>=2?1:0;
-      this.impact(note.x,note.y,0xffdc7b,tier?`♪ ×${this.noteChain} 連續！`:`♪ ${this.notesCollected}/${notePositions.length}`,'#fff3b3',tier);
+      this.impact(note.x,note.y,0xffdc7b,tier?tr(`♪ ×${this.noteChain} 連續！`, `♪ ×${this.noteChain} combo!`):`♪ ${this.notesCollected}/${notePositions.length}`,'#fff3b3',tier);
       if(this.notesCollected%5===0){this.banner(`♪ ${this.notesCollected} / ${notePositions.length}`,'#fff3b3');this.hitstop(90);this.punch(.06);if(!this.owner.reducedMotion)this.cameras.main.flash(120,255,240,190);}
       else{this.hitstop(35+tier*12);this.punch(.015+tier*.012);}this.owner.tone('note');this.sync();
     }
@@ -241,14 +242,14 @@ class ForestScene extends Phaser.Scene {
     if(this.big&&!fell){
       this.setBig(false);this.invulnerableUntil=this.simTime+1400;this.owner.tone('shrink');this.hitstop(90);
       if(!this.owner.reducedMotion)this.cameras.main.shake(100,.003);
-      this.impact(this.player.x,this.player.y-30,0xf0ab85,'縮小了','#ffd2c4',1);return;
+      this.impact(this.player.x,this.player.y-30,0xf0ab85,tr('縮小了', 'Shrunk'),'#ffd2c4',1);return;
     }
     this.lives--;this.owner.emit({type:'health',lives:this.lives});this.owner.tone('hurt');
     if(!this.owner.reducedMotion){this.cameras.main.shake(100,.003);this.cameras.main.flash(160,240,120,100);}
     this.impact(this.player.x,this.player.y-20,0xf0ab85,'-1 ♥','#ffd2c4',1);this.hitstop(110);
     if(this.lives<=0){this.finish(false);return;}
     this.burst(this.player.x,this.player.y-20,0xf0ab85,12);this.respawn();this.invulnerableUntil=this.simTime+1400;
-    this.owner.emit({type:'hint',message:this.checkpoint?'回到中途營地，再出發！':'沒關係！看準落腳處，再跳一次。'});
+    this.owner.emit({type:'hint',message:this.checkpoint?tr('回到中途營地，再出發！', 'Back to camp. Off you go!'):tr('沒關係！看準落腳處，再跳一次。', 'That\'s okay! Pick your landing and jump again.')});
   }
   finish(won:boolean) {
     if(!this.owner.running)return;

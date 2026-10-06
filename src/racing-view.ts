@@ -1,5 +1,6 @@
 import { course } from './racing-courses';
 import { ramps } from './racing-jumps';
+import { tr } from './i18n';
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
@@ -22,6 +23,8 @@ import {
   itemBoxes,
   boostPads,
   obstacles,
+  zoneNames,
+  zoneNamesEn,
 } from "./racing-data";
 import type { RaceSnapshot } from "./racing-engine";
 
@@ -41,7 +44,7 @@ const portraits = import.meta.glob(
 ) as Record<string, string>;
 const UP = new THREE.Vector3(0, 1, 0);
 const roadColors = ["#b6a17a", "#8f9e82", "#c5aa79"];
-const carGlideLabel = (s: RaceSnapshot) => s.flight.gliding ? '滑翔中 · ↑ 俯衝 ／ ↓ 拉升' : '飛躍中 · 輕轉方向，落回路面';
+const carGlideLabel = (s: RaceSnapshot) => s.flight.gliding ? tr('滑翔中 · ↑ 俯衝 ／ ↓ 拉升', 'Gliding · ↑ dive / ↓ climb') : tr('飛躍中 · 輕轉方向，落回路面', 'Airborne · steer gently back onto the road');
 const leafColors = ["#608452", "#327963", "#b2b55a"];
 
 /** One shared distance-to-world mapping for track, cars, scenery and gameplay props. */
@@ -329,7 +332,7 @@ export class RacingView {
       this.box(start, "#dec383", side * 6.25, 0.4, 0, 1, 0.8, 1);
     }
     this.box(start, "#345b43", 0, 6.6, 0, 13, 1.15, 0.6);
-    this.sign(start, course.name + "  /  START", 0, 6.6, 0.34, 8, 0.85);
+    this.sign(start, tr(course.name, course.nameEn) + "  /  START", 0, 6.6, 0.34, 8, 0.85);
     for (let j = 0; j < 16; j++)
       this.box(
         start,
@@ -465,7 +468,7 @@ export class RacingView {
           this.box(post, leafColors[zone], 0, 1.4, 0, 0.28, 0.3, 0.28);
         }
       }
-    for (const [i, label] of ["晨光林道", "蕨葉彎道", "金色花谷"].entries()) {
+    for (const [i, label] of tr(zoneNames, zoneNamesEn).entries()) {
       const f = raceFrame(i * 16000 + 2400, -2.2),
         g = new THREE.Group();
       g.position.copy(f.position);
@@ -599,7 +602,7 @@ export class RacingView {
       const sign = new THREE.Group(); this.scene.add(sign); this.place(sign, r.z - 250, r.x > 0 ? 1.3 : -1.3);
       this.box(sign, '#655038', 0, 1.2, 0, .1, 2.4, .1);
       this.box(sign, '#315c4c', 0, 2.35, 0, 3.3, .8, .12);
-      this.sign(sign, '↑ ' + r.name, 0, 2.35, .07, 3.1, .48);
+      this.sign(sign, '↑ ' + tr(r.name, r.nameEn), 0, 2.35, .07, 3.1, .48);
     });
   }
   private buildProps() {
@@ -1217,7 +1220,7 @@ export class RacingView {
       c.textBaseline = "middle";
       c.lineWidth = 7;
       c.strokeStyle = "#1d3527";
-      const text = `加速連鎖 ×${this.boostChain}！`;
+      const text = tr(`加速連鎖 ×${this.boostChain}！`, `Boost chain ×${this.boostChain}!`);
       c.strokeText(text, 0, 0);
       c.fillStyle = this.boostChain >= 4 ? "#ffffff" : this.boostChain >= 3 ? "#d6fcff" : "#fff3b3";
       c.shadowColor = this.boostChain >= 3 ? "#7ff3ff" : "#ffd45a";
@@ -1307,7 +1310,7 @@ export class RacingView {
       c.strokeText(String(Math.ceil(s.countdown)), 320, h * 0.51);
       c.fillText(String(Math.ceil(s.countdown)), 320, h * 0.51);
       c.font = "14px sans-serif";
-      c.fillText("準備出發", 320, h * 0.51 + 31);
+      c.fillText(tr("準備出發", "Get ready"), 320, h * 0.51 + 31);
     }
     if (s.stun > 0 && s.phase === "racing") {
       c.textAlign = "center";
@@ -1315,15 +1318,15 @@ export class RacingView {
       c.fillStyle = "#fff0b1";
       c.strokeStyle = "#483b29";
       c.lineWidth = 4;
-      const label = `撞暈中… ${s.stun.toFixed(1)} 秒`;
+      const label = tr(`撞暈中… ${s.stun.toFixed(1)} 秒`, `Dizzy… ${s.stun.toFixed(1)} s`);
       c.strokeText(label, 320, h * 0.675);
       c.fillText(label, 320, h * 0.675);
     }
     if (s.flight.airborne && s.phase === 'racing' && s.stun <= 0) {
       c.textAlign = 'center'; c.font = 'bold 14px sans-serif';
       c.strokeStyle = '#294735'; c.lineWidth = 3; c.fillStyle = '#ffe6a1';
-      c.strokeText(s.flight.trick ? '特技成功 · 穩住落點！' : s.flight.trickWindow > 0 ? '現在按甩尾鍵 · 起跳特技！' : carGlideLabel(s), 320, h * .675);
-      c.fillText(s.flight.trick ? '特技成功 · 穩住落點！' : s.flight.trickWindow > 0 ? '現在按甩尾鍵 · 起跳特技！' : carGlideLabel(s), 320, h * .675);
+      c.strokeText(s.flight.trick ? tr('特技成功 · 穩住落點！', 'Trick! · Stick the landing!') : s.flight.trickWindow > 0 ? tr('現在按甩尾鍵 · 起跳特技！', 'Press drift now · Takeoff trick!') : carGlideLabel(s), 320, h * .675);
+      c.fillText(s.flight.trick ? tr('特技成功 · 穩住落點！', 'Trick! · Stick the landing!') : s.flight.trickWindow > 0 ? tr('現在按甩尾鍵 · 起跳特技！', 'Press drift now · Takeoff trick!') : carGlideLabel(s), 320, h * .675);
     }
     if (s.offroad && s.stun <= 0 && s.phase === "racing") {
       c.textAlign = "center";
@@ -1331,8 +1334,8 @@ export class RacingView {
       c.strokeStyle = "#294735";
       c.lineWidth = 3;
       c.fillStyle = "#fff0b1";
-      c.strokeText("草地會減速，轉回賽道！", 320, h * 0.725);
-      c.fillText("草地會減速，轉回賽道！", 320, h * 0.725);
+      c.strokeText(tr("草地會減速，轉回賽道！", "Grass slows you down. Back on track!"), 320, h * 0.725);
+      c.fillText(tr("草地會減速，轉回賽道！", "Grass slows you down. Back on track!"), 320, h * 0.725);
     }
   }
   private diagnostics() {

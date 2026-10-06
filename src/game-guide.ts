@@ -1,4 +1,5 @@
 import './game-guide.css';
+import { tr } from './i18n';
 
 // One swipeable "how to play" popup shared by every game. On phones it opens by itself on the first visit,
 // so the page itself can stay on one screen instead of stacking instructions below the game.
@@ -23,9 +24,9 @@ export function mountGuide({ id, title, pages, onOpen, onClose }: Options) {
   root.hidden = true;
   root.innerHTML = `<div class="guide-backdrop" data-guide-close></div>
 <section class="guide-sheet" role="dialog" aria-modal="true" aria-labelledby="guide-title-${id}">
-<header class="guide-head"><div><small>玩法說明</small><h2 id="guide-title-${id}">${title}</h2></div><button class="guide-close" type="button" data-guide-close aria-label="關閉玩法說明"><span aria-hidden="true">✕</span></button></header>
-<div class="guide-track" tabindex="0" aria-roledescription="輪播" aria-label="左右滑動看下一頁">${pages.map((p, i) => `<article class="guide-page" aria-roledescription="頁" aria-label="第 ${i + 1} 頁，共 ${pages.length} 頁"><div class="guide-icon" aria-hidden="true">${icon(p.icon)}</div><h3>${p.title}</h3><div class="guide-body">${p.body}</div></article>`).join('')}</div>
-<footer class="guide-foot"><button class="guide-prev" type="button" aria-label="上一頁">‹</button><div class="guide-dots" aria-hidden="true">${pages.map(() => '<i></i>').join('')}</div><button class="guide-next" type="button">下一頁 ›</button></footer>
+<header class="guide-head"><div><small>${tr('玩法說明', 'How to play')}</small><h2 id="guide-title-${id}">${title}</h2></div><button class="guide-close" type="button" data-guide-close aria-label="${tr('關閉玩法說明', 'Close how to play')}"><span aria-hidden="true">✕</span></button></header>
+<div class="guide-track" tabindex="0" aria-roledescription="${tr('輪播', 'carousel')}" aria-label="${tr('左右滑動看下一頁', 'Swipe for the next page')}">${pages.map((p, i) => `<article class="guide-page" aria-roledescription="${tr('頁', 'slide')}" aria-label="${tr(`第 ${i + 1} 頁，共 ${pages.length} 頁`, `Page ${i + 1} of ${pages.length}`)}"><div class="guide-icon" aria-hidden="true">${icon(p.icon)}</div><h3>${p.title}</h3><div class="guide-body">${p.body}</div></article>`).join('')}</div>
+<footer class="guide-foot"><button class="guide-prev" type="button" aria-label="${tr('上一頁', 'Previous page')}">‹</button><div class="guide-dots" aria-hidden="true">${pages.map(() => '<i></i>').join('')}</div><button class="guide-next" type="button">${tr('下一頁 ›', 'Next ›')}</button></footer>
 </section>`;
   document.body.append(root);
   const track = root.querySelector<HTMLElement>('.guide-track')!;
@@ -40,7 +41,7 @@ export function mountGuide({ id, title, pages, onOpen, onClose }: Options) {
   const paint = () => {
     dots.forEach((d, i) => d.classList.toggle('on', i === index));
     prev.disabled = index === 0;
-    next.textContent = index === pages.length - 1 ? '開始玩' : '下一頁 ›';
+    next.textContent = index === pages.length - 1 ? tr('開始玩', 'Let\'s play') : tr('下一頁 ›', 'Next ›');
   };
   track.addEventListener('scroll', () => {
     const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
@@ -76,4 +77,4 @@ export function mountGuide({ id, title, pages, onOpen, onClose }: Options) {
 }
 
 // A small "?" button pages drop into their toolbar to reopen the guide.
-export const guideButton = (label = '玩法') => `<button class="guide-open" type="button" data-guide-open aria-haspopup="dialog"><span aria-hidden="true">?</span>${label}</button>`;
+export const guideButton = (label = tr('玩法', 'How to play')) => `<button class="guide-open" type="button" data-guide-open aria-haspopup="dialog"><span aria-hidden="true">?</span>${label}</button>`;

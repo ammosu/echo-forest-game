@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { tr } from "./i18n";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
@@ -107,8 +108,8 @@ export class DefenseView {
     this.batchScenery();
     this.lifeCrown = this.ball(this.scene, -5.65, 1.9, -0.2, 0.9, "#82aa56");
     this.lifeCrown.scale.set(0.85, 1, 0.85);
-    this.label("生命樹", -5.65, 3.05, -0.2, 1.05);
-    this.label("← 怪物入口", 3.9, 1.75, -3.12, 1.8);
+    this.label(tr("生命樹", "Life Tree"), -5.65, 3.05, -0.2, 1.05);
+    this.label(tr("← 怪物入口", "← Monsters"), 3.9, 1.75, -3.12, 1.8);
     for (let row = 0; row < 5; row++)
       this.label(String(row + 1), 5.05, 0.18, row - 2, 0.55);
     this.hoverTile = this.box(

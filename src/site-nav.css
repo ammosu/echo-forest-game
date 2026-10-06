@@ -17,6 +17,9 @@
 .topbar .is-current{background:#f4d480;color:#24372c;border-color:#f4d480;font-weight:700}
 .topbar .is-current .topbar-map-icon{color:#24372c}
 .topbar .is-current img{opacity:1;background:#fff1c6}
+.topbar-lang{height:40px;min-width:48px;padding:0 12px;margin-left:6px;border-radius:20px;border:1px solid #4d6a58;background:none;color:#e8e2b8;font:600 13px 'Outfit','Noto Sans TC',sans-serif;cursor:pointer;flex-shrink:0;transition:background .15s,color .15s}
+.topbar-lang:hover{background:#1f3d34;color:#ffe7a1}
+.topbar-lang:focus-visible{outline:3px solid #f4d480;outline-offset:3px}
 @media(max-width:1100px){.topbar-inner{padding:12px 20px;gap:18px}.topbar-map,.topbar-game{padding:0 9px;font-size:12px}.topbar-game img{display:none}}
 /* Phones: brand + map on one row, the five games in a sideways strip below. */
 @media(max-width:760px){
@@ -24,6 +27,7 @@
   .topbar-brand{font-size:19px;gap:9px}.topbar-tree{width:20px;height:25px}.topbar-brand small{font-size:8px;letter-spacing:2px;margin-top:3px}
   .topbar-nav{display:contents}
   .topbar-map{margin:0 0 0 auto;height:36px;font-size:12px;padding:0 12px}
+  .topbar-lang{order:2;height:36px;min-width:44px;margin:0;font-size:12px}
   .topbar-games{order:3;width:calc(100% + 28px);margin:0 -14px;padding:2px 14px 10px;overflow-x:auto;scrollbar-width:none;gap:6px;scroll-padding:0 14px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
   .topbar-games::-webkit-scrollbar{display:none}
   .topbar-game{height:36px;padding:0 12px 0 5px;font-size:12px;background:#1b3a31;border-color:#2f4f43}

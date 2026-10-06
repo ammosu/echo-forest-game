@@ -1,6 +1,7 @@
 import './style.css';
 import './catch.css';
 import { siteHeader } from './site-nav';
+import { tr, localizeDocument } from './i18n';
 import { mountGuide, guideButton } from './game-guide';
 import { CatchGame, CATCH_REACH, inReach } from './catch-engine';
 import characters from '../assets/characters.json';
@@ -12,30 +13,31 @@ import starIcon from '../assets/ui/catch/star.png';
 const sprites = import.meta.glob('../assets/sprites/1x/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const sprite = (id: string) => sprites[`../assets/sprites/1x/${id}.png`];
 const cast = ['anbo', 'anmi', 'anka', 'anzo'].map(id => characters.characters.find(c => c.id === id)!);
+localizeDocument('Echo Forest — Note Catch', 'Move left and right with your forest friends to catch golden notes and finish a three-part morning song.');
 const game = new CatchGame();
-const phrases = ['晨光落下', '林間追光', '一起合奏'];
+const phrases = tr(['晨光落下', '林間追光', '一起合奏'], ['Morning light', 'Chasing light', 'All together']);
 let hero = cast[0];
 let best = 0;
 try { const saved = Number(localStorage.getItem('echo-catch-best')); if (Number.isFinite(saved) && saved > 0) best = saved; } catch {}
 document.querySelector('#app')!.innerHTML = `
 ${siteHeader("catch")}
-<main class="catch-main"><section class="catch-intro"><div><p class="chapter">晨光音樂會・48 秒的小小演出</p><h1>接住森林的旋律。</h1>${guideButton()}<p>左右移動，讓每一個音符都找到歸處。</p></div><div class="catch-record">本機最高分<strong id="best">${best.toLocaleString()}</strong></div></section>
-<section class="catch-shell" aria-label="音符接接樂遊戲" data-phase="ready">
-  <div class="catch-toolbar"><span id="phrase">準備開演</span><div><button id="sound" aria-pressed="true">♫ 聲音開</button><button id="pause" disabled>暫停</button><button id="restart" disabled>重來</button></div></div>
-  <div class="catch-hud"><div><small>合奏分數</small><strong id="score">0</strong></div><div><small>接住音符</small><strong><span id="caught">0</span><small> / 48</small></strong></div><div><small>連續接住</small><strong id="combo">0</strong></div><div><small>剩餘時間</small><strong id="time">48<small> 秒</small></strong></div></div>
-  <div class="catch-stage" id="stage" style="--forest:url('${forest}');--note:url('${noteIcon}');--noise:url('${noiseIcon}');--catch-zone:${CATCH_REACH * 2 * 25}cqw" tabindex="0" aria-label="音符舞台，左右方向鍵或 A D 移動，1 到 4 選擇位置，Escape 暫停">
+<main class="catch-main"><section class="catch-intro"><div><p class="chapter">${tr('晨光音樂會・48 秒的小小演出', 'Morning concert · a 48-second show')}</p><h1>${tr('接住森林的旋律。', 'Catch the forest\'s melody.')}</h1>${guideButton()}<p>${tr('左右移動，讓每一個音符都找到歸處。', 'Move left and right so every note finds a home.')}</p></div><div class="catch-record">${tr('本機最高分', 'Best score')}<strong id="best">${best.toLocaleString()}</strong></div></section>
+<section class="catch-shell" aria-label="${tr('音符接接樂遊戲', 'Note Catch game')}" data-phase="ready">
+  <div class="catch-toolbar"><span id="phrase">${tr('準備開演', 'Ready to begin')}</span><div><button id="sound" aria-pressed="true">${tr('♫ 聲音開', '♫ Sound on')}</button><button id="pause" disabled>${tr('暫停', 'Pause')}</button><button id="restart" disabled>${tr('重來', 'Restart')}</button></div></div>
+  <div class="catch-hud"><div><small>${tr('合奏分數', 'Score')}</small><strong id="score">0</strong></div><div><small>${tr('接住音符', 'Caught')}</small><strong><span id="caught">0</span><small> / 48</small></strong></div><div><small>${tr('連續接住', 'Combo')}</small><strong id="combo">0</strong></div><div><small>${tr('剩餘時間', 'Time left')}</small><strong id="time">48<small>${tr(' 秒', 's')}</small></strong></div></div>
+  <div class="catch-stage" id="stage" style="--forest:url('${forest}');--note:url('${noteIcon}');--noise:url('${noiseIcon}');--catch-zone:${CATCH_REACH * 2 * 25}cqw" tabindex="0" aria-label="${tr('音符舞台，左右方向鍵或 A D 移動，1 到 4 選擇位置，Escape 暫停', 'Note stage. Arrow keys or A D to move, 1 to 4 to pick a spot, Escape to pause')}">
     <div class="catch-sun" aria-hidden="true"></div><div class="catch-lanes" aria-hidden="true">${[1,2,3,4].map(i => `<span><b>${i}</b></span>`).join('')}</div>
     <div id="notes" aria-hidden="true"></div><div id="fx" aria-hidden="true"></div><div class="catch-line" aria-hidden="true"></div>
-    <div class="catch-player" id="player" aria-hidden="true"><span id="feedback"></span><b class="catch-ring"></b><em class="catch-hint">接音點</em><img id="hero" src="${sprite(hero.id)}" alt=""><i></i></div>
+    <div class="catch-player" id="player" aria-hidden="true"><span id="feedback"></span><b class="catch-ring"></b><em class="catch-hint">${tr('接音點', 'Catch here')}</em><img id="hero" src="${sprite(hero.id)}" alt=""><i></i></div>
     <div class="catch-overlay" id="overlay"><div class="catch-panel" id="panel"></div></div>
   </div>
-  <div class="catch-timeline" role="progressbar" aria-label="樂曲進度" aria-valuemin="0" aria-valuemax="48" aria-valuenow="0"><i id="timeline"></i><span></span><span></span></div>
-  <div class="catch-touch" aria-label="選擇接音符的位置">${[1,2,3,4].map(i => `<button data-lane="${i - 1}" aria-label="移到第 ${i} 道">${i}<span>♪</span></button>`).join('')}</div>
-  <div class="catch-caption"><span>← → / A D 移動 · 1–4 選位置 · Esc 暫停</span><span>手機：拖曳舞台，或點下方位置</span></div>
+  <div class="catch-timeline" role="progressbar" aria-label="${tr('樂曲進度', 'Song progress')}" aria-valuemin="0" aria-valuemax="48" aria-valuenow="0"><i id="timeline"></i><span></span><span></span></div>
+  <div class="catch-touch" aria-label="${tr('選擇接音符的位置', 'Pick where to catch')}">${[1,2,3,4].map(i => `<button data-lane="${i - 1}" aria-label="${tr(`移到第 ${i} 道`, `Move to lane ${i}`)}">${i}<span>♪</span></button>`).join('')}</div>
+  <div class="catch-caption"><span>${tr('← → / A D 移動 · 1–4 選位置 · Esc 暫停', '← → / A D move · 1–4 pick spot · Esc pause')}</span><span>${tr('手機：拖曳舞台，或點下方位置', 'Phone: drag the stage or tap a spot below')}</span></div>
 </section>
-<section class="catch-guide"><div><b class="gold"><img src="${noteIcon}" alt=""></b><p><strong>金色音符，接住它</strong>音符落進腳下光圈就算接住，每個 100 分，連擊最高加成 100 分。</p></div><div><b class="noise"><img src="${noiseIcon}" alt=""></b><p><strong>灰色雜音，讓它飄過</strong>穿過光圈中央才算碰到，碰到扣 50 分，漏接或碰雜音會中斷連擊。</p></div><div><b><img src="${starIcon}" alt=""></b><p><strong>慢慢熟悉，就能合奏</strong>接住 12 / 28 個得一 / 二星；三星需接住 44 個，且碰雜音不超過 1 次。</p></div></section>
+<section class="catch-guide"><div><b class="gold"><img src="${noteIcon}" alt=""></b><p><strong>${tr('金色音符，接住它', 'Golden notes: catch them')}</strong>${tr('音符落進腳下光圈就算接住，每個 100 分，連擊最高加成 100 分。', 'A note counts when it lands in the ring at your feet. 100 points each, plus up to 100 bonus for combos.')}</p></div><div><b class="noise"><img src="${noiseIcon}" alt=""></b><p><strong>${tr('灰色雜音，讓它飄過', 'Grey noise: let it pass')}</strong>${tr('穿過光圈中央才算碰到，碰到扣 50 分，漏接或碰雜音會中斷連擊。', 'It only hits you through the middle of the ring, costing 50 points. Missing a note or hitting noise breaks your combo.')}</p></div><div><b><img src="${starIcon}" alt=""></b><p><strong>${tr('慢慢熟悉，就能合奏', 'Practice makes music')}</strong>${tr('接住 12 / 28 個得一 / 二星；三星需接住 44 個，且碰雜音不超過 1 次。', 'Catch 12 / 28 for one / two stars. Three stars need 44 caught and no more than 1 noise hit.')}</p></div></section>
 <p id="announcement" class="catch-sr" role="status" aria-live="polite"></p>
-<footer><span>一點晨光，一首自己的小曲。</span><span>Echo Forest ✦</span></footer></main>`;
+<footer><span>${tr('一點晨光，一首自己的小曲。', 'A little morning light, a little song of your own.')}</span><span>Echo Forest ✦</span></footer></main>`;
 
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const stage = el('stage');
@@ -71,18 +73,18 @@ function tone(pitch: number, noise = false) {
   osc.onended = () => { voices.delete(osc); osc.disconnect(); gain.disconnect(); };
   osc.start(now); osc.stop(now + .4);
 }
-function updateSound() { el('sound').textContent = sound ? '♫ 聲音開' : '♫ 聲音關'; el('sound').setAttribute('aria-pressed', String(sound)); }
+function updateSound() { el('sound').textContent = sound ? tr('♫ 聲音開', '♫ Sound on') : tr('♫ 聲音關', '♫ Sound off'); el('sound').setAttribute('aria-pressed', String(sound)); }
 function release() { keys.clear(); pointer = null; game.release(); }
 function setPhase() {
   document.querySelector('.catch-shell')!.setAttribute('data-phase', game.phase);
   pause.disabled = !['playing','paused'].includes(game.phase);
-  pause.textContent = game.phase === 'paused' ? '繼續' : '暫停';
+  pause.textContent = game.phase === 'paused' ? tr('繼續', 'Resume') : tr('暫停', 'Pause');
   el<HTMLButtonElement>('restart').disabled = game.phase === 'ready';
   document.querySelectorAll<HTMLButtonElement>('[data-lane]').forEach(b => b.disabled = game.phase !== 'playing');
 }
 function showPicker() {
   game.phase = 'ready'; release(); stopAudio(); overlay.hidden = false; setPhase();
-  panel.innerHTML = `<p class="chapter">選一位夥伴，接住晨光</p><h2>音符接接樂</h2><p class="catch-legend"><span><img src="${noteIcon}" alt="">接住金色音符</span><span><img src="${noiseIcon}" alt="">避開灰色雜音</span></p><p>後兩段需要跨格接音，留意旁邊的雜音。</p><div class="catch-picks" role="group" aria-label="選擇演奏夥伴">${cast.map(c => `<button data-hero="${c.id}" aria-pressed="${c.id === hero.id}"><img src="${sprite(c.id)}" alt=""><span>${c.name}</span></button>`).join('')}</div><button class="catch-primary" id="start">開始演奏</button><small>角色能力相同 · 音效會在開始後播放</small>`;
+  panel.innerHTML = `<p class="chapter">${tr('選一位夥伴，接住晨光', 'Pick a friend and catch the morning light')}</p><h2>${tr('音符接接樂', 'Note Catch')}</h2><p class="catch-legend"><span><img src="${noteIcon}" alt="">${tr('接住金色音符', 'Catch golden notes')}</span><span><img src="${noiseIcon}" alt="">${tr('避開灰色雜音', 'Dodge grey noise')}</span></p><p>${tr('後兩段需要跨格接音，留意旁邊的雜音。', 'In the last two parts you\'ll reach across lanes — watch for noise nearby.')}</p><div class="catch-picks" role="group" aria-label="${tr('選擇演奏夥伴', 'Pick a friend')}">${cast.map(c => `<button data-hero="${c.id}" aria-pressed="${c.id === hero.id}"><img src="${sprite(c.id)}" alt=""><span>${c.name}</span></button>`).join('')}</div><button class="catch-primary" id="start">${tr('開始演奏', 'Start playing')}</button><small>${tr('角色能力相同 · 音效會在開始後播放', 'All friends play the same · sound starts after you begin')}</small>`;
   panel.querySelectorAll<HTMLButtonElement>('[data-hero]').forEach(b => b.onclick = () => {
     hero = cast.find(c => c.id === b.dataset.hero)!; el<HTMLImageElement>('hero').src = sprite(hero.id);
     panel.querySelectorAll('[data-hero]').forEach(p => p.setAttribute('aria-pressed', String(p === b)));
@@ -93,15 +95,15 @@ function start() {
   stopAudio(); unlockAudio(); release(); game.start(); feedbackUntil = 0; lastPhrase = -1;
   noteElements.forEach(n => n.remove()); noteElements.clear(); el('fx').replaceChildren(); freezeUntil = 0;
   overlay.hidden = true; setPhase(); render(); stage.focus({ preventScroll: true });
-  announce('開始演奏，左右移動接住金色音符。');
+  announce(tr('開始演奏，左右移動接住金色音符。', 'Go! Move left and right to catch golden notes.'));
 }
 function togglePause() {
   if (game.phase === 'playing') {
     game.pause(); release(); stopAudio(); overlay.hidden = false;
-    panel.innerHTML = '<p class="chapter">在樹蔭下歇一會</p><h2>旋律會等你。</h2><p>準備好，再接住下一個音符。</p><button class="catch-primary" id="resume">繼續演奏</button>';
-    el('resume').onclick = togglePause; el('resume').focus({ preventScroll: true }); announce('遊戲已暫停。');
+    panel.innerHTML = tr('<p class="chapter">在樹蔭下歇一會</p><h2>旋律會等你。</h2><p>準備好，再接住下一個音符。</p><button class="catch-primary" id="resume">繼續演奏</button>', '<p class="chapter">Resting in the shade</p><h2>The music will wait for you.</h2><p>When you\'re ready, catch the next note.</p><button class="catch-primary" id="resume">Keep playing</button>');
+    el('resume').onclick = togglePause; el('resume').focus({ preventScroll: true }); announce(tr('遊戲已暫停。', 'Game paused.'));
   } else if (game.phase === 'paused') {
-    unlockAudio(); game.resume(); overlay.hidden = true; stage.focus({ preventScroll: true }); announce('繼續演奏。');
+    unlockAudio(); game.resume(); overlay.hidden = true; stage.focus({ preventScroll: true }); announce(tr('繼續演奏。', 'Playing again.'));
   }
   setPhase();
 }
@@ -109,16 +111,16 @@ function finish() {
   release(); stopAudio(); best = Math.max(best, game.score);
   try { localStorage.setItem('echo-catch-best', String(best)); } catch {}
   el('best').textContent = best.toLocaleString(); overlay.hidden = false; setPhase();
-  const title = ['每個音符，都是新的開始。', '晨光聽見你了。', '森林跟著你唱歌。', '整座森林都在合奏！'][game.stars];
-  panel.innerHTML = `<p class="chapter">三段演出完成 · ${hero.name}</p><div class="catch-stars" aria-label="${game.stars} 顆星，滿分 3 顆">${[0,1,2].map(i => `<img src="${starIcon}" alt="" class="${i < game.stars ? 'on' : ''}">`).join('')}</div><h2>${title}</h2><div class="catch-results"><span>合奏分數<strong>${game.score.toLocaleString()}</strong></span><span>接住音符<strong>${game.caught} / ${game.total}</strong></span><span>最高連擊<strong>${game.maxCombo}</strong></span></div><p class="catch-next">${nextGoal()}</p><p>漏接 ${game.missed} 個音符 · 碰到 ${game.noises} 次雜音</p><button class="catch-primary" id="again">再演奏一次</button><button class="catch-secondary" id="choose">換一位夥伴</button>`;
+  const title = tr(['每個音符，都是新的開始。', '晨光聽見你了。', '森林跟著你唱歌。', '整座森林都在合奏！'], ['Every note is a fresh start.', 'The morning light heard you.', 'The forest is singing along.', 'The whole forest is playing with you!'])[game.stars];
+  panel.innerHTML = `<p class="chapter">${tr('三段演出完成', 'Show complete')} · ${hero.name}</p><div class="catch-stars" aria-label="${tr(`${game.stars} 顆星，滿分 3 顆`, `${game.stars} of 3 stars`)}">${[0,1,2].map(i => `<img src="${starIcon}" alt="" class="${i < game.stars ? 'on' : ''}">`).join('')}</div><h2>${title}</h2><div class="catch-results"><span>${tr('合奏分數', 'Score')}<strong>${game.score.toLocaleString()}</strong></span><span>${tr('接住音符', 'Caught')}<strong>${game.caught} / ${game.total}</strong></span><span>${tr('最高連擊', 'Best combo')}<strong>${game.maxCombo}</strong></span></div><p class="catch-next">${nextGoal()}</p><p>${tr(`漏接 ${game.missed} 個音符 · 碰到 ${game.noises} 次雜音`, `Missed ${game.missed} notes · hit noise ${game.noises} times`)}</p><button class="catch-primary" id="again">${tr('再演奏一次', 'Play again')}</button><button class="catch-secondary" id="choose">${tr('換一位夥伴', 'Change friend')}</button>`;
   el('again').onclick = start; el('choose').onclick = showPicker; el('again').focus({ preventScroll: true });
-  announce(`演出完成，${game.caught} 個音符，${game.score} 分，${game.stars} 顆星。`);
+  announce(tr(`演出完成，${game.caught} 個音符，${game.score} 分，${game.stars} 顆星。`, `Show complete: ${game.caught} notes, ${game.score} points, ${game.stars} stars.`));
 }
 function nextGoal() {
-  if (game.stars >= 3) return '三顆星全拿，整座森林都記住了這首曲子。';
+  if (game.stars >= 3) return tr('三顆星全拿，整座森林都記住了這首曲子。', 'All three stars — the whole forest will remember this song.');
   const goal = [12, 28, 44][game.stars];
-  if (game.caught < goal) return `再多接住 ${goal - game.caught} 個音符，就能拿到第 ${game.stars + 1} 顆星。`;
-  return '音符都接到了！碰到雜音不超過 1 次就能拿到第三顆星。';
+  if (game.caught < goal) return tr(`再多接住 ${goal - game.caught} 個音符，就能拿到第 ${game.stars + 1} 顆星。`, `Catch ${goal - game.caught} more notes to earn star ${game.stars + 1}.`);
+  return tr('音符都接到了！碰到雜音不超過 1 次就能拿到第三顆星。', 'You caught enough notes! Hit noise no more than once to earn the third star.');
 }
 function feedback(text: string, kind: string) {
   el('feedback').textContent = text; el('feedback').className = kind; feedbackUntil = game.time + .65;
@@ -155,12 +157,12 @@ function burst(lane: number, kind: 'catch' | 'noise') {
 function render() {
   player.style.left = `${12.5 + game.x * 25}%`;
   el('score').textContent = game.score.toLocaleString(); el('caught').textContent = String(game.caught);
-  el('combo').textContent = String(game.combo); el('time').innerHTML = `${Math.ceil(game.duration - game.time)}<small> 秒</small>`;
+  el('combo').textContent = String(game.combo); el('time').innerHTML = `${Math.ceil(game.duration - game.time)}<small>${tr(' 秒', 's')}</small>`;
   el('timeline').style.width = `${game.time / game.duration * 100}%`;
   document.querySelector('.catch-timeline')!.setAttribute('aria-valuenow', String(Math.floor(game.time)));
   if (game.phase !== 'ready' && lastPhrase !== game.phrase) {
     lastPhrase = game.phrase; el('phrase').textContent = `${game.phrase + 1} / 3 · ${phrases[game.phrase]}`;
-    announce(`第 ${game.phrase + 1} 樂段，${phrases[game.phrase]}。`);
+    announce(tr(`第 ${game.phrase + 1} 樂段，${phrases[game.phrase]}。`, `Part ${game.phrase + 1}: ${phrases[game.phrase]}.`));
   }
   player.classList.toggle('catching', !reducedMotion && game.time < feedbackUntil && el('feedback').className === 'good');
   el('feedback').hidden = game.time >= feedbackUntil;
@@ -219,11 +221,11 @@ stage.onpointercancel = stage.onlostpointercapture = () => {
 document.querySelectorAll<HTMLButtonElement>('[data-lane]').forEach(b => b.onclick = () => { keys.clear(); game.direction = 0; game.moveTo(Number(b.dataset.lane)); });
 pause.onclick = togglePause; el('restart').onclick = start;
 el('sound').onclick = () => { sound = !sound; if (sound) unlockAudio(); else stopAudio(); updateSound(); };
-mountGuide({ id: 'catch', title: '音符接接樂', onOpen: () => autoPause(), pages: [
-  { icon: noteIcon, title: '金色音符，接住它', body: '<p>音符落進腳下光圈就算接住，<b>每個 100 分</b>，連擊最高加成 100 分。</p><p>一局 48 秒，共三段旋律。</p>' },
-  { icon: noiseIcon, title: '灰色雜音，讓它飄過', body: '<p>穿過光圈中央才算碰到，<b>碰到扣 50 分</b>。</p><p>漏接或碰雜音都會中斷連擊。後兩段需要跨格接音，留意旁邊的雜音。</p>' },
-  { icon: sprite('anmi'), title: '怎麼移動', body: '<ul><li>手機：<b>拖曳舞台</b>，或點下方 1–4 位置</li><li>鍵盤：<kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd> 移動，<kbd>1</kbd>–<kbd>4</kbd> 選位置</li><li><kbd>Esc</kbd> 暫停</li></ul>' },
-  { icon: starIcon, title: '慢慢熟悉，就能合奏', body: '<p>接住 <b>12 / 28 個</b>得一 / 二星。</p><p>三星需接住 <b>44 個</b>，且碰雜音不超過 1 次。</p>' },
+mountGuide({ id: 'catch', title: tr('音符接接樂', 'Note Catch'), onOpen: () => autoPause(), pages: [
+  { icon: noteIcon, title: tr('金色音符，接住它', 'Golden notes: catch them'), body: tr('<p>音符落進腳下光圈就算接住，<b>每個 100 分</b>，連擊最高加成 100 分。</p><p>一局 48 秒，共三段旋律。</p>', '<p>A note counts when it lands in the ring at your feet: <b>100 points each</b>, plus up to 100 bonus for combos.</p><p>Each game is 48 seconds, in three parts.</p>') },
+  { icon: noiseIcon, title: tr('灰色雜音，讓它飄過', 'Grey noise: let it pass'), body: tr('<p>穿過光圈中央才算碰到，<b>碰到扣 50 分</b>。</p><p>漏接或碰雜音都會中斷連擊。後兩段需要跨格接音，留意旁邊的雜音。</p>', '<p>Noise only hits you through the middle of the ring, and <b>costs 50 points</b>.</p><p>Missing a note or hitting noise breaks your combo. In the last two parts you\'ll reach across lanes — watch for noise nearby.</p>') },
+  { icon: sprite('anmi'), title: tr('怎麼移動', 'How to move'), body: tr('<ul><li>手機：<b>拖曳舞台</b>，或點下方 1–4 位置</li><li>鍵盤：<kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd> 移動，<kbd>1</kbd>–<kbd>4</kbd> 選位置</li><li><kbd>Esc</kbd> 暫停</li></ul>', '<ul><li>Phone: <b>drag the stage</b>, or tap spots 1–4 below</li><li>Keyboard: <kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd> to move, <kbd>1</kbd>–<kbd>4</kbd> to pick a spot</li><li><kbd>Esc</kbd> to pause</li></ul>') },
+  { icon: starIcon, title: tr('慢慢熟悉，就能合奏', 'Practice makes music'), body: tr('<p>接住 <b>12 / 28 個</b>得一 / 二星。</p><p>三星需接住 <b>44 個</b>，且碰雜音不超過 1 次。</p>', '<p>Catch <b>12 / 28</b> for one / two stars.</p><p>Three stars need <b>44 caught</b> and no more than 1 noise hit.</p>') },
 ] });
 function autoPause() { if (game.phase === 'playing') togglePause(); else release(); }
 window.addEventListener('blur', autoPause); document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
@@ -237,12 +239,12 @@ function tick(now: number) {
         tone(event.pitch); burst(event.lane, 'catch');
         const tier = comboTier();
         if ([5, 10, 20, 30, 40].includes(game.combo)) {
-          milestone(`${game.combo} 連擊！`, tier); hitstop(90); shakeStage('punch');
+          milestone(tr(`${game.combo} 連擊！`, `${game.combo} combo!`), tier); hitstop(90); shakeStage('punch');
         } else hitstop(tier >= 2 ? 60 : 40);
-        feedback(game.combo >= 5 ? `${game.combo} 連擊！` : `+${100 + Math.min(10, game.combo - 1) * 10}`, 'good');
+        feedback(game.combo >= 5 ? tr(`${game.combo} 連擊！`, `${game.combo} combo!`) : `+${100 + Math.min(10, game.combo - 1) * 10}`, 'good');
       }
-      if (event.kind === 'noise') { tone(0, true); burst(event.lane, 'noise'); hitstop(70); shakeStage('shake'); feedback('雜音飄過，繼續加油', 'oops'); }
-      if (event.kind === 'miss') feedback('下一個音符等你', 'miss');
+      if (event.kind === 'noise') { tone(0, true); burst(event.lane, 'noise'); hitstop(70); shakeStage('shake'); feedback(tr('雜音飄過，繼續加油', 'Oops, noise! Keep going'), 'oops'); }
+      if (event.kind === 'miss') feedback(tr('下一個音符等你', 'Next note\'s coming'), 'miss');
       if (event.kind === 'complete') finish();
     }
     render();

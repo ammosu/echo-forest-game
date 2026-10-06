@@ -1,6 +1,7 @@
 import "./style.css";
 import "./defense.css";
 import { siteHeader } from "./site-nav";
+import { tr, localizeDocument } from "./i18n";
 import { mountGuide, guideButton } from "./game-guide";
 import { DefenseEngine, balance, seeds, type PlantKind } from "./defense-engine";
 import { DefenseView } from "./defense-view";
@@ -29,17 +30,18 @@ try {
 } catch {}
 const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
+localizeDocument("Echo Forest — Forest Bomb Defense", "Plant forest guards, set off chain bombs, and protect the Life Tree with Anbo.");
 document.querySelector("#app")!.innerHTML = `
 ${siteHeader("defense")}
-<main class="defense-main"><section class="defense-intro"><div><p class="chapter">立體森林・生命樹防線</p><h1>種下希望，炸出一條路。</h1>${guideButton()}<p>白天的園丁，危急時刻的爆破手。與 Anbo 守住這片森林。</p></div><div class="defense-record">本機最高分<strong id="best">${best.toLocaleString()}</strong></div></section>
-<section class="defense-shell" aria-label="森林爆破保衛戰"><div class="defense-toolbar"><strong>森林爆破保衛戰 <small class="view-badge">3D</small></strong><div><button id="look" aria-pressed="false" title="切換畫面風格"><span class="look-prefix">畫面：</span><span id="look-name">標準</span></button><button id="sound" aria-pressed="false">音效關</button><button id="speed" aria-pressed="false" title="切換戰鬥速度（F）">▶▶ <span id="speed-name">×1</span></button><button id="pause" disabled>暫停</button><button id="restart" disabled>重來</button></div></div>
-<div class="defense-hud"><span class="hud-chip hud-tree"><img src="${treeIcon}" alt=""><span><small>生命樹</small><b id="tree">10</b><i>/ 10</i></span><span class="tree-bar" aria-hidden="true"><span id="tree-fill"></span></span></span><span class="hud-chip"><small>體力</small><span id="hearts" role="img" aria-label="體力 3">${[0, 1, 2].map(() => `<img src="${heartIcon}" alt="">`).join("")}</span></span><span class="hud-chip dew"><img src="${dewIcon}" alt=""><span><small>露珠</small><b id="dew">${balance.startDew}</b></span></span><span class="hud-chip"><img src="${starIcon}" alt=""><span><small>得分</small><b id="score">0</b></span></span><span class="hud-wave"><span id="wave">準備出發</span><span class="wave-pips" aria-hidden="true">${[1, 2, 3, 4, 5].map((n) => `<i data-pip="${n}"></i>`).join("")}</span></span></div>
-<div class="defense-layout"><div class="defense-field"><canvas id="field" width="1000" height="620" tabindex="0" aria-label="9乘5森林戰場。方向鍵移動，空白鍵放炸彈，1至3選植物，Enter種在腳下，Escape暫停。"></canvas><div id="cover" class="defense-cover" data-state="intro"><div><img class="cover-hero" src="${heroArt}" alt="" aria-hidden="true"><div class="cover-copy"><p class="chapter">Echo Forest · 森林微縮戰場</p><h2 id="cover-title">小小守衛，<br>守住大大的森林。</h2><p id="cover-copy">種下射手抵擋怪物，放置炸彈清除枯木。<br>注意十字爆風，也別忘了照顧每一行。</p><button id="start" class="primary">開始守護</button><p class="cover-note"><img src="${shooterArt}" alt="">五波攻防 <img src="${bombArt}" alt="">連鎖爆破 <img src="${iceArt}" alt="">3 種植物</p><div class="cover-stats"><span><img src="${starIcon}" alt=""><b id="stat-score">0</b><small>得分</small></span><span><img src="${monsterIcon}" alt=""><b id="stat-kills">0</b><small>擊退</small></span><span><img src="${bombArt}" alt=""><b id="stat-chains">0</b><small>連鎖</small></span></div></div></div></div></div>
-<aside class="seed-shelf"><h2>口袋裡的種子</h2><p>選種子，再點草地種下</p>${(Object.keys(seeds) as PlantKind[]).map((k, i) => `<button class="seed ${i === 0 ? "selected" : ""}" data-seed="${k}" aria-pressed="${i === 0}"><img class="seed-art" src="${seedArt[k]}" alt="" aria-hidden="true"><span><strong>${seeds[k].name}</strong><small>${["持續向右射擊", "高耐久，攔住怪物", "冰霧減緩移速"][i]}</small><em><img src="${dewIcon}" alt="">${seeds[k].cost}</em></span><kbd>${i + 1}</kbd></button>`).join("")}<button id="bomb" class="bomb-button"><img src="${bombArt}" alt=""><span>放炸彈</span><kbd>Space</kbd></button><small class="bomb-note">免費・同時最多 3 顆<br>倒數 2 秒・十字兩格爆風</small><button id="next" class="next-button" disabled>提前迎戰</button></aside></div>
-<div class="field-legend"><span><i class="swatch anbo"></i>金色光圈：Anbo 的位置</span><span><i class="swatch blast"></i>橘色地格：即將爆炸</span><span><img class="legend-monster" src="${monsterIcon}" alt="">最右一列：怪物入口</span></div>
-<p id="notice" class="defense-notice" role="status">先替每一行安排射手，缺口交給炸彈。</p>
-<div class="defense-controls"><div id="defense-stick"></div><button id="plant-here">腳下種植 <kbd>Enter</kbd></button><span>方向鍵 / WASD 移動 · 1–3 選種子 · F 倍速 · Esc 暫停</span></div></section>
-<section class="defense-guide"><article><span>01</span><h2>每一行，都是防線。</h2><p>射手放後方、樹樁擋前方。每 ${balance.income.every} 秒獲得 ${balance.income.amount} 露珠，每波怪物會集中在兩行。</p></article><article><span>02</span><h2>放好炸彈，轉個彎。</h2><p>爆風沿十字延伸兩格。繞到斜角躲避，植物不會被己方炸彈傷害。</p></article><article><span>03</span><h2>讓危機，連鎖化解。</h2><p>爆風能引爆另一顆炸彈。炸開枯木可獲得 ${balance.logReward} 露珠，但枯木會擋住後方爆風。</p></article></section><footer><span>小小像素，大大冒險。</span><span>Echo Forest ✦ 生命樹防線</span></footer></main>`;
+<main class="defense-main"><section class="defense-intro"><div><p class="chapter">${tr('立體森林・生命樹防線', '3D Forest · Life Tree Line')}</p><h1>${tr('種下希望，炸出一條路。', 'Plant hope, blast a path.')}</h1>${guideButton()}<p>${tr('白天的園丁，危急時刻的爆破手。與 Anbo 守住這片森林。', 'Gardener by day, bomb expert when danger comes. Protect the forest with Anbo.')}</p></div><div class="defense-record">${tr('本機最高分', 'Best score')}<strong id="best">${best.toLocaleString()}</strong></div></section>
+<section class="defense-shell" aria-label="${tr('森林爆破保衛戰', 'Forest Bomb Defense')}"><div class="defense-toolbar"><strong>${tr('森林爆破保衛戰', 'Bomb Defense')} <small class="view-badge">3D</small></strong><div><button id="look" aria-pressed="false" title="${tr('切換畫面風格', 'Switch visual style')}"><span class="look-prefix">${tr('畫面：', 'View: ')}</span><span id="look-name">${tr('標準', 'Standard')}</span></button><button id="sound" aria-pressed="false">${tr('音效關', 'Sound off')}</button><button id="speed" aria-pressed="false" title="${tr('切換戰鬥速度（F）', 'Change battle speed (F)')}">▶▶ <span id="speed-name">×1</span></button><button id="pause" disabled>${tr('暫停', 'Pause')}</button><button id="restart" disabled>${tr('重來', 'Restart')}</button></div></div>
+<div class="defense-hud"><span class="hud-chip hud-tree"><img src="${treeIcon}" alt=""><span><small>${tr('生命樹', 'Life Tree')}</small><b id="tree">10</b><i>/ 10</i></span><span class="tree-bar" aria-hidden="true"><span id="tree-fill"></span></span></span><span class="hud-chip"><small>${tr('體力', 'Energy')}</small><span id="hearts" role="img" aria-label="${tr('體力 3', 'Energy 3')}">${[0, 1, 2].map(() => `<img src="${heartIcon}" alt="">`).join("")}</span></span><span class="hud-chip dew"><img src="${dewIcon}" alt=""><span><small>${tr('露珠', 'Dew')}</small><b id="dew">${balance.startDew}</b></span></span><span class="hud-chip"><img src="${starIcon}" alt=""><span><small>${tr('得分', 'Score')}</small><b id="score">0</b></span></span><span class="hud-wave"><span id="wave">${tr('準備出發', 'Get ready')}</span><span class="wave-pips" aria-hidden="true">${[1, 2, 3, 4, 5].map((n) => `<i data-pip="${n}"></i>`).join("")}</span></span></div>
+<div class="defense-layout"><div class="defense-field"><canvas id="field" width="1000" height="620" tabindex="0" aria-label="${tr('9乘5森林戰場。方向鍵移動，空白鍵放炸彈，1至3選植物，Enter種在腳下，Escape暫停。', '9 by 5 forest battlefield. Arrow keys move, Space places a bomb, 1 to 3 picks a plant, Enter plants underfoot, Escape pauses.')}"></canvas><div id="cover" class="defense-cover" data-state="intro"><div><img class="cover-hero" src="${heroArt}" alt="" aria-hidden="true"><div class="cover-copy"><p class="chapter">Echo Forest · ${tr('森林微縮戰場', 'Tiny Forest Battlefield')}</p><h2 id="cover-title">${tr('小小守衛，<br>守住大大的森林。', 'Little guards,<br>protecting a big forest.')}</h2><p id="cover-copy">${tr('種下射手抵擋怪物，放置炸彈清除枯木。<br>注意十字爆風，也別忘了照顧每一行。', 'Plant shooters to stop monsters and use bombs to clear dead logs.<br>Watch out for cross-shaped blasts, and look after every row.')}</p><button id="start" class="primary">${tr('開始守護', 'Start defending')}</button><p class="cover-note"><img src="${shooterArt}" alt="">${tr('五波攻防', '5 waves')} <img src="${bombArt}" alt="">${tr('連鎖爆破', 'Chain blasts')} <img src="${iceArt}" alt="">${tr('3 種植物', '3 plants')}</p><div class="cover-stats"><span><img src="${starIcon}" alt=""><b id="stat-score">0</b><small>${tr('得分', 'Score')}</small></span><span><img src="${monsterIcon}" alt=""><b id="stat-kills">0</b><small>${tr('擊退', 'Defeated')}</small></span><span><img src="${bombArt}" alt=""><b id="stat-chains">0</b><small>${tr('連鎖', 'Chains')}</small></span></div></div></div></div></div>
+<aside class="seed-shelf"><h2>${tr('口袋裡的種子', 'Seed pouch')}</h2><p>${tr('選種子，再點草地種下', 'Pick a seed, then tap the grass')}</p>${(Object.keys(seeds) as PlantKind[]).map((k, i) => `<button class="seed ${i === 0 ? "selected" : ""}" data-seed="${k}" aria-pressed="${i === 0}"><img class="seed-art" src="${seedArt[k]}" alt="" aria-hidden="true"><span><strong>${seeds[k].name}</strong><small>${tr(["持續向右射擊", "高耐久，攔住怪物", "冰霧減緩移速"], ["Shoots to the right", "Tough, blocks monsters", "Frost slows monsters"])[i]}</small><em><img src="${dewIcon}" alt="">${seeds[k].cost}</em></span><kbd>${i + 1}</kbd></button>`).join("")}<button id="bomb" class="bomb-button"><img src="${bombArt}" alt=""><span>${tr('放炸彈', 'Bomb')}</span><kbd>Space</kbd></button><small class="bomb-note">${tr('免費・同時最多 3 顆<br>倒數 2 秒・十字兩格爆風', 'Free · up to 3 at once<br>2s fuse · 2-tile cross blast')}</small><button id="next" class="next-button" disabled>${tr('提前迎戰', 'Next wave now')}</button></aside></div>
+<div class="field-legend"><span><i class="swatch anbo"></i>${tr('金色光圈：Anbo 的位置', 'Gold ring: where Anbo is')}</span><span><i class="swatch blast"></i>${tr('橘色地格：即將爆炸', 'Orange tiles: about to blow')}</span><span><img class="legend-monster" src="${monsterIcon}" alt="">${tr('最右一列：怪物入口', 'Far-right column: monster entrance')}</span></div>
+<p id="notice" class="defense-notice" role="status">${tr('先替每一行安排射手，缺口交給炸彈。', 'Give every row a shooter, and let bombs handle the gaps.')}</p>
+<div class="defense-controls"><div id="defense-stick"></div><button id="plant-here">${tr('腳下種植', 'Plant here')} <kbd>Enter</kbd></button><span>${tr('方向鍵 / WASD 移動 · 1–3 選種子 · F 倍速 · Esc 暫停', 'Arrows / WASD move · 1–3 seeds · F speed · Esc pause')}</span></div></section>
+<section class="defense-guide"><article><span>01</span><h2>${tr('每一行，都是防線。', 'Every row is a defense line.')}</h2><p>${tr(`射手放後方、樹樁擋前方。每 ${balance.income.every} 秒獲得 ${balance.income.amount} 露珠，每波怪物會集中在兩行。`, `Shooters in back, stumps in front. You get ${balance.income.amount} dew every ${balance.income.every} seconds, and each wave leans on two rows.`)}</p></article><article><span>02</span><h2>${tr('放好炸彈，轉個彎。', 'Drop a bomb, then turn the corner.')}</h2><p>${tr('爆風沿十字延伸兩格。繞到斜角躲避，植物不會被己方炸彈傷害。', 'Blasts reach two tiles in a cross. Hide on a diagonal. Your bombs never hurt your plants.')}</p></article><article><span>03</span><h2>${tr('讓危機，連鎖化解。', 'Chain your way out of trouble.')}</h2><p>${tr(`爆風能引爆另一顆炸彈。炸開枯木可獲得 ${balance.logReward} 露珠，但枯木會擋住後方爆風。`, `A blast can set off another bomb. Breaking a dead log gives ${balance.logReward} dew, but logs block the blast behind them.`)}</p></article></section><footer><span>${tr('小小像素，大大冒險。', 'Tiny pixels, big adventures.')}</span><span>Echo Forest ✦ ${tr('生命樹防線', 'Life Tree Line')}</span></footer></main>`;
 type Look = "standard" | "hd2d";
 /** ?look= wins for sharing a link; otherwise reuse the viewer's last choice. */
 function initialLook(): Look {
@@ -57,14 +59,14 @@ function initialLook(): Look {
 let pauseForGuide = () => {};
 mountGuide({
   id: "defense",
-  title: "爆破保衛戰",
+  title: tr("爆破保衛戰", "Bomb Defense"),
   onOpen: () => pauseForGuide(),
   pages: [
-    { icon: shooterArt, title: "種下植物，守住每一行", body: `<p>先選種子，再點草地種下；或走到格子上按「腳下種植」。</p><ul><li><b>松果射手</b> 40 露珠：持續向右射擊</li><li><b>樹樁守衛</b> 25 露珠：高耐久，攔住怪物</li><li><b>冰霧蘑菇</b> 50 露珠：冰霧減緩移速</li></ul>` },
-    { icon: dewIcon, title: "露珠從哪裡來", body: `<p>開場有 ${balance.startDew} 露珠，之後<b>每 ${balance.income.every} 秒 +${balance.income.amount}</b>。</p><p>擊退怪物 +${balance.killReward[0]}～${balance.killReward[2]}，用炸彈炸開枯木 +${balance.logReward}。露珠不夠鋪滿全場：看清楚每波集中的兩行，把火力疊在那裡，再用炸彈補洞。</p>` },
-    { icon: bombArt, title: "炸彈與連鎖", body: `<ul><li>炸彈免費，<b>同時最多 3 顆</b>，倒數 2 秒爆炸。</li><li>爆風沿<b>十字延伸兩格</b>，繞到斜角就能躲開；植物不會被自己的炸彈傷害。</li><li>爆風能引爆另一顆炸彈，形成連鎖；枯木會擋住後方爆風。</li></ul>` },
-    { icon: treeIcon, title: "五波攻防", body: `<p>怪物從<b>最右一列</b>出現，走到最左邊會傷害生命樹（共 10 點）。</p><p>Anbo 有 3 點體力，被爆風打中會失去 1 點，閃爍時暫時無敵。撐過五波就勝利，剩下的生命樹與體力會加分。</p><p>地圖上：<b>金色光圈</b>是 Anbo，<b>橘色地格</b>代表即將爆炸。</p>` },
-    { icon: heroArt, title: "操作方式", body: `<p><b>手機</b>：方向鍵按鈕移動，點種子再點草地種植，按「放炸彈」。</p><p><b>鍵盤</b>：<kbd>方向鍵</kbd>／<kbd>WASD</kbd> 移動、<kbd>1</kbd>–<kbd>3</kbd> 選種子、<kbd>Enter</kbd> 腳下種植、<kbd>Space</kbd> 放炸彈、<kbd>Esc</kbd> 暫停。</p><p>右上 <b>▶▶</b>（或 <kbd>F</kbd>）切換兩倍速，整場戰鬥一起加快。</p>` },
+    { icon: shooterArt, title: tr("種下植物，守住每一行", "Plant to guard every row"), body: tr(`<p>先選種子，再點草地種下；或走到格子上按「腳下種植」。</p><ul><li><b>松果射手</b> 40 露珠：持續向右射擊</li><li><b>樹樁守衛</b> 25 露珠：高耐久，攔住怪物</li><li><b>冰霧蘑菇</b> 50 露珠：冰霧減緩移速</li></ul>`, `<p>Pick a seed, then tap the grass. Or walk onto a tile and press \"Plant here\".</p><ul><li><b>Cone Shooter</b> 40 dew: keeps shooting to the right</li><li><b>Stump Guard</b> 25 dew: tough, blocks monsters</li><li><b>Frost Mushroom</b> 50 dew: frost slows monsters down</li></ul>`) },
+    { icon: dewIcon, title: tr("露珠從哪裡來", "Where dew comes from"), body: tr(`<p>開場有 ${balance.startDew} 露珠，之後<b>每 ${balance.income.every} 秒 +${balance.income.amount}</b>。</p><p>擊退怪物 +${balance.killReward[0]}～${balance.killReward[2]}，用炸彈炸開枯木 +${balance.logReward}。露珠不夠鋪滿全場：看清楚每波集中的兩行，把火力疊在那裡，再用炸彈補洞。</p>`, `<p>You start with ${balance.startDew} dew, then get <b>+${balance.income.amount} every ${balance.income.every} seconds</b>.</p><p>Defeat a monster for +${balance.killReward[0]}–${balance.killReward[2]}, and bomb a dead log for +${balance.logReward}. There is not enough dew to fill the whole field: watch which two rows each wave targets, stack firepower there, and bomb the gaps.</p>`) },
+    { icon: bombArt, title: tr("炸彈與連鎖", "Bombs and chains"), body: tr(`<ul><li>炸彈免費，<b>同時最多 3 顆</b>，倒數 2 秒爆炸。</li><li>爆風沿<b>十字延伸兩格</b>，繞到斜角就能躲開；植物不會被自己的炸彈傷害。</li><li>爆風能引爆另一顆炸彈，形成連鎖；枯木會擋住後方爆風。</li></ul>`, `<ul><li>Bombs are free, <b>up to 3 at once</b>, and go off after 2 seconds.</li><li>Blasts reach <b>two tiles in a cross</b>. Step onto a diagonal to dodge. Your own bombs never hurt your plants.</li><li>A blast can set off another bomb for a chain. Dead logs block the blast behind them.</li></ul>`) },
+    { icon: treeIcon, title: tr("五波攻防", "Five waves"), body: tr(`<p>怪物從<b>最右一列</b>出現，走到最左邊會傷害生命樹（共 10 點）。</p><p>Anbo 有 3 點體力，被爆風打中會失去 1 點，閃爍時暫時無敵。撐過五波就勝利，剩下的生命樹與體力會加分。</p><p>地圖上：<b>金色光圈</b>是 Anbo，<b>橘色地格</b>代表即將爆炸。</p>`, `<p>Monsters appear in the <b>far-right column</b>. If they reach the left edge, they hurt the Life Tree (10 points in all).</p><p>Anbo has 3 energy and loses 1 when hit by a blast, but can\'t be hurt while blinking. Survive five waves to win. Leftover Life Tree and energy add bonus points.</p><p>On the map: the <b>gold ring</b> is Anbo, and <b>orange tiles</b> are about to blow.</p>`) },
+    { icon: heroArt, title: tr("操作方式", "Controls"), body: tr(`<p><b>手機</b>：拖動左下搖桿移動，點種子再點草地種植，按「放炸彈」。</p><p><b>鍵盤</b>：<kbd>方向鍵</kbd>／<kbd>WASD</kbd> 移動、<kbd>1</kbd>–<kbd>3</kbd> 選種子、<kbd>Enter</kbd> 腳下種植、<kbd>Space</kbd> 放炸彈、<kbd>Esc</kbd> 暫停。</p><p>右上 <b>▶▶</b>（或 <kbd>F</kbd>）切換兩倍速，整場戰鬥一起加快。</p>`, `<p><b>Phone</b>: drag the joystick to move, tap a seed then the grass to plant, and press \"Bomb\".</p><p><b>Keyboard</b>: <kbd>Arrows</kbd>/<kbd>WASD</kbd> move, <kbd>1</kbd>–<kbd>3</kbd> pick a seed, <kbd>Enter</kbd> plants underfoot, <kbd>Space</kbd> drops a bomb, <kbd>Esc</kbd> pauses.</p><p>Top right <b>▶▶</b> (or <kbd>F</kbd>) switches to double speed for the whole battle.</p>`) },
   ],
 });
 function mountGame() {
@@ -75,10 +77,10 @@ function mountGame() {
     view = new DefenseView(canvas, initialLook());
   } catch {
     $("cover").dataset.state = "error";
-    $("cover-title").textContent = "無法開啟立體森林";
+    $("cover-title").textContent = tr("無法開啟立體森林", "Can\'t open the 3D forest");
     $("cover-copy").textContent =
-      "請啟用瀏覽器硬體加速，或使用支援 WebGL 2 的瀏覽器後重新載入。";
-    $("start").textContent = "重新載入";
+      tr("請啟用瀏覽器硬體加速，或使用支援 WebGL 2 的瀏覽器後重新載入。", "Turn on hardware acceleration, or use a browser with WebGL 2, then reload.");
+    $("start").textContent = tr("重新載入", "Reload");
     $("start").onclick = () => location.reload();
     return;
   }
@@ -129,7 +131,7 @@ function mountGame() {
     $("cover").hidden = true;
     $<HTMLButtonElement>("pause").disabled = false;
     $<HTMLButtonElement>("restart").disabled = false;
-    $("pause").textContent = "暫停";
+    $("pause").textContent = tr("暫停", "Pause");
     focus();
     const shell = document.querySelector(".defense-shell")!;
     if (phone.matches || shell.getBoundingClientRect().bottom > innerHeight)
@@ -142,13 +144,13 @@ function mountGame() {
     game.paused = !game.paused;
     keys.clear();
     held = null;
-    $("pause").textContent = game.paused ? "繼續" : "暫停";
+    $("pause").textContent = game.paused ? tr("繼續", "Resume") : tr("暫停", "Pause");
     $("cover").hidden = !game.paused;
     if (game.paused) {
       $("cover").dataset.state = "paused";
-      $("cover-title").textContent = "森林，暫時安靜下來。";
-      $("cover-copy").textContent = "準備好後，再一起守護生命樹。";
-      $("start").textContent = "繼續守護";
+      $("cover-title").textContent = tr("森林，暫時安靜下來。", "The forest is resting for now.");
+      $("cover-copy").textContent = tr("準備好後，再一起守護生命樹。", "When you\'re ready, let\'s protect the Life Tree again.");
+      $("start").textContent = tr("繼續守護", "Keep defending");
       $("start").focus({ preventScroll: true });
     } else focus();
   }
@@ -166,7 +168,7 @@ function mountGame() {
   function showSpeed() {
     $("speed-name").textContent = `×${speed}`;
     $("speed").setAttribute("aria-pressed", String(speed === 2));
-    $("speed").setAttribute("aria-label", speed === 2 ? "戰鬥兩倍速，切回一般速度" : "一般速度，切換為兩倍速");
+    $("speed").setAttribute("aria-label", speed === 2 ? tr("戰鬥兩倍速，切回一般速度", "Double speed, switch back to normal") : tr("一般速度，切換為兩倍速", "Normal speed, switch to double"));
   }
   function toggleSpeed() {
     speed = speed === 2 ? 1 : 2;
@@ -183,7 +185,7 @@ function mountGame() {
   };
   function showLook() {
     const hd = view.look === "hd2d";
-    $("look-name").textContent = hd ? "HD-2D" : "標準";
+    $("look-name").textContent = hd ? "HD-2D" : tr("標準", "Standard");
     $("look").setAttribute("aria-pressed", String(hd));
   }
   showLook();
@@ -196,7 +198,7 @@ function mountGame() {
   };
   $("sound").onclick = () => {
     sound = !sound;
-    $("sound").textContent = sound ? "音效開" : "音效關";
+    $("sound").textContent = sound ? tr("音效開", "Sound on") : tr("音效關", "Sound off");
     $("sound").setAttribute("aria-pressed", String(sound));
     beep(660);
   };
@@ -280,7 +282,7 @@ function mountGame() {
           : Math.abs(x) >= Math.abs(y)
             ? [Math.sign(x), 0]
             : [0, Math.sign(y)]),
-    "移動搖桿",
+    tr("移動搖桿", "Move joystick"),
     true,
   );
   let last = performance.now(),
@@ -316,7 +318,7 @@ function mountGame() {
     if (game.kills > lastKills) {
       streak = now - streakAt < 2500 ? streak + (game.kills - lastKills) : game.kills - lastKills;
       streakAt = now;
-      if (streak >= 2) banner(`連破 ×${streak}！`, streak >= 5 ? 3 : streak >= 3 ? 2 : 1);
+      if (streak >= 2) banner(tr(`連破 ×${streak}！`, `Streak ×${streak}!`), streak >= 5 ? 3 : streak >= 3 ? 2 : 1);
       freezeUntil = now + (streak >= 3 ? 80 : 50);
       view.kick(0.08 + Math.min(streak, 6) * 0.03, 0.015 + Math.min(streak, 6) * 0.006);
     }
@@ -326,7 +328,7 @@ function mountGame() {
         if (spark.kind === "defeat") spark.power = streak >= 5 ? 2.2 : streak >= 3 ? 1.6 : streak >= 2 ? 1.3 : 1;
       }
     if (game.chains > lastChains) {
-      banner(`連鎖爆破 ×${game.chains - lastChains + 1}！`, game.chains - lastChains >= 2 ? 3 : 2);
+      banner(tr(`連鎖爆破 ×${game.chains - lastChains + 1}！`, `Chain blast ×${game.chains - lastChains + 1}!`), game.chains - lastChains >= 2 ? 3 : 2);
       freezeUntil = now + 110;
       view.kick(0.45, 0.04);
     } else if (game.bombs.length < lastBombs) view.kick(0.25, 0.02);
@@ -347,7 +349,7 @@ function mountGame() {
     $("hearts")
       .querySelectorAll("img")
       .forEach((img, i) => img.classList.toggle("lost", i >= hearts));
-    $("hearts").setAttribute("aria-label", `體力 ${hearts}`);
+    $("hearts").setAttribute("aria-label", tr(`體力 ${hearts}`, `Energy ${hearts}`));
     $("tree-fill").style.width = `${Math.max(0, game.tree) * 10}%`;
     $("tree-fill").classList.toggle("low", game.tree <= 3);
     document.querySelectorAll<HTMLElement>("[data-pip]").forEach((pip) => {
@@ -364,14 +366,14 @@ function mountGame() {
     $("notice").textContent = game.message;
     $("notice").classList.toggle(
       "warn",
-      /擊中|受傷|失守|不足|占用|最多|入口/.test(game.message),
+      /擊中|受傷|失守|不足|占用|最多|入口|Hit by|hurt|fell|Not enough|taken|at most|entrance/.test(game.message),
     );
     $("wave").textContent =
       game.phase === "build"
-        ? `整備 ${Math.ceil(game.timer)} 秒 · 第 ${game.wave + 1} / 5 波`
+        ? tr(`整備 ${Math.ceil(game.timer)} 秒 · 第 ${game.wave + 1} / 5 波`, `Prep ${Math.ceil(game.timer)}s · Wave ${game.wave + 1} / 5`)
         : game.phase === "ready"
-          ? "準備出發"
-          : `第 ${game.wave} / 5 波`;
+          ? tr("準備出發", "Get ready")
+          : tr(`第 ${game.wave} / 5 波`, `Wave ${game.wave} / 5`);
     $<HTMLButtonElement>("next").disabled =
       game.phase !== "build" || game.paused;
     $<HTMLButtonElement>("bomb").disabled = !game.active;
@@ -402,12 +404,12 @@ function mountGame() {
       $("cover").hidden = false;
       $("cover").dataset.state = game.phase;
       $("cover-title").textContent =
-        game.phase === "won" ? "森林，由你守住了。" : "再種一次希望。";
+        game.phase === "won" ? tr("森林，由你守住了。", "You saved the forest!") : tr("再種一次希望。", "Plant some hope again.");
       $("cover-copy").textContent = game.message;
       $("stat-score").textContent = game.score.toLocaleString();
       $("stat-kills").textContent = String(game.kills);
       $("stat-chains").textContent = String(game.chains);
-      $("start").textContent = "再守一場";
+      $("start").textContent = tr("再守一場", "Play again");
       $<HTMLButtonElement>("pause").disabled = true;
       $("start").focus({ preventScroll: true });
       keys.clear();
@@ -425,10 +427,10 @@ function mountGame() {
     held = null;
     $("cover").hidden = false;
     $("cover").dataset.state = "error";
-    $("cover-title").textContent = "森林畫面暫時中斷";
+    $("cover-title").textContent = tr("森林畫面暫時中斷", "The forest view stopped");
     $("cover-copy").textContent =
-      "請重新載入以恢復立體場景，本機最高分會保留。";
-    $("start").textContent = "重新載入";
+      tr("請重新載入以恢復立體場景，本機最高分會保留。", "Reload to bring the 3D scene back. Your best score is saved.");
+    $("start").textContent = tr("重新載入", "Reload");
     $("start").onclick = () => location.reload();
     $<HTMLButtonElement>("pause").disabled = true;
     $<HTMLButtonElement>("restart").disabled = true;
