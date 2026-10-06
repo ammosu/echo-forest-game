@@ -75,8 +75,8 @@ export class DefenseEngine {
     { x: 6, y: 2 },
   ];
   message = tr(
-    `先種射手，再用炸彈守住缺口。第 1 波集中在第 ${focusLanes(1).map((y) => y + 1).join("、")} 行！`,
-    `Plant shooters first, then use bombs to plug the gaps. Wave 1 targets rows ${focusLanes(1).map((y) => y + 1).join(" and ")}!`,
+    `先種射手，再用炸彈守住缺口。第 1 波集中在第 ${focusLanes(1).map((y) => y + 1).sort().join("、")} 行！`,
+    `Plant shooters first, then use bombs to plug the gaps. Wave 1 targets rows ${focusLanes(1).map((y) => y + 1).sort().join(" and ")}!`,
   );
   start() {
     Object.assign(this, new DefenseEngine());
@@ -85,7 +85,8 @@ export class DefenseEngine {
   get active() {
     return !this.paused && (this.phase === "build" || this.phase === "wave");
   }
-  move(dx: number, dy: number) {
+  /** `pace` is the delay before the next step; the touch stick walks slower on a light push. */
+  move(dx: number, dy: number, pace = 0.15) {
     if (!this.active || this.moveCooldown > 0) return;
     const x = this.player.x + dx,
       y = this.player.y + dy;
@@ -100,7 +101,7 @@ export class DefenseEngine {
       return;
     this.player.x = x;
     this.player.y = y;
-    this.moveCooldown = 0.15;
+    this.moveCooldown = pace;
   }
   plant(x: number, y: number, kind: PlantKind) {
     if (!this.active) return false;
@@ -332,7 +333,7 @@ export class DefenseEngine {
         this.phase = "build";
         this.timer = this.wave < 2 ? 10 : this.wave < 4 ? 8 : 6;
         this.resources += balance.waveBonus;
-        const [a, b] = focusLanes(this.wave + 1).map((y) => y + 1);
+        const [a, b] = focusLanes(this.wave + 1).map((y) => y + 1).sort();
         this.message = tr(
           `守住了！獲得 ${balance.waveBonus} 露珠。下一波集中在第 ${a}、${b} 行！`,
           `Wave cleared! +${balance.waveBonus} dew. Next wave targets rows ${a} and ${b}!`,

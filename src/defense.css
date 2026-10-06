@@ -1134,7 +1134,7 @@ img.seed-art {
     bottom: 0;
     z-index: 5;
     display: grid;
-    grid-template-columns: auto 1fr 1fr;
+    grid-template-columns: auto 1fr;
     align-items: center;
     gap: 8px;
     margin: 8px -5px -5px;
@@ -1290,7 +1290,6 @@ img.seed-art {
 .defense-record{display:flex;align-items:baseline;gap:6px}
 .defense-record strong{font-size:16px}
 .defense-toolbar{padding-bottom:4px}
-.defense-toolbar>strong .view-badge{display:none}
 .defense-notice{display:none}
 img.seed-art{width:30px;height:30px}
 .seed{padding:3px 3px 5px}
@@ -1299,8 +1298,9 @@ img.seed-art{width:30px;height:30px}
 .defense-controls>button{height:72px}
 .defense-controls .bomb-button img{width:30px;height:30px}
 .defense-controls{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}
-.defense-toolbar>strong{display:none}
-.defense-toolbar>div{width:100%;justify-content:space-between}
+.defense-toolbar>strong{font-size:0;flex:0 0 auto}
+.defense-toolbar{flex-wrap:wrap;row-gap:4px}
+.defense-toolbar>div{flex:1 1 auto;justify-content:space-between}
 .hud-chip>img{display:none}
 .hud-chip{padding:4px 4px 7px}
 .seed strong{display:none}
@@ -1317,9 +1317,13 @@ body.defense-playing .topbar,body.defense-playing .defense-intro{display:none}
 body.defense-playing .defense-main{min-height:100dvh;display:flex;flex-direction:column;padding-top:6px;padding-bottom:6px;box-sizing:border-box}
 body.defense-playing .defense-shell{flex:1;display:flex;flex-direction:column;min-height:0}
 body.defense-playing .defense-layout{flex:1;min-height:0}
-body.defense-playing .defense-field{flex:1;min-height:230px;max-height:420px}
+body.defense-playing .defense-field{flex:1;min-height:230px}
 body.defense-playing #field{position:absolute;inset:0;height:100%;aspect-ratio:auto}
 body.defense-playing .defense-controls .joystick{width:100px;height:100px}
 body.defense-playing .defense-controls .joystick-knob{width:44px;height:44px;margin:-22px 0 0 -22px}
 body.defense-playing .defense-controls>button{height:96px;font-size:15px}
 }
+button.view-badge{border:0;font:inherit;font-size:10px;font-weight:700;line-height:1.4;cursor:default}
+@media(max-width:700px){button.view-badge{cursor:pointer;padding:3px 7px;box-shadow:0 2px #8c7a43}}
+/* Phones plant by tapping a seed card, so the "plant here" button goes. */
+@media(max-width:700px){#plant-here{display:none}}

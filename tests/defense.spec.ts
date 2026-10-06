@@ -166,9 +166,16 @@ test("mobile: seeds, board placement, touch movement and bomb button", async ({
     (window as any).__defenseView.cell(0, 0),
   );
   await page.mouse.click(cell.x, cell.y);
+  // Tapping the seed planted it under Anbo (2,2); tapping the grass planted the same seed there.
   expect(
-    await page.evaluate(() => (window as any).__defense.plants[0].kind),
-  ).toBe("wall");
+    await page.evaluate(() =>
+      (window as any).__defense.plants.map((p: any) => [p.kind, p.x, p.y]),
+    ),
+  ).toEqual([
+    ["wall", 2, 2],
+    ["wall", 0, 0],
+  ]);
+  await expect(page.locator("#plant-here")).toBeHidden();
   const stick = (await page.locator("#defense-stick").boundingBox())!;
   const cx = stick.x + stick.width / 2,
     cy = stick.y + stick.height / 2;
@@ -177,22 +184,31 @@ test("mobile: seeds, board placement, touch movement and bomb button", async ({
     type: "touchStart",
     touchPoints: [{ x: cx, y: cy }],
   });
+  // A small thumb wobble stays inside the dead zone.
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [{ x: cx + 4, y: cy - 9 }],
+  });
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => (window as any).__defense.player)).toMatchObject({ x: 2, y: 2 });
   // Mostly up with a little drift right: the grid stick snaps to the stronger axis.
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchMove",
     touchPoints: [{ x: cx + 8, y: cy - 34 }],
   });
+  // A 390×844 phone turns the board 90°: screen up walks toward the monster entrance (+x).
+  expect(await page.evaluate(() => (window as any).__defenseView.rotated())).toBe(true);
   await expect
-    .poll(() => page.evaluate(() => (window as any).__defense.player.y))
-    .toBeLessThan(2);
-  expect(await page.evaluate(() => (window as any).__defense.player.x)).toBe(2);
+    .poll(() => page.evaluate(() => (window as any).__defense.player.x))
+    .toBeGreaterThan(2);
+  expect(await page.evaluate(() => (window as any).__defense.player.y)).toBe(2);
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
     touchPoints: [],
   });
   expect(
-    await page.evaluate(() => (window as any).__defense.player.y),
-  ).toBeLessThan(2);
+    await page.evaluate(() => (window as any).__defense.player.x),
+  ).toBeGreaterThan(2);
   await page.getByRole("button", { name: "放炸彈" }).click();
   expect(
     await page.evaluate(() => (window as any).__defense.bombs.length),
@@ -212,7 +228,14 @@ test("mobile: seeds, board placement, touch movement and bomb button", async ({
   await page.screenshot({
     path: "tests/evidence/defense-mobile.png",
     fullPage: true,
-  });
+  });  // The 3D badge flips the phone board to the angled view and back without moving the controls.
+  const bombY = (await page.locator("#bomb").boundingBox())!.y;
+  await page.locator("#tilt").click();
+  expect(await page.evaluate(() => (window as any).__defenseView.rotated())).toBe(false);
+  await expect(page.locator("#tilt")).toContainText("斜角");
+  expect((await page.locator("#bomb").boundingBox())!.y).toBe(bombY);
+  await page.reload();
+  expect(await page.evaluate(() => (window as any).__defenseView.rotated())).toBe(false);
 });
 test("browser: five-wave playthrough renders result and persists best score", async ({
   page,

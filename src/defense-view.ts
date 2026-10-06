@@ -49,6 +49,7 @@ export class DefenseView {
   private facing = Math.PI / 4;
   private lastFrame = performance.now();
   private lifeCrown: THREE.Mesh;
+  private entranceLabel?: THREE.Sprite;
   private hoverTile: THREE.Mesh;
   private dangerTiles: THREE.Mesh[] = [];
   private observer: ResizeObserver;
@@ -107,7 +108,8 @@ export class DefenseView {
     this.lifeCrown = this.ball(this.scene, -5.65, 1.9, -0.2, 0.9, "#82aa56");
     this.lifeCrown.scale.set(0.85, 1, 0.85);
     this.label(tr("生命樹", "Life Tree"), -5.65, 3.05, -0.2, 1.05);
-    this.label(tr("← 怪物入口", "← Monsters"), 3.9, 1.75, -3.12, 1.8);
+    this.entranceLabel = this.label(tr("← 怪物入口", "← Monsters"), 3.9, 1.75, -3.12, 1.8);
+    this.entranceLabel.visible = !this.rotated;
     for (let row = 0; row < 5; row++)
       this.label(String(row + 1), 5.05, 0.18, row - 2, 0.55);
     this.hoverTile = this.box(
@@ -553,6 +555,7 @@ export class DefenseView {
     sprite.scale.set(width, width / 4, 1);
     sprite.layers.set(LABEL_LAYER);
     parent.add(sprite);
+    return sprite;
   }
 
   private buildGrove() {
@@ -903,14 +906,37 @@ export class DefenseView {
         THREE.MathUtils.clamp(this.width / 160, 2.5, 6);
   }
 
-  /** Desktop keeps the angled diorama; phones look at the board head-on and steeper so cells read larger. */
+  /**
+   * Desktop keeps the angled diorama; small screens look at the board head-on and steeper so cells
+   * read larger. Tall portrait phones turn it 90° so monsters walk down from the top of the screen.
+   */
   private cameraHome = new THREE.Vector3(7.2, 12.8, 15.8);
-  private compact = false;
+  private mode: "wide" | "compact" | "rotated" = "wide";
+  private tallPhone = matchMedia("(max-width: 700px) and (max-aspect-ratio: 10/19)");
+  /** The phone player's choice from the 3D badge; null follows the screen shape. */
+  private tilt: "rotated" | "angled" | null = null;
+  get rotated() {
+    return this.mode === "rotated";
+  }
+  setTilt(tilt: "rotated" | "angled" | null) {
+    this.tilt = tilt;
+    this.resize(true);
+  }
   private aimCamera() {
-    this.cameraHome.set(...((this.compact ? [0, 15, 9.5] : [7.2, 12.8, 15.8]) as [number, number, number]));
+    const [home, target] = {
+      wide: [[7.2, 12.8, 15.8], [-0.35, 0, 0]],
+      compact: [[0, 15, 9.5], [0.1, 0, 0]],
+      rotated: [[-8.6, 14, 0], [0.2, 0, 0]],
+    }[this.mode] as [number, number, number][];
+    // Rotated, the Life Tree stands between the camera and the first column; clip everything behind
+    // the board edge so it cannot hide the shooters (its health stays on the HUD).
+    this.renderer.clippingPlanes =
+      this.mode === "rotated" ? [new THREE.Plane(new THREE.Vector3(1, 0, 0), 4.95)] : [];
+    // Its arrow points the wrong way once the board turns.
+    if (this.entranceLabel) this.entranceLabel.visible = this.mode !== "rotated";
+    this.cameraHome.set(...home);
     this.camera.position.copy(this.cameraHome);
-    if (this.compact) this.camera.lookAt(0.1, 0, 0);
-    else this.camera.lookAt(-0.35, 0, 0);
+    this.camera.lookAt(...target);
     this.camera.updateMatrixWorld();
   }
   /** Fit the frustum tightly around the 9×5 grid (plus spawn lane and sprite height) for small screens. */
@@ -932,21 +958,22 @@ export class DefenseView {
     this.camera.bottom = cy - halfWidth / aspect;
   }
 
-  private resize() {
+  private resize(force = false) {
     const { width, height } = this.canvas.getBoundingClientRect();
-    if (!width || !height || (width === this.width && height === this.height))
+    if (!width || !height || (!force && width === this.width && height === this.height))
       return;
     this.width = width;
     this.height = height;
     this.renderer.setSize(width, height, false);
     this.sizeComposer();
     const aspect = width / height;
-    const compact = width < 640;
-    if (compact !== this.compact) {
-      this.compact = compact;
+    const turned = this.tilt ? this.tilt === "rotated" : this.tallPhone.matches;
+    const mode = width >= 640 ? "wide" : turned ? "rotated" : "compact";
+    if (mode !== this.mode) {
+      this.mode = mode;
       this.aimCamera();
     }
-    if (compact) this.fitBoard(aspect);
+    if (mode !== "wide") this.fitBoard(aspect);
     else {
       const halfWidth = Math.max(7.25, 4.75 * aspect);
       this.camera.left = -halfWidth;

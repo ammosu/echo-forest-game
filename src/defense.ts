@@ -34,7 +34,7 @@ localizeDocument("Echo Forest — Forest Bomb Defense", "Plant forest guards, se
 document.querySelector("#app")!.innerHTML = `
 ${siteHeader("defense")}
 <main class="defense-main"><section class="defense-intro"><div><p class="chapter">${tr('立體森林・生命樹防線', '3D Forest · Life Tree Line')}</p><h1>${tr('種下希望，炸出一條路。', 'Plant hope, blast a path.')}</h1>${guideButton()}<p>${tr('白天的園丁，危急時刻的爆破手。與 Anbo 守住這片森林。', 'Gardener by day, bomb expert when danger comes. Protect the forest with Anbo.')}</p></div><div class="defense-record">${tr('本機最高分', 'Best score')}<strong id="best">${best.toLocaleString()}</strong></div></section>
-<section class="defense-shell" aria-label="${tr('森林爆破保衛戰', 'Forest Bomb Defense')}"><div class="defense-toolbar"><strong>${tr('森林爆破保衛戰', 'Bomb Defense')} <small class="view-badge">3D</small></strong><div><button id="look" aria-pressed="false" title="${tr('切換畫面風格', 'Switch visual style')}"><span class="look-prefix">${tr('畫面：', 'View: ')}</span><span id="look-name">${tr('標準', 'Standard')}</span></button><button id="sound" aria-pressed="false">${tr('音效關', 'Sound off')}</button><button id="speed" aria-pressed="false" title="${tr('切換戰鬥速度（F）', 'Change battle speed (F)')}">▶▶ <span id="speed-name">×1</span></button><button id="pause" disabled>${tr('暫停', 'Pause')}</button><button id="restart" disabled>${tr('重來', 'Restart')}</button></div></div>
+<section class="defense-shell" aria-label="${tr('森林爆破保衛戰', 'Forest Bomb Defense')}"><div class="defense-toolbar"><strong>${tr('森林爆破保衛戰', 'Bomb Defense')} <button id="tilt" class="view-badge" aria-pressed="false" title="${tr('切換直式／斜角視角', 'Switch upright / angled view')}">3D<span id="tilt-name"></span></button></strong><div><button id="look" aria-pressed="false" title="${tr('切換畫面風格', 'Switch visual style')}"><span class="look-prefix">${tr('畫面：', 'View: ')}</span><span id="look-name">${tr('標準', 'Standard')}</span></button><button id="sound" aria-pressed="false">${tr('音效關', 'Sound off')}</button><button id="speed" aria-pressed="false" title="${tr('切換戰鬥速度（F）', 'Change battle speed (F)')}">▶▶ <span id="speed-name">×1</span></button><button id="pause" disabled>${tr('暫停', 'Pause')}</button><button id="restart" disabled>${tr('重來', 'Restart')}</button></div></div>
 <div class="defense-hud"><span class="hud-chip hud-tree"><img src="${treeIcon}" alt=""><span><small>${tr('生命樹', 'Life Tree')}</small><b id="tree">10</b><i>/ 10</i></span><span class="tree-bar" aria-hidden="true"><span id="tree-fill"></span></span></span><span class="hud-chip"><small>${tr('體力', 'Energy')}</small><span id="hearts" role="img" aria-label="${tr('體力 3', 'Energy 3')}">${[0, 1, 2].map(() => `<img src="${heartIcon}" alt="">`).join("")}</span></span><span class="hud-chip dew"><img src="${dewIcon}" alt=""><span><small>${tr('露珠', 'Dew')}</small><b id="dew">${balance.startDew}</b></span></span><span class="hud-chip"><img src="${starIcon}" alt=""><span><small>${tr('得分', 'Score')}</small><b id="score">0</b></span></span><span class="hud-wave"><span id="wave">${tr('準備出發', 'Get ready')}</span><span class="wave-pips" aria-hidden="true">${[1, 2, 3, 4, 5].map((n) => `<i data-pip="${n}"></i>`).join("")}</span></span></div>
 <div class="defense-layout"><div class="defense-field"><canvas id="field" width="1000" height="620" tabindex="0" aria-label="${tr('9乘5森林戰場。方向鍵移動，空白鍵放炸彈，1至3選植物，Enter種在腳下，Escape暫停。', '9 by 5 forest battlefield. Arrow keys move, Space places a bomb, 1 to 3 picks a plant, Enter plants underfoot, Escape pauses.')}"></canvas><div id="cover" class="defense-cover" data-state="intro"><div><img class="cover-hero" src="${heroArt}" alt="" aria-hidden="true"><div class="cover-copy"><p class="chapter">Echo Forest · ${tr('森林微縮戰場', 'Tiny Forest Battlefield')}</p><h2 id="cover-title">${tr('小小守衛，<br>守住大大的森林。', 'Little guards,<br>protecting a big forest.')}</h2><p id="cover-copy">${tr('種下射手抵擋怪物，放置炸彈清除枯木。<br>注意十字爆風，也別忘了照顧每一行。', 'Plant shooters to stop monsters and use bombs to clear dead logs.<br>Watch out for cross-shaped blasts, and look after every row.')}</p><button id="start" class="primary">${tr('開始守護', 'Start defending')}</button><p class="cover-note"><img src="${shooterArt}" alt="">${tr('五波攻防', '5 waves')} <img src="${bombArt}" alt="">${tr('連鎖爆破', 'Chain blasts')} <img src="${iceArt}" alt="">${tr('3 種植物', '3 plants')}</p><div class="cover-stats"><span><img src="${starIcon}" alt=""><b id="stat-score">0</b><small>${tr('得分', 'Score')}</small></span><span><img src="${monsterIcon}" alt=""><b id="stat-kills">0</b><small>${tr('擊退', 'Defeated')}</small></span><span><img src="${bombArt}" alt=""><b id="stat-chains">0</b><small>${tr('連鎖', 'Chains')}</small></span></div></div></div></div></div>
 <aside class="seed-shelf"><h2>${tr('口袋裡的種子', 'Seed pouch')}</h2><p>${tr('選種子，再點草地種下', 'Pick a seed, then tap the grass')}</p>${(Object.keys(seeds) as PlantKind[]).map((k, i) => `<button class="seed ${i === 0 ? "selected" : ""}" data-seed="${k}" aria-pressed="${i === 0}"><img class="seed-art" src="${seedArt[k]}" alt="" aria-hidden="true"><span><strong>${seeds[k].name}</strong><small>${tr(["持續向右射擊", "高耐久，攔住怪物", "冰霧減緩移速"], ["Shoots to the right", "Tough, blocks monsters", "Frost slows monsters"])[i]}</small><em><img src="${dewIcon}" alt="">${seeds[k].cost}</em></span><kbd>${i + 1}</kbd></button>`).join("")}<button id="bomb" class="bomb-button"><img src="${bombArt}" alt=""><span>${tr('放炸彈', 'Bomb')}</span><kbd>Space</kbd></button><small class="bomb-note">${tr('免費・同時最多 3 顆<br>倒數 2 秒・十字兩格爆風', 'Free · up to 3 at once<br>2s fuse · 2-tile cross blast')}</small><button id="next" class="next-button" disabled>${tr('提前迎戰', 'Next wave now')}</button></aside></div>
@@ -66,7 +66,7 @@ mountGuide({
     { icon: dewIcon, title: tr("露珠從哪裡來", "Where dew comes from"), body: tr(`<p>開場有 ${balance.startDew} 露珠，之後<b>每 ${balance.income.every} 秒 +${balance.income.amount}</b>。</p><p>擊退怪物 +${balance.killReward[0]}～${balance.killReward[2]}，用炸彈炸開枯木 +${balance.logReward}。露珠不夠鋪滿全場：看清楚每波集中的兩行，把火力疊在那裡，再用炸彈補洞。</p>`, `<p>You start with ${balance.startDew} dew, then get <b>+${balance.income.amount} every ${balance.income.every} seconds</b>.</p><p>Defeat a monster for +${balance.killReward[0]}–${balance.killReward[2]}, and bomb a dead log for +${balance.logReward}. There is not enough dew to fill the whole field: watch which two rows each wave targets, stack firepower there, and bomb the gaps.</p>`) },
     { icon: bombArt, title: tr("炸彈與連鎖", "Bombs and chains"), body: tr(`<ul><li>炸彈免費，<b>同時最多 3 顆</b>，倒數 2 秒爆炸。</li><li>爆風沿<b>十字延伸兩格</b>，繞到斜角就能躲開；植物不會被自己的炸彈傷害。</li><li>爆風能引爆另一顆炸彈，形成連鎖；枯木會擋住後方爆風。</li></ul>`, `<ul><li>Bombs are free, <b>up to 3 at once</b>, and go off after 2 seconds.</li><li>Blasts reach <b>two tiles in a cross</b>. Step onto a diagonal to dodge. Your own bombs never hurt your plants.</li><li>A blast can set off another bomb for a chain. Dead logs block the blast behind them.</li></ul>`) },
     { icon: treeIcon, title: tr("五波攻防", "Five waves"), body: tr(`<p>怪物從<b>最右一列</b>出現，走到最左邊會傷害生命樹（共 10 點）。</p><p>Anbo 有 3 點體力，被爆風打中會失去 1 點，閃爍時暫時無敵。撐過五波就勝利，剩下的生命樹與體力會加分。</p><p>地圖上：<b>金色光圈</b>是 Anbo，<b>橘色地格</b>代表即將爆炸。</p>`, `<p>Monsters appear in the <b>far-right column</b>. If they reach the left edge, they hurt the Life Tree (10 points in all).</p><p>Anbo has 3 energy and loses 1 when hit by a blast, but can\'t be hurt while blinking. Survive five waves to win. Leftover Life Tree and energy add bonus points.</p><p>On the map: the <b>gold ring</b> is Anbo, and <b>orange tiles</b> are about to blow.</p>`) },
-    { icon: heroArt, title: tr("操作方式", "Controls"), body: tr(`<p><b>手機</b>：拖動左下搖桿移動，點種子再點草地種植，按「放炸彈」。</p><p><b>鍵盤</b>：<kbd>方向鍵</kbd>／<kbd>WASD</kbd> 移動、<kbd>1</kbd>–<kbd>3</kbd> 選種子、<kbd>Enter</kbd> 腳下種植、<kbd>Space</kbd> 放炸彈、<kbd>Esc</kbd> 暫停。</p><p>右上 <b>▶▶</b>（或 <kbd>F</kbd>）切換兩倍速，整場戰鬥一起加快。</p>`, `<p><b>Phone</b>: drag the joystick to move, tap a seed then the grass to plant, and press \"Bomb\".</p><p><b>Keyboard</b>: <kbd>Arrows</kbd>/<kbd>WASD</kbd> move, <kbd>1</kbd>–<kbd>3</kbd> pick a seed, <kbd>Enter</kbd> plants underfoot, <kbd>Space</kbd> drops a bomb, <kbd>Esc</kbd> pauses.</p><p>Top right <b>▶▶</b> (or <kbd>F</kbd>) switches to double speed for the whole battle.</p>`) },
+    { icon: heroArt, title: tr("操作方式", "Controls"), body: tr(`<p><b>手機</b>：拖動左下搖桿走到格子上，<b>點種子就種在腳下</b>（也可以直接點草地種下目前的種子），按「放炸彈」。</p><p><b>鍵盤</b>：<kbd>方向鍵</kbd>／<kbd>WASD</kbd> 移動、<kbd>1</kbd>–<kbd>3</kbd> 選種子、<kbd>Enter</kbd> 腳下種植、<kbd>Space</kbd> 放炸彈、<kbd>Esc</kbd> 暫停。</p><p>右上 <b>▶▶</b>（或 <kbd>F</kbd>）切換兩倍速，整場戰鬥一起加快。</p>`, `<p><b>Phone</b>: drag the joystick onto a tile, then <b>tap a seed to plant it underfoot</b> (or tap the grass to plant the current seed there), and press \"Bomb\".</p><p><b>Keyboard</b>: <kbd>Arrows</kbd>/<kbd>WASD</kbd> move, <kbd>1</kbd>–<kbd>3</kbd> pick a seed, <kbd>Enter</kbd> plants underfoot, <kbd>Space</kbd> drops a bomb, <kbd>Esc</kbd> pauses.</p><p>Top right <b>▶▶</b> (or <kbd>F</kbd>) switches to double speed for the whole battle.</p>`) },
   ],
 });
 function mountGame() {
@@ -94,7 +94,8 @@ function mountGame() {
   phone.addEventListener("change", placeBomb);
   let hover: { x: number; y: number } | null = null;
   const keys = new Set<string>();
-  let held: number[] | null = null;
+  /** Held direction plus step pace in seconds. */
+  let held: [number, number, number] | null = null;
   let audio: AudioContext | undefined;
   function beep(freq: number, duration = 0.08) {
     if (!sound) return;
@@ -196,6 +197,31 @@ function mountGame() {
     } catch {}
     showLook();
   };
+  // Phones only: the 3D badge flips the board between upright (90°) and the angled diorama.
+  function readTilt() {
+    try {
+      const saved = localStorage.getItem("echo-defense-tilt");
+      return saved === "rotated" || saved === "angled" ? saved : null;
+    } catch {
+      return null;
+    }
+  }
+  function showTilt() {
+    $("tilt-name").textContent = phone.matches ? (view.rotated ? tr(" 直式", " Upright") : tr(" 斜角", " Angled")) : "";
+    $("tilt").setAttribute("aria-pressed", String(view.rotated));
+  }
+  view.setTilt(readTilt());
+  showTilt();
+  phone.addEventListener("change", showTilt);
+  $("tilt").onclick = () => {
+    if (!phone.matches) return;
+    const next = view.rotated ? "angled" : "rotated";
+    view.setTilt(next);
+    try {
+      localStorage.setItem("echo-defense-tilt", next);
+    } catch {}
+    showTilt();
+  };
   $("sound").onclick = () => {
     sound = !sound;
     $("sound").textContent = sound ? tr("音效開", "Sound on") : tr("音效關", "Sound off");
@@ -211,7 +237,15 @@ function mountGame() {
   $("next").onclick = () => game.nextWave();
   document
     .querySelectorAll<HTMLButtonElement>("[data-seed]")
-    .forEach((b) => (b.onclick = () => select(b.dataset.seed as PlantKind)));
+    .forEach(
+      (b) =>
+        (b.onclick = () => {
+          const kind = b.dataset.seed as PlantKind;
+          select(kind);
+          // Phones have no "plant here" button: walk with the stick, then tap a seed to plant underfoot.
+          if (phone.matches && game.active) game.plant(game.player.x, game.player.y, kind);
+        }),
+    );
   canvas.addEventListener("pointermove", (e) => {
     hover = view.pick(e.clientX, e.clientY);
   });
@@ -272,16 +306,24 @@ function mountGame() {
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) unfocus();
   });
-  // The board is a grid, so the stick snaps to its strongest axis: one step per move cooldown.
+  let stickAxis: "x" | "y" | null = null;
+  // The board is a grid, so the stick snaps to one axis. A wide dead zone and a sticky axis stop
+  // small thumb wobbles from stepping or turning; push depth sets the walking pace.
   mountJoystick(
     $("defense-stick"),
-    (x, y) =>
-      (held =
-        !x && !y
-          ? null
-          : Math.abs(x) >= Math.abs(y)
-            ? [Math.sign(x), 0]
-            : [0, Math.sign(y)]),
+    (sx, sy) => {
+      const depth = Math.min(1, Math.hypot(sx, sy));
+      if (depth < 0.35) return void (held = stickAxis = null);
+      const ax = Math.abs(sx),
+        ay = Math.abs(sy);
+      // Changing axis needs a clear lean, so a diagonal thumb does not zig-zag.
+      if (stickAxis === "x" ? ay > ax * 1.6 : stickAxis === "y" ? ax > ay * 1.6 : true)
+        stickAxis = ax >= ay ? "x" : "y";
+      let [dx, dy] = stickAxis === "x" ? [Math.sign(sx), 0] : [0, Math.sign(sy)];
+      // On the rotated phone board, screen up walks toward the monster entrance.
+      if (view.rotated) [dx, dy] = [-dy, dx];
+      held = [dx, dy, 0.34 - 0.16 * depth];
+    },
     tr("移動搖桿", "Move joystick"),
     true,
   );
@@ -308,7 +350,7 @@ function mountGame() {
   function frame(now: number) {
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
-    if (held) game.move(held[0], held[1]);
+    if (held) game.move(held[0], held[1], held[2]);
     else if (keys.has("ArrowLeft") || keys.has("KeyA")) game.move(-1, 0);
     else if (keys.has("ArrowRight") || keys.has("KeyD")) game.move(1, 0);
     else if (keys.has("ArrowUp") || keys.has("KeyW")) game.move(0, -1);
@@ -443,6 +485,7 @@ function mountGame() {
       __defenseView: {
         cell: (x: number, y: number) => view.screenCell(x, y),
         snapshot: () => view.diagnostics(),
+        rotated: () => view.rotated,
       },
     });
   }
