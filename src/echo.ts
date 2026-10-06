@@ -1,6 +1,7 @@
 import './style.css';
 import './echo.css';
 import { siteHeader } from './site-nav';
+import { mountGuide, guideButton } from './game-guide';
 import { EchoGame, echoTiming } from './echo-engine';
 import characters from '../assets/characters.json';
 import forest from '../assets/generated/forest-background.png';
@@ -21,7 +22,7 @@ try { const saved = Number(localStorage.getItem('echo-memory-best')); if (Number
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   ${siteHeader("echo")}
   <main class="echo-main">
-    <section class="echo-intro"><div><p class="chapter">林間小舞台・記憶合奏</p><h1>森林回音</h1><p>聽一段旋律，讓森林聽見你的回應。</p></div><div class="echo-best">最長合奏<strong><span id="best">${best}</span><small> / 8 段</small></strong></div></section>
+    <section class="echo-intro"><div><p class="chapter">林間小舞台・記憶合奏</p><h1>森林回音</h1>${guideButton()}<p>聽一段旋律，讓森林聽見你的回應。</p></div><div class="echo-best">最長合奏<strong><span id="best">${best}</span><small> / 8 段</small></strong></div></section>
     <section class="echo-concert" aria-label="森林回音遊戲" data-phase="ready">
       <div class="echo-toolbar"><span id="round">準備開演</span><div><button id="sound" aria-pressed="true">♫ 聲音開</button><button id="pause" disabled>暫停</button><button id="restart" disabled>重新開始</button></div></div>
       <div class="echo-stage" style="--forest:url('${forest}')">
@@ -230,6 +231,11 @@ window.addEventListener('keydown', e => {
   if (/^[1-4]$/.test(e.key)) { e.preventDefault(); play(Number(e.key) - 1); }
   if (e.key === 'Escape') { e.preventDefault(); togglePause(); }
 });
+mountGuide({ id: 'echo', title: '森林回音', onOpen: () => autoPause(), pages: [
+  { icon: sprite('owl'), title: '聽', body: '<p>Owl 指揮時，四位夥伴會<b>依序亮起並發出聲音</b>。</p><p>專心記住誰先、誰後。</p>' },
+  { icon: '♫', title: '回應', body: '<p>輪到你時，<b>照同樣順序點選夥伴</b>，或按鍵盤 <kbd>1</kbd>–<kbd>4</kbd>。</p><p>開始前可以先點夥伴試聽音色。</p>' },
+  { icon: gem(0), title: '合奏', body: '<p>每完成一段就<b>多加一個音</b>，最多 8 段。</p><p>忘記也沒關係，按「再聽一次」隨時重聽。關閉聲音也能跟著燈光玩。</p>' },
+] });
 function autoPause() { if (!['ready', 'paused', 'complete'].includes(game.phase)) togglePause(); }
 window.addEventListener('blur', autoPause);
 document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });

@@ -346,7 +346,9 @@ export class ForestGame {
   scene:ForestScene; game:Phaser.Game; private sound=false;private audio?:AudioContext;
   constructor(parent:HTMLElement,public emit:(event:GameEvent)=>void) {
     this.scene=new ForestScene(this);
-    this.game=new Phaser.Game({type:Phaser.AUTO,parent,width:640,height:this.compact?480:360,pixelArt:true,roundPixels:true,backgroundColor:'#173c36',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{gravity:{x:0,y:820},debug:false}},render:{antialias:false},audio:{noAudio:true},scene:[this.scene]});
+    // Portrait phones fill the stage's height: same 360px-tall world and zoom, the canvas just narrows to the stage's shape.
+    const box=parent.getBoundingClientRect(), aspect=box.height>0?Math.min(4/3,Math.max(.9,box.width/box.height)):4/3;
+    this.game=new Phaser.Game({type:Phaser.AUTO,parent,width:this.compact?Math.round(480*aspect):640,height:this.compact?480:360,pixelArt:true,roundPixels:true,backgroundColor:'#173c36',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{gravity:{x:0,y:820},debug:false}},render:{antialias:false},audio:{noAudio:true},scene:[this.scene]});
   }
   start(){this.ensureAudio();this.scene.start();}
   setCharacter(id:string){if(!playableIds.includes(id)||this.running)return;this.character=id;if(this.scene.ready)this.scene.applyCharacter();}

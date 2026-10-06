@@ -24,11 +24,20 @@ test('phone map has reachable touch targets with storage blocked and no page ove
   const page = await context.newPage();
   await page.addInitScript(() => { Storage.prototype.getItem = () => { throw Error('blocked'); }; Storage.prototype.setItem = () => { throw Error('blocked'); }; });
   await page.goto('http://127.0.0.1:5173/');
+  const sheet = page.locator('#destination'), close = page.locator('#sheet-close');
+  await expect(sheet).toBeHidden();
   for (const pin of await page.locator('.map-pin').all()) {
     await pin.tap(); await expect(pin).toHaveAttribute('aria-pressed', 'true');
+    await expect(sheet).toBeInViewport({ ratio: 1 }); await expect(page.locator('#depart')).toBeInViewport();
+    await expect(close).toBeFocused();
+    if (await pin.getAttribute('data-place') !== 'catch') { await close.tap(); await expect(sheet).toBeHidden(); await expect(pin).toBeFocused(); }
   }
   await expect(page.locator('#destination-title')).toHaveText('音符接接樂');
-  await page.screenshot({ path:'tests/evidence/forest-map-mobile.png', fullPage:true });
+  await page.screenshot({ path:'tests/evidence/forest-map-mobile.png' });
+  await page.locator('#sheet-backdrop').tap({ position: { x: 20, y: 20 } }); await expect(sheet).toBeHidden();
+  await page.locator('[data-place=echo]').tap(); await page.keyboard.press('Escape'); await expect(sheet).toBeHidden();
+  await page.locator('[data-place=echo]').tap(); await page.locator('#depart').tap(); await expect(page).toHaveURL(/echo\.html$/);
+  await page.goBack();
   for (const width of [320,390,844]) {
     await page.setViewportSize({width, height:width === 844 ? 390 : 844});
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -79,4 +88,32 @@ test('every page shares the same top bar on desktop and phone, and the old map U
   await page.goto('http://127.0.0.1:5173/forest.html');
   await expect(page.locator('h1')).toHaveText('今天，想去哪裡玩？');
   await page.close();
+});
+
+test('on phones every page fits one screen and each game explains itself in a swipeable popup', async ({ browser }) => {
+  for (const [w, h] of [[390, 844], [375, 667]]) {
+    const context = await browser.newContext({ baseURL: 'http://127.0.0.1:5173', viewport: { width: w, height: h }, isMobile: true, hasTouch: true, storageState: { cookies: [], origins: [] } });
+    const page = await context.newPage();
+    for (const path of ['/', '/adventure.html', '/race.html', '/defense.html', '/echo.html', '/catch.html']) {
+      await page.goto(path);
+      const guide = page.locator('.guide');
+      if (path !== '/') {
+        await expect(guide, `${path} first visit`).toBeVisible();
+        await expect(page.locator('.guide-sheet')).toBeInViewport({ ratio: 1 });
+        expect(await page.evaluate(() => innerWidth)).toBe(w);
+        const pages = await page.locator('.guide-page').count();
+        expect(pages).toBeGreaterThanOrEqual(3);
+        // Quick double tap still moves two pages; the last page's button starts the game.
+        await page.locator('.guide-next').click(); await page.locator('.guide-next').click();
+        await expect(page.locator('.guide-dots i').nth(2)).toHaveClass(/on/);
+        await page.locator('.guide-close').tap(); await expect(guide).toBeHidden();
+        await page.reload(); await expect(guide).toBeHidden();
+        await page.locator('[data-guide-open]').tap(); await expect(guide).toBeVisible();
+        await page.keyboard.press('Escape'); await expect(guide).toBeHidden();
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollHeight), `${path} at ${w}×${h}`).toBeLessThanOrEqual(h);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), `${path} width`).toBeLessThanOrEqual(w);
+    }
+    await context.close();
+  }
 });

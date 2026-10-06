@@ -22,3 +22,18 @@
 @keyframes depart-pulse{0%{transform:translateY(6px);box-shadow:0 0 0 0 #f4d480aa}60%{transform:none;box-shadow:0 0 0 8px #f4d48000}}
 @media(max-width:720px){.depart.changed{animation:depart-pulse .45s ease-out}}
 @media(prefers-reduced-motion:reduce){.depart.changed{animation:none}}
+/* Phone popup: tapping a place opens its explanation and depart button as a sheet with a clear close button. */
+.sheet-close,.sheet-backdrop{display:none}
+@media(max-width:720px){
+.forest-main{padding-bottom:0}
+.sheet-backdrop{display:block;position:fixed;inset:0;z-index:30;background:#0b221cb3;opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+.destination{position:fixed;z-index:31;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-height:calc(100dvh - 24px);overflow-y:auto;padding:20px 20px 16px;border:2px solid #f4d480;box-shadow:0 18px 40px #0b221ccc;transform:translateY(calc(100% + 40px));visibility:hidden;transition:transform .25s ease-out,visibility .25s}
+body.sheet-open{overflow:hidden}body.sheet-open .sheet-backdrop{opacity:1;visibility:visible}body.sheet-open .destination{transform:none;visibility:visible}
+.sheet-close{display:grid;place-items:center;position:absolute;z-index:1;top:12px;right:12px;width:44px;height:44px;border-radius:50%;border:2px solid #274435;background:#fff6cf;color:#274435;font-size:20px;font-weight:900;cursor:pointer;box-shadow:0 3px 0 #274435}
+.sheet-close:active{transform:translateY(2px);box-shadow:0 1px 0 #274435}.sheet-close:focus-visible{outline-color:#274435;outline-offset:3px}
+.destination-top{margin-right:56px}#destination-icon{display:none}
+.guide-portrait{top:60px}.guide-portrait span{display:none}
+.depart,.depart.changed{position:static;animation:none;margin-top:14px;box-shadow:none;border:0;border-bottom:4px solid #173b2a}
+}
+@media(max-width:720px) and (prefers-reduced-motion:reduce){.destination,.sheet-backdrop{transition:none}}
+@media(max-width:720px) and (max-height:760px){.map-footer{display:none}.forest-main{padding-bottom:12px}.map-heading .map-help{margin-top:4px}}

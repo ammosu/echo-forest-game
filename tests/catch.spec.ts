@@ -183,3 +183,18 @@ test('touch judgment matches the ring: early/late within the window, center insi
   expect(late.chart[0].result).toBe('caught');
   expect(inReach(1.4, 1)).toBe(true); expect(inReach(1.41, 1)).toBe(false);
 });
+
+test('phone page fits one screen and the how-to-play popup opens on first visit', async ({ browser }) => {
+  for (const [width, height] of [[390, 844], [375, 667]]) {
+    const context = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true, storageState: { cookies: [], origins: [] } });
+    const page = await context.newPage(); await page.goto('/catch.html');
+    await expect(page.locator('.guide-sheet')).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('.guide-page')).toHaveCount(4);
+    await page.locator('.guide-close').tap(); await expect(page.locator('.guide')).toBeHidden();
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+    await page.locator('#start').tap(); await expect(page.locator('.catch-shell')).toHaveAttribute('data-phase', 'playing');
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+    await page.locator('[data-guide-open]').tap(); await expect(page.locator('.catch-shell')).toHaveAttribute('data-phase', 'paused');
+    await context.close();
+  }
+});

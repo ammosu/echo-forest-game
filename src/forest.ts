@@ -34,7 +34,7 @@ ${trees.map(tree).join('')}
 <div class="map-locations" role="group" aria-label="選擇遊戲">${places.map(p=>`<button class="map-pin" data-place="${p.id}" style="--x:${p.x}%;--y:${p.y}%" aria-pressed="false" aria-controls="destination"><img src="${sprite(p.hero)}" alt=""><span>${p.title}</span><small>${p.place}</small><em class="pin-picked" aria-hidden="true">已選</em></button>`).join('')}</div>
 <div class="entrance-sign"><span aria-hidden="true">⌂</span> 森林入口</div><span class="map-compass" aria-hidden="true">✧<small>北</small></span>
 </section>
-<aside class="destination" id="destination" aria-labelledby="destination-title"><div class="destination-top"><span id="destination-kind"></span><span id="destination-icon" aria-hidden="true"></span></div><div class="guide-portrait"><img id="guide-img" alt=""><span id="guide-name"></span></div><div aria-live="polite" aria-atomic="true"><p id="destination-place"></p><h2 id="destination-title"></h2><p id="destination-detail"></p></div><p id="destination-controls"></p><a class="depart" id="depart"><img id="depart-img" alt=""><span class="depart-text">出發去玩<b id="depart-title"></b></span><span aria-hidden="true">↗</span></a><p class="all-open">五款遊戲都已開放，選喜歡的就能玩。</p></aside></div>
+<div class="sheet-backdrop" id="sheet-backdrop" aria-hidden="true"></div><aside class="destination" id="destination" aria-labelledby="destination-title"><button class="sheet-close" id="sheet-close" type="button" aria-label="關閉說明，回到地圖"><span aria-hidden="true">✕</span></button><div class="destination-top"><span id="destination-kind"></span><span id="destination-icon" aria-hidden="true"></span></div><div class="guide-portrait"><img id="guide-img" alt=""><span id="guide-name"></span></div><div aria-live="polite" aria-atomic="true"><p id="destination-place"></p><h2 id="destination-title"></h2><p id="destination-detail"></p></div><p id="destination-controls"></p><a class="depart" id="depart"><img id="depart-img" alt=""><span class="depart-text">出發去玩<b id="depart-title"></b></span><span aria-hidden="true">↗</span></a><p class="all-open">五款遊戲都已開放，選喜歡的就能玩。</p></aside></div>
 <footer class="map-footer"><span>沿著小徑，遇見一段新的旋律。</span><span>Echo Forest · 森林導覽圖</span></footer></main>`;
 const el = (id: string) => document.getElementById(id)!;
 const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.map-pin'));
@@ -53,8 +53,29 @@ function select(id: string) {
   link.classList.remove('changed'); void link.offsetWidth; link.classList.add('changed'); link.href = p.href; link.setAttribute('aria-label', `出發去玩${p.title}`);
   try { localStorage.setItem('echo-forest-map-place', p.id); } catch { /* The map works without storage. */ }
 }
+// On phones the destination card is a popup sheet, so the explanation and the depart button can't be missed below the map.
+const phone = matchMedia('(max-width:720px)');
+const sheet = el('destination');
+let opener: HTMLElement | null = null;
+function syncSheet() {
+  const open = document.body.classList.contains('sheet-open');
+  sheet.toggleAttribute('inert', phone.matches && !open);
+  if (phone.matches) { sheet.setAttribute('role', 'dialog'); sheet.setAttribute('aria-modal', String(open)); } else { sheet.removeAttribute('role'); sheet.removeAttribute('aria-modal'); }
+}
+function openSheet(from: HTMLElement) {
+  if (!phone.matches) return;
+  opener = from; document.body.classList.add('sheet-open'); syncSheet(); el('sheet-close').focus({ preventScroll: true });
+}
+function closeSheet() {
+  if (!document.body.classList.contains('sheet-open')) return;
+  document.body.classList.remove('sheet-open'); syncSheet(); opener?.focus({ preventScroll: true });
+}
+el('sheet-close').onclick = closeSheet; el('sheet-backdrop').onclick = closeSheet;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+phone.addEventListener('change', () => { document.body.classList.remove('sheet-open'); syncSheet(); });
+syncSheet();
 buttons.forEach((b, i) => {
-  b.onclick = () => select(b.dataset.place!);
+  b.onclick = () => { select(b.dataset.place!); openSheet(b); };
   b.onkeydown = e => {
     const delta = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
     if (!delta) return;

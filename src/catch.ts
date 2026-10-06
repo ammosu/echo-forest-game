@@ -1,6 +1,7 @@
 import './style.css';
 import './catch.css';
 import { siteHeader } from './site-nav';
+import { mountGuide, guideButton } from './game-guide';
 import { CatchGame, CATCH_REACH, inReach } from './catch-engine';
 import characters from '../assets/characters.json';
 import forest from '../assets/generated/forest-background.png';
@@ -18,7 +19,7 @@ let best = 0;
 try { const saved = Number(localStorage.getItem('echo-catch-best')); if (Number.isFinite(saved) && saved > 0) best = saved; } catch {}
 document.querySelector('#app')!.innerHTML = `
 ${siteHeader("catch")}
-<main class="catch-main"><section class="catch-intro"><div><p class="chapter">晨光音樂會・48 秒的小小演出</p><h1>接住森林的旋律。</h1><p>左右移動，讓每一個音符都找到歸處。</p></div><div class="catch-record">本機最高分<strong id="best">${best.toLocaleString()}</strong></div></section>
+<main class="catch-main"><section class="catch-intro"><div><p class="chapter">晨光音樂會・48 秒的小小演出</p><h1>接住森林的旋律。</h1>${guideButton()}<p>左右移動，讓每一個音符都找到歸處。</p></div><div class="catch-record">本機最高分<strong id="best">${best.toLocaleString()}</strong></div></section>
 <section class="catch-shell" aria-label="音符接接樂遊戲" data-phase="ready">
   <div class="catch-toolbar"><span id="phrase">準備開演</span><div><button id="sound" aria-pressed="true">♫ 聲音開</button><button id="pause" disabled>暫停</button><button id="restart" disabled>重來</button></div></div>
   <div class="catch-hud"><div><small>合奏分數</small><strong id="score">0</strong></div><div><small>接住音符</small><strong><span id="caught">0</span><small> / 48</small></strong></div><div><small>連續接住</small><strong id="combo">0</strong></div><div><small>剩餘時間</small><strong id="time">48<small> 秒</small></strong></div></div>
@@ -92,7 +93,6 @@ function start() {
   stopAudio(); unlockAudio(); release(); game.start(); feedbackUntil = 0; lastPhrase = -1;
   noteElements.forEach(n => n.remove()); noteElements.clear(); el('fx').replaceChildren(); freezeUntil = 0;
   overlay.hidden = true; setPhase(); render(); stage.focus({ preventScroll: true });
-  if (matchMedia('(max-width:750px)').matches) stage.scrollIntoView({ block: 'center', behavior: 'instant' });
   announce('開始演奏，左右移動接住金色音符。');
 }
 function togglePause() {
@@ -219,6 +219,12 @@ stage.onpointercancel = stage.onlostpointercapture = () => {
 document.querySelectorAll<HTMLButtonElement>('[data-lane]').forEach(b => b.onclick = () => { keys.clear(); game.direction = 0; game.moveTo(Number(b.dataset.lane)); });
 pause.onclick = togglePause; el('restart').onclick = start;
 el('sound').onclick = () => { sound = !sound; if (sound) unlockAudio(); else stopAudio(); updateSound(); };
+mountGuide({ id: 'catch', title: '音符接接樂', onOpen: () => autoPause(), pages: [
+  { icon: noteIcon, title: '金色音符，接住它', body: '<p>音符落進腳下光圈就算接住，<b>每個 100 分</b>，連擊最高加成 100 分。</p><p>一局 48 秒，共三段旋律。</p>' },
+  { icon: noiseIcon, title: '灰色雜音，讓它飄過', body: '<p>穿過光圈中央才算碰到，<b>碰到扣 50 分</b>。</p><p>漏接或碰雜音都會中斷連擊。後兩段需要跨格接音，留意旁邊的雜音。</p>' },
+  { icon: sprite('anmi'), title: '怎麼移動', body: '<ul><li>手機：<b>拖曳舞台</b>，或點下方 1–4 位置</li><li>鍵盤：<kbd>←</kbd> <kbd>→</kbd> / <kbd>A</kbd> <kbd>D</kbd> 移動，<kbd>1</kbd>–<kbd>4</kbd> 選位置</li><li><kbd>Esc</kbd> 暫停</li></ul>' },
+  { icon: starIcon, title: '慢慢熟悉，就能合奏', body: '<p>接住 <b>12 / 28 個</b>得一 / 二星。</p><p>三星需接住 <b>44 個</b>，且碰雜音不超過 1 次。</p>' },
+] });
 function autoPause() { if (game.phase === 'playing') togglePause(); else release(); }
 window.addEventListener('blur', autoPause); document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
 let previous = performance.now(); let frame = 0;

@@ -492,3 +492,29 @@
     height: 48px;
   }
 }
+/* Phones: one screen. Instructions live in the guide popup; the in-stage picker replaces the friend list. */
+.intro h1+.guide-open{margin-top:12px}
+@media (max-width: 760px) {
+  .forest-friends, main > footer, .intro .intro-copy, .intro .player-badge, .game-caption { display: none; }
+  .intro > div:first-child { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; }
+  .intro > div:first-child > .chapter { flex-basis: 100%; }
+  .intro h1 + .guide-open { margin-top: 0; }
+  main .intro { margin-bottom: 14px; }
+  main { padding-bottom: 12px; }
+}
+/* Portrait phones: the stage grows into the free height (down to a square-ish view), the rest goes to roomier thumb controls. */
+@media (max-width: 750px) and (orientation: portrait) {
+  #app { display: flex; flex-direction: column; height: 100dvh; }
+  main { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; }
+  .game-shell { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .game-shell .stage { aspect-ratio: auto; flex: 1 1 0; min-height: 240px; max-height: calc((100vw - 46px) / .9); }
+  .game-shell .touch-controls { flex: 0 0 auto; margin: auto 0; align-items: center; padding: 12px 14px; }
+  .game-shell .touch-controls .joystick { width: 128px; height: 128px; }
+  .game-shell .touch-controls .joystick-knob { width: 56px; height: 56px; margin: -28px 0 0 -28px; }
+  .game-shell .touch-controls .touch-jump { height: 76px; min-width: 112px; }
+}
+@media (max-width: 750px) and (orientation: portrait) and (max-height: 760px) {
+  .game-shell .touch-controls .joystick { width: 108px; height: 108px; }
+  .game-shell .touch-controls .joystick-knob { width: 48px; height: 48px; margin: -24px 0 0 -24px; }
+  .game-shell .touch-controls .touch-jump { height: 64px; min-width: 96px; }
+}

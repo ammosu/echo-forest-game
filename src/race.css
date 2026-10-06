@@ -1451,3 +1451,46 @@
     margin-top: 16px;
   }
 }
+/* Phones: one screen. Courses become a one-row picker; crew, record and tips move into the guide popup; the workshop sits in the toolbar. */
+.race-garage-bar{display:none!important}
+.race-main .intro h1+.guide-open{margin-top:10px}
+@media(max-width:760px){
+  .race-main{padding-top:12px;padding-bottom:10px}
+  .race-main>.race-details,.race-main>.race-tips,.race-main>footer{display:none}
+  .race-main .intro{margin-bottom:10px}
+  .race-main .intro>div:first-child{display:flex;flex-wrap:wrap;align-items:center;column-gap:12px}
+  .race-main .intro .chapter{flex-basis:100%;margin-bottom:6px}
+  .race-main .intro h1{font-size:24px}
+  .race-main .intro h1+.guide-open{margin-top:0}
+  .race-main .intro-copy,.race-main .race-intro-badge{display:none}
+  .course-board{grid-template-columns:repeat(3,1fr);margin-bottom:10px}
+  .course-option{flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px 8px;border-bottom:0;border-right:1px solid #698165;text-align:center}
+  .course-option:last-child{border-right:0}
+  .course-option svg{width:26px;height:28px}
+  .course-option strong{font-size:13px;justify-content:center}
+  .course-option small,.course-option span>span,.course-option em{display:none}
+  .race-garage-bar{display:flex!important}
+}
+@media(max-width:760px) and (max-height:760px){
+  .race-main{padding-top:8px}
+  .race-main .intro .chapter{display:none}
+  .race-main .intro{margin-bottom:6px}
+  .course-board{margin-bottom:6px}
+  .course-option{flex-direction:row;padding:7px 4px}
+  .course-option svg{width:20px;height:22px}
+}
+@media(max-width:760px) and (orientation:portrait){
+  .race-stage{aspect-ratio:auto;height:clamp(220px,calc(100dvh - var(--race-chrome,470px)),460px)}
+  .race-main .race-welcome h2{font-size:24px;margin:4px 0 8px}
+  .race-main .race-start-meta{margin:10px 0}
+  .race-main .race-caption{padding:6px 0 0}
+}
+@media(max-width:760px) and (max-height:760px) and (orientation:portrait){
+  .race-main{--race-chrome:394px}
+  .race-main .race-welcome>p:not(.welcome-label),.race-main .race-start-meta{display:none}
+  .race-main .race-welcome h2{font-size:21px;margin:2px 0 10px}
+  .race-main .race-overlay{padding:4%}
+  .race-shell .race-touch{padding-top:8px;padding-bottom:2px}
+  .race-shell .race-touch .joystick{width:96px;height:96px}
+  .race-shell .race-touch .joystick-knob{width:42px;height:42px;margin:-21px 0 0 -21px}
+}

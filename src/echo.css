@@ -79,3 +79,8 @@
 @keyframes echo-hop{0%{translate:0 0}40%{translate:0 -22px}100%{translate:0 0}}
 @media(max-width:540px){.echo-banner{font-size:28px}.echo-banner.big{font-size:32px}}
 @media(prefers-reduced-motion:reduce){.echo-banner{animation:echo-flash 1.25s ease-in forwards}}
+/* Phones: one screen. The how-to-play cards live in the guide popup instead of below the game. */
+.echo-intro .guide-open{margin-top:10px}
+@media(max-width:760px){.echo-guide,.echo-main>footer{display:none}.echo-intro>div:first-child{display:flex;flex-wrap:wrap;align-items:center;column-gap:12px}.echo-intro>div:first-child>.chapter{flex-basis:100%}.echo-intro>div:first-child>p:last-child{display:none}.echo-intro .guide-open{margin-top:0}.echo-intro{margin-bottom:12px}.echo-main{padding-bottom:12px}}
+@media(max-width:760px){.echo-best{white-space:nowrap}.echo-best strong{display:block}}
+@media(max-width:760px) and (max-height:760px){.echo-intro .chapter,.echo-conductor,.echo-instrument{display:none}.echo-main{padding-top:10px}.echo-intro{margin-bottom:8px}.echo-message{min-height:96px}.echo-message h2{font-size:19px;margin:6px 0 4px}.echo-stage{padding-top:8px}.echo-portrait img{max-height:84px}.echo-controls{padding:8px 12px 10px;gap:6px}.echo-main{padding-bottom:6px}}

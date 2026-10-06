@@ -2,6 +2,7 @@ import { courses, course, raceRecordKey } from './racing-courses';
 import "./style.css";
 import "./race.css";
 import { siteHeader } from "./site-nav";
+import { mountGuide, guideButton } from "./game-guide";
 import {
   RacingEngine,
   type RaceEvent,
@@ -42,10 +43,10 @@ try {
 document.getElementById("app")!.innerHTML = `
 ${siteHeader("race")}
 <main class="race-main">
-  <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> ${course.name}・森林盃</p><h1 id="page-title">把晨光，甩在身後。</h1><p class="intro-copy">沿著林間彎道，和夥伴們一起衝向終點。</p></div><div class="race-intro-badge"><span class="checker" aria-hidden="true"></span><div><strong>3 圈 <span>／ 4 位車手</span></strong><small>三座跳台，展翼滑翔森林</small></div></div></section>
+  <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> ${course.name}・森林盃</p><h1 id="page-title">把晨光，甩在身後。</h1>${guideButton()}<p class="intro-copy">沿著林間彎道，和夥伴們一起衝向終點。</p></div><div class="race-intro-badge"><span class="checker" aria-hidden="true"></span><div><strong>3 圈 <span>／ 4 位車手</span></strong><small>三座跳台，展翼滑翔森林</small></div></div></section>
   <nav class="course-board" aria-label="選擇賽道">${courses.map(c => `<a href="?course=${c.id}" class="course-option" ${c.id === course.id ? 'aria-current="page"' : ''}><svg viewBox="-135 -265 510 530" aria-hidden="true"><polygon points="${c.points.map(p => p.join(',')).join(' ')}"/></svg><span><strong>${c.name}<small>${c.style}</small></strong><span>${c.description}</span><em>${c.id === course.id ? '目前賽道' : '選擇這條路線'}</em></span></a>`).join('')}</nav>
   <section class="game-shell race-shell is-locked" id="race-shell" aria-label="森林賽車">
-    <div class="game-toolbar"><div class="trail-name"><span aria-hidden="true">⚑</span> ${course.name} <span class="trail-en">Woodland circuit</span></div><div class="toolbar-actions"><button id="race-look" aria-pressed="false" title="切換畫面風格">✧ <span id="race-look-name">標準</span></button><button id="race-sound" aria-label="開啟音效" aria-pressed="false">♫ <span>音效關</span></button><button id="race-fullscreen" aria-label="全螢幕">⛶ <span>全螢幕</span></button><button id="race-pause" aria-label="暫停比賽" disabled>Ⅱ <span>暫停</span></button><button id="race-restart" aria-label="重新比賽" disabled>↻ <span>重來</span></button></div></div>
+    <div class="game-toolbar"><div class="trail-name"><span aria-hidden="true">⚑</span> ${course.name} <span class="trail-en">Woodland circuit</span></div><div class="toolbar-actions"><button id="race-look" aria-pressed="false" title="切換畫面風格">✧ <span id="race-look-name">標準</span></button><button id="race-sound" aria-label="開啟音效" aria-pressed="false">♫ <span>音效關</span></button><button id="race-fullscreen" aria-label="全螢幕">⛶ <span>全螢幕</span></button><button id="race-pause" aria-label="暫停比賽" disabled>Ⅱ <span>暫停</span></button><button id="race-restart" aria-label="重新比賽" disabled>↻ <span>重來</span></button><button class="race-garage-bar" id="open-kart-bar" aria-label="賽車工坊">⚙ <span>工坊</span></button></div></div>
     <div class="race-stage"><canvas id="race-canvas" tabindex="0" aria-label="森林賽車，方向鍵轉向，空白鍵甩尾，E 使用道具，Escape 暫停"></canvas>
       <div class="race-hud" id="race-hud" hidden><div class="race-position"><span><img src="${flagIcon}" alt="">目前名次</span><strong><b id="race-position">4</b><small> / 4</small></strong></div><div class="race-progress"><span><img src="${lapIcon}" alt="">圈數 <b id="race-lap">1</b><small> / 3</small></span><strong><img src="${timerIcon}" alt=""><span id="race-time">00:00.00</span></strong></div></div>
       <div class="race-speed" id="race-speed-panel" hidden><div><img src="${speedIcon}" alt=""><b id="race-speed">0</b><span>km/h</span><em id="race-boost-status">苔綠號</em></div><div class="drift-meter"><span id="drift-fill"></span></div><small id="drift-hint">按住空白鍵＋轉向甩尾</small></div>
@@ -308,11 +309,13 @@ fullscreen.onclick = async () => {
 window.addEventListener("pagehide", () => race.setPaused(true));
 const garage = el<HTMLDialogElement>("kart-dialog");
 let garagePaused = false;
-el("open-kart").onclick = () => {
+const openGarage = () => {
   garagePaused = race.active && !race.paused;
   if (garagePaused) race.setPaused(true);
   garage.showModal();
 };
+el("open-kart").onclick = openGarage;
+el("open-kart-bar").onclick = openGarage;
 el("close-kart").onclick = () => garage.close();
 garage.addEventListener("close", () => {
   if (garagePaused) race.setPaused(false);
@@ -336,3 +339,16 @@ document.querySelectorAll<HTMLButtonElement>("[data-direction]").forEach((button
     b.setAttribute("aria-pressed", String(b === button));
   });
 }));
+// On phones the crew, record and driving tips live in this swipeable guide instead of below the track.
+mountGuide({
+  id: "race", title: "森林賽車",
+  // Like the other games, the race stays paused after the guide closes; the player resumes when ready.
+  onOpen: () => { if (race.active && !race.paused) race.setPaused(true); },
+  pages: [
+    { icon: portraits["../assets/sprites/1x/angoo.png"], title: "三圈決勝", body: `<p>和 <b>Angoo、Anmi、Anje</b> 一起跑 <b>3 圈</b>，搶第一個衝線。</p><p>上方可以換賽道：${courses.map(c => c.name).join("、")}。</p>` },
+    { icon: "🕹", title: "轉向與油門", body: "<p>手機：左邊<b>搖桿</b>左右推來轉向，推越多轉越急；右邊有<b>煞車</b>。</p><p>鍵盤：<kbd>←</kbd><kbd>→</kbd> 轉向、<kbd>↓</kbd> 煞車。預設<b>自動油門</b>，專心過彎就好。</p>" },
+    { icon: "↝", title: "甩尾蓄力", body: "<p>彎道裡<b>按住甩尾並轉向</b>，計量條亮藍後放開，就能短暫加速。</p><p>鍵盤用 <kbd>Space</kbd>。</p>" },
+    { icon: itemArt, title: "回聲能量", body: "<p>撞開<b>道具箱</b>拿到回聲能量，按<b>道具</b>鈕或 <kbd>E</kbd> 啟動，抓住超車時機。</p>" },
+    { icon: "⚑", title: "跳台與滑翔", body: "<p>衝上跳台會<b>自動展翼</b>：空中 <kbd>↑</kbd> 俯衝、<kbd>↓</kbd> 拉升；手機按住<b>煞車</b>也能拉升。</p><p>起跳時點一下<b>甩尾／特技</b>，落地加速更久。</p>" },
+  ],
+});

@@ -165,6 +165,13 @@ test("mobile: seeds, board placement, touch movement and bomb button", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/defense.html");
+  // The whole page fits one phone screen; tips live in the guide popup.
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(844);
+  await expect(page.locator(".defense-guide")).toBeHidden();
+  await page.locator("[data-guide-open]").click();
+  await expect(page.locator(".guide-sheet")).toBeVisible();
+  await page.locator(".guide-close").click();
+  await expect(page.locator(".guide-sheet")).toBeHidden();
   await page.getByRole("button", { name: "開始守護", exact: true }).click();
   await page.locator('[data-seed="wall"]').click();
   await page.locator("#field").scrollIntoViewIfNeeded();

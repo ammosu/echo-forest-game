@@ -1,0 +1,36 @@
+/* Shared swipeable "how to play" popup. */
+.guide{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center;padding:12px 12px calc(12px + env(safe-area-inset-bottom));font-family:'Outfit','Noto Sans TC',sans-serif}
+.guide[hidden]{display:none!important}
+html.guide-shown{overflow:hidden}.guide{overscroll-behavior:contain}
+.guide-backdrop{position:absolute;inset:0;background:#071d20cc;backdrop-filter:blur(3px);animation:guide-fade .2s ease-out}
+.guide-sheet{position:relative;width:min(460px,100%);min-width:0;max-height:calc(100dvh - 24px);display:flex;flex-direction:column;background:#e4e8c6;color:#274435;border:2px solid #f4d480;border-radius:14px;box-shadow:0 18px 40px #0b221ccc;overflow:hidden;animation:guide-rise .25s ease-out}
+@media(min-width:761px){.guide{align-items:center}}
+.guide-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 14px 10px 20px;border-bottom:1px solid #acb68e}
+.guide-head small{display:block;font-size:11px;color:#5a6d49;letter-spacing:2px}
+.guide-head h2{margin:2px 0 0;font-size:21px;font-weight:800;letter-spacing:.04em}
+.guide-close{flex:0 0 auto;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;border:2px solid #274435;background:#fff6cf;color:#274435;font-size:20px;font-weight:900;cursor:pointer;box-shadow:0 3px 0 #274435;padding:0}
+.guide-close:active{transform:translateY(2px);box-shadow:0 1px 0 #274435}
+.guide button:focus-visible,.guide-track:focus-visible{outline:3px solid #274435;outline-offset:3px}
+.guide-track{display:flex;width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;min-height:0;flex:1}
+.guide-track::-webkit-scrollbar{display:none}
+.guide-page{flex:0 0 100%;scroll-snap-align:start;scroll-snap-stop:always;padding:18px 22px 8px;overflow-y:auto;text-align:center}
+.guide-icon{height:72px;display:grid;place-items:center;font-size:44px;line-height:1;color:#2c5940}
+.guide-icon img{max-height:72px;max-width:96px;object-fit:contain;image-rendering:pixelated}
+.guide-page h3{margin:10px 0 8px;font-size:19px;font-weight:800}
+.guide-body{font-size:14px;line-height:1.75;color:#3c5442;text-align:left}
+.guide-body p{margin:0 0 8px}.guide-body ul{margin:0;padding-left:1.2em}.guide-body li{margin:3px 0}
+.guide .guide-body kbd{font:inherit;font-size:12px;background:#fff6cf;border:1px solid #a2b18a;border-radius:4px;padding:0 5px;color:#274435;box-shadow:none;min-width:0}
+.guide-body b{color:#274435}
+.guide-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px 14px}
+.guide-prev,.guide-next{height:46px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
+.guide-prev{width:46px;border:2px solid #a2b18a;background:transparent;color:#274435;font-size:22px}
+.guide-prev:disabled{opacity:.3;cursor:default}
+.guide-next{min-width:112px;padding:0 18px;border:0;border-bottom:4px solid #173b2a;background:#2c5940;color:#f9edbb}
+.guide-dots{display:flex;gap:7px}.guide-dots i{width:8px;height:8px;border-radius:50%;background:#a2b18a;transition:width .2s,background .2s}.guide-dots i.on{width:22px;border-radius:4px;background:#2c5940}
+/* Toolbar button that reopens the popup. */
+.guide-open{display:inline-flex;align-items:center;gap:5px;border:1px solid #80916c;background:#24453b;color:#f4d480;border-radius:16px;height:30px;padding:0 10px 0 4px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.guide-open>span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#f4d480;color:#24372c;font-size:13px;font-weight:900}
+.guide-open:hover{background:#2f5747}
+@keyframes guide-rise{from{transform:translateY(40px);opacity:0}}
+@keyframes guide-fade{from{opacity:0}}
+@media(prefers-reduced-motion:reduce){.guide-sheet,.guide-backdrop{animation:none}.guide-dots i{transition:none}}

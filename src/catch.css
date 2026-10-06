@@ -84,3 +84,8 @@
 @media(max-width:750px){.catch-milestone{font-size:32px}.catch-milestone.t2{font-size:36px}.catch-milestone.t3{font-size:40px}}
 @media(prefers-reduced-motion:reduce){.catch-milestone{animation:catch-flash-fade 1.05s ease-in forwards}.catch-player[data-tier="3"] .catch-ring{animation:none}}
 .catch-fx i:nth-child(odd){background:var(--c,#fff8d6)}.catch-fx.noise i:nth-child(odd){background:#8d9892}
+/* Phones: one screen. Tips and key hints live in the guide popup instead of below the game. */
+.catch-intro .guide-open{margin-top:10px}
+@media(max-width:760px){.catch-guide,.catch-caption,.catch-main>footer{display:none}.catch-intro>div:first-child{display:flex;flex-wrap:wrap;align-items:center;column-gap:12px}.catch-intro>div:first-child>.chapter{flex-basis:100%}.catch-intro .guide-open{margin-top:0}.catch-main{padding-bottom:12px}.catch-record{white-space:nowrap}}
+@media(max-width:760px){.catch-stage{height:clamp(280px,calc(100svh - 368px),520px)}.catch-shell:is([data-phase=ready],[data-phase=complete]) .catch-stage{min-height:clamp(280px,calc(100svh - 368px),520px)}.catch-shell:is([data-phase=ready],[data-phase=complete]) .catch-overlay{min-height:inherit}}
+@media(max-width:760px) and (max-height:760px){.catch-intro .chapter{display:none}.catch-main{padding-top:8px;padding-bottom:6px}.catch-intro{margin-bottom:8px}.catch-hud{padding:5px 14px}.catch-toolbar{padding:5px 14px}.catch-panel{padding:14px 16px}.catch-panel>p:not(.chapter):not(.catch-legend),.catch-panel>small{display:none}.catch-panel h2{margin:4px 0 8px}.catch-picks{margin:8px 0 12px}.catch-touch{padding-top:6px;padding-bottom:6px}}

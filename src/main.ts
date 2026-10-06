@@ -3,6 +3,7 @@ import './adventure.css';
 import { siteHeader } from './site-nav';
 import { ForestGame, hostOf, playableIds, type GameEvent, type Look } from './game';
 import { mountJoystick } from './joystick';
+import { mountGuide, guideButton } from './game-guide';
 import characters from '../assets/characters.json';
 import restBadge from '../assets/ui/adv-rest.png';
 import winBadge from '../assets/ui/adv-win.png';
@@ -19,7 +20,7 @@ let hero = byId(new URLSearchParams(location.search).get('hero') ?? (() => { try
 app.innerHTML = `
   ${siteHeader("adventure")}
   <main>
-    <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> 第一章・晨光小徑</p><h1 id="page-title">森林裡，出發。</h1><p class="intro-copy">跟著 <span class="hero-name">Anbo</span> 的腳步，找回散落在林間的旋律。</p></div><div class="player-badge"><img id="badge-img" src="${front('anbo')}" alt=""/><div><small>今天的冒險夥伴</small><strong><span class="hero-name">Anbo</span> <span id="badge-species">柴犬</span></strong></div></div></section>
+    <section class="intro" aria-labelledby="page-title"><div><p class="chapter"><span></span> 第一章・晨光小徑</p><h1 id="page-title">森林裡，出發。</h1>${guideButton()}<p class="intro-copy">跟著 <span class="hero-name">Anbo</span> 的腳步，找回散落在林間的旋律。</p></div><div class="player-badge"><img id="badge-img" src="${front('anbo')}" alt=""/><div><small>今天的冒險夥伴</small><strong><span class="hero-name">Anbo</span> <span id="badge-species">柴犬</span></strong></div></div></section>
     <section class="game-shell is-locked" aria-label="森林音符冒險">
       <div class="game-toolbar"><div class="trail-name"><span aria-hidden="true">✦</span> 晨光小徑 <span class="trail-en">Morning trail</span></div><div class="toolbar-actions"><button id="look" aria-pressed="false" title="切換畫面風格">✧ <span id="look-name">標準</span></button><button id="sound" aria-label="開啟音效" aria-pressed="false">♫ <span>音效關</span></button><button id="pause" aria-label="暫停遊戲" disabled>Ⅱ <span>暫停</span></button><button id="restart" aria-label="重新開始遊戲" disabled>↻ <span>重來</span></button></div></div>
       <div class="stage" id="stage">
@@ -131,6 +132,12 @@ document.querySelectorAll<HTMLButtonElement>('[data-control]').forEach(button =>
   button.onpointerup = release; button.onpointercancel = release; button.onlostpointercapture = release;
 });
 mountJoystick(el('adventure-stick'), x => game.setStick(x), '移動搖桿');
+mountGuide({ id: 'adventure', title: '森林冒險', onOpen: () => { game.releaseControls(); if (game.running && !game.paused) game.setPaused(true); }, pages: [
+  { icon: side('anbo', 'run_a'), title: '移動與跳躍', body: '<p><b>手機</b>：左手推搖桿左右移動，推越遠跑越快；右手按「跳躍」，<b>按住跳得更高</b>。</p><p><b>電腦</b>：<kbd>←</kbd><kbd>→</kbd> 或 <kbd>A</kbd><kbd>D</kbd> 移動，<kbd>Space</kbd> 跳躍，<kbd>Esc</kbd> 暫停，<kbd>R</kbd> 重來。</p>' },
+  { icon: '♪', title: '收集音符，找到終點', body: '<p>沿路收集散落的<b>音符</b>，一路往右走到森林另一端，找到等你的朋友就完成冒險。</p><p>經過<b>中途營地</b>的旗子會點亮，之後跌倒就從營地再出發。</p>' },
+  { icon: '♥', title: '小心危險', body: '<p>你有 <b>3 顆愛心</b>。碰到<b>刺叢</b>或巡邏的小怪會少一顆心，掉進空隙也是。</p><p>從上方<b>踩住小怪</b>就能打倒它；踩上<b>紅蘑菇</b>會被彈得很高。</p>' },
+  { icon: '✦', title: '變大橡實與細樹枝', body: '<p>吃到<b>橡實</b>會變大：被碰到時只會變回原樣，不會少一顆心。</p><p><b>細樹枝</b>只從上面才踩得住，可以從下方直接跳上去。</p>' },
+] });
 window.addEventListener('blur', () => { game.releaseControls(); if (game.running) game.setPaused(true); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { game.releaseControls(); if (game.running) game.setPaused(true); } });
 window.addEventListener('keydown', e => {
