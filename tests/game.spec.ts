@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-type Snapshot = { ready:boolean; running:boolean; paused:boolean; x:number; y:number; vx:number; vy:number; grounded:boolean; seconds:number; notes:number; lives:number; checkpoint:boolean; enemies:{x:number;active:boolean}[]; movingX:number };
+type Snapshot = { ready:boolean; running:boolean; paused:boolean; x:number; y:number; vx:number; vy:number; grounded:boolean; seconds:number; notes:number; lives:number; big:boolean; scale:number; thornSpans:number[][]; checkpoint:boolean; enemies:{x:number;active:boolean}[]; movingX:number };
 const snapshot = (page:Page):Promise<Snapshot> => page.evaluate(() => (window as any).__forest.snapshot());
 async function start(page:Page) { await page.goto('/'); await page.getByRole('button',{name:'開始冒險'}).click(); await expect.poll(async()=> (await snapshot(page)).grounded).toBe(true); }
 async function walkUntil(page:Page, target:number, jumpStumps=true) {
@@ -32,6 +32,23 @@ test('loads all assets, collects notes, supports jump height, pause and reset',a
   await page.waitForTimeout(1150);await expect(page.locator('#timer')).toHaveText('00:01');
   expect(errors).toEqual([]);
 });
+test('jumps pass up through thin branches and land on top of them',async({page})=>{
+  await start(page);await walkUntil(page,540);
+  await expect.poll(async()=> (await snapshot(page)).grounded).toBe(true);expect((await snapshot(page)).y).toBe(304);
+  // The branch spans x 480..635 at y 244; a full jump from below must not bonk on its underside.
+  let minY=999;await page.keyboard.down('Space');
+  for(let i=0;i<20;i++){minY=Math.min(minY,(await snapshot(page)).y);await page.waitForTimeout(30);}
+  await page.keyboard.up('Space');expect(minY).toBeLessThan(240);
+  await expect.poll(async()=>{const s=await snapshot(page);return s.grounded&&Math.round(s.y);}).toBe(244);
+});
+test('grow acorn makes the hero big; falling still costs a life and resets size',async({page})=>{
+  await start(page);await walkUntil(page,380);
+  await expect.poll(async()=> (await snapshot(page)).scale).toBe(1.5);
+  const s=await snapshot(page);expect(s.big).toBe(true);expect(s.lives).toBe(3);
+  await walkUntil(page,735);
+  await expect.poll(async()=> (await snapshot(page)).lives).toBe(2);
+  const after=await snapshot(page);expect(after.big).toBe(false);expect(after.scale).toBe(1);
+});
 test('three falls lead to retry, then reset restores the whole level',async({page})=>{
   await start(page);
   for(let lives=2;lives>=0;lives--){
@@ -51,7 +68,7 @@ test('complete the actual level using keyboard input and save the result',async(
     const landingHazard = !s.grounded && s.vy > 0 && s.y > 230 && s.enemies.some(e => e.active && e.x - s.x > 0 && e.x - s.x < 85);
     await page.keyboard[landingHazard ? 'up' : 'down']('ArrowRight');
     if(held&&Date.now()>=releaseAt){await page.keyboard.up('Space');held=false;}
-    const jump=[250,950,1810,2530].some(x=>x-s.x>0&&x-s.x<58)||[700,1510,2310].some(x=>x-s.x>0&&x-s.x<31)||s.enemies.some(e=>e.active&&e.x-s.x>0&&e.x-s.x<58);
+    const jump=[250,950,1810,2530].some(x=>x-s.x>0&&x-s.x<58)||[700,1500,2290].some(x=>x-s.x>2&&x-s.x<22)||s.thornSpans.some(([x])=>x-s.x>0&&x-s.x<40)||s.enemies.some(e=>e.active&&e.x-s.x>0&&e.x-s.x<58);
     if(s.grounded&&!held&&jump){await page.keyboard.down('Space');held=true;releaseAt=Date.now()+850;}
     await page.waitForTimeout(35);
   }
