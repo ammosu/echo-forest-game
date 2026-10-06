@@ -1415,3 +1415,39 @@
   .race-touch button { height: 46px; min-width: 0; padding: 0 4px; }
   .race-touch .drift-touch { padding: 0 4px; font-size: 11px; }
 }
+.race-garage {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #47634a;
+  background: #1d3a30;
+  color: inherit;
+  padding: 10px 16px 10px 10px;
+  text-align: left;
+  align-self: center;
+}
+.race-garage:hover {
+  border-color: var(--gold);
+}
+.race-garage .kart-thumb {
+  width: 54px;
+  flex-shrink: 0;
+}
+.race-garage strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffe1a0;
+}
+.race-garage small {
+  display: block;
+  font-size: 9px;
+  color: #9fb492;
+  margin-top: 5px;
+}
+@media (max-width: 650px) {
+  .race-garage {
+    width: 100%;
+    margin-top: 16px;
+  }
+}

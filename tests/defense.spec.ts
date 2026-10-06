@@ -139,6 +139,27 @@ test("desktop: navigation, keyboard planting and bombing, pause and restart", as
   expect(await page.evaluate(() => (window as any).__defense.wave)).toBe(0);
   expect(errors).toEqual([]);
 });
+test("desktop: fast-forward runs the battle at double speed and is remembered", async ({
+  page,
+}) => {
+  await page.goto("/defense.html");
+  await page.getByRole("button", { name: "開始守護", exact: true }).click();
+  const rate = async () => {
+    const a = await page.evaluate(() => (window as any).__defense.elapsed);
+    await page.waitForTimeout(1000);
+    return (await page.evaluate(() => (window as any).__defense.elapsed)) - a;
+  };
+  const normal = await rate();
+  await page.keyboard.press("KeyF");
+  await expect(page.locator("#speed")).toHaveAttribute("aria-pressed", "true");
+  const fast = await rate();
+  expect(fast / normal).toBeGreaterThan(1.6);
+  await page.reload();
+  await expect(page.locator("#speed-name")).toHaveText("×2");
+  await page.locator("#speed").click();
+  await expect(page.locator("#speed-name")).toHaveText("×1");
+});
+
 test("mobile: seeds, board placement, touch movement and bomb button", async ({
   page,
 }) => {

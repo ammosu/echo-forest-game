@@ -15,6 +15,27 @@ async function start(page: Page) {
     .toBe("racing");
 }
 
+test("kart workshop lives on the race page and pauses then resumes the race", async ({
+  page,
+}) => {
+  await start(page);
+  await page.getByRole("button", { name: /賽車工坊/ }).click();
+  await expect(page.locator("#kart-dialog")).toBeVisible();
+  expect((await state(page)).paused).toBe(true);
+  for (const view of ["正面", "右前", "右側", "右後", "背面", "左後", "左側", "左前"]) {
+    await page.getByRole("button", { name: view, exact: true }).click();
+    await expect(page.locator("#direction-label")).toHaveText(view);
+    await expect(page.getByRole("button", { name: view, exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#kart-large")).toHaveAttribute("aria-label", `Anbo 賽車${view}`);
+  }
+  const imageUrl = await page.locator(".workshop-note a[download]").getAttribute("href");
+  expect((await page.request.get(imageUrl!)).ok()).toBe(true);
+  await page.screenshot({ path: "tests/evidence/kart-eight-directions.png", fullPage: true });
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#kart-dialog")).not.toBeVisible();
+  await expect.poll(async () => (await state(page)).paused).toBe(false);
+});
+
 test("race entry links, countdown, assets and pause/resume are usable", async ({
   page,
 }) => {

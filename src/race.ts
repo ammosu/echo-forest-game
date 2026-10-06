@@ -20,6 +20,9 @@ const portraits = import.meta.glob("../assets/sprites/1x/*.png", {
   query: "?url",
   import: "default",
 }) as Record<string, string>;
+const kartSheet = new URL("../assets/generated/anbo-kart-eight-directions.png", import.meta.url).href;
+const directions = ["正面", "右前", "右側", "右後", "背面", "左後", "左側", "左前"];
+const kartFrame = (i: number) => `${(i % 4) * 100 / 3}% ${Math.floor(i / 4) * 100}%`;
 const el = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
 const time = (seconds: number) =>
@@ -52,10 +55,11 @@ document.getElementById("app")!.innerHTML = `
     <div class="race-touch" aria-label="賽車觸控操作"><div class="touch-stick" id="race-stick"></div><div><button data-race-control="gas" id="touch-gas" aria-label="油門" hidden>油門</button><button data-race-control="brake" id="touch-brake" aria-label="煞車">煞車</button><button data-race-control="drift" class="drift-touch" aria-label="甩尾" title="地面按住甩尾；起跳時點一下做特技">甩尾／特技</button><button data-race-control="item" class="item-touch" aria-label="觸控使用道具"><img src="${itemArt}" alt="">道具</button></div></div>
     <div class="race-caption"><div><kbd>←</kbd><kbd>→</kbd> 轉向 <kbd>Space</kbd> 甩尾 <kbd>E</kbd> 道具 <kbd>↓</kbd> 煞車</div><label><input id="auto-gas" type="checkbox" checked> 自動油門 <span>專心過彎就好</span></label></div>
   </section>
-  <section class="race-details"><div class="race-racers"><div class="friends-heading"><h2>一起上場的夥伴</h2><p id="race-standings-label">你駕駛 Anbo 的苔綠號</p></div><div class="race-entry-list">${entries.map((entry, i) => `<div class="race-entry ${i === 0 ? "you" : ""}" data-racer="${entry.name}"><span class="entry-rank">${i === 0 ? "你" : i + 1}</span><img src="${portraits[`../assets/sprites/1x/${entry.characterId}.png`]}" alt="${entry.name}"><div><strong>${entry.name}</strong><small>${vehicles[entry.vehicleId].name}</small></div><span class="vehicle-dot" style="--vehicle:${vehicles[entry.vehicleId].color}"></span></div>`).join("")}</div></div><div class="race-record"><span>本機最快紀錄</span><strong id="best-time">${saved}</strong><small>三圈總時間</small></div></section>
+  <section class="race-details"><div class="race-racers"><div class="friends-heading"><h2>一起上場的夥伴</h2><p id="race-standings-label">你駕駛 Anbo 的苔綠號</p></div><div class="race-entry-list">${entries.map((entry, i) => `<div class="race-entry ${i === 0 ? "you" : ""}" data-racer="${entry.name}"><span class="entry-rank">${i === 0 ? "你" : i + 1}</span><img src="${portraits[`../assets/sprites/1x/${entry.characterId}.png`]}" alt="${entry.name}"><div><strong>${entry.name}</strong><small>${vehicles[entry.vehicleId].name}</small></div><span class="vehicle-dot" style="--vehicle:${vehicles[entry.vehicleId].color}"></span></div>`).join("")}</div></div><div class="race-record"><span>本機最快紀錄</span><strong id="best-time">${saved}</strong><small>三圈總時間</small></div><button class="race-garage" id="open-kart"><span class="kart-thumb" style="background-image:url('${kartSheet}');background-position:${kartFrame(1)}" aria-hidden="true"></span><span><strong>賽車工坊 <span aria-hidden="true">↗</span></strong><small>八個角度看看苔綠號</small></span></button></section>
   <section class="race-tips" aria-label="駕駛技巧"><p><span>↝</span><strong>彎道裡蓄力</strong>按住甩尾並轉向，亮藍後放開，短暫加速。</p><p><span>✦</span><strong>抓住超車時機</strong>吃到道具箱後，按 E 啟動回聲能量。</p><p><span>⚑</span><strong>選擇飛躍路線</strong>跳台自動展翼；↑ 俯衝、↓ 拉升。起跳按甩尾做特技，落地加速更久。</p></section>
   <footer><span>小小像素，大大冒險。</span><span>Echo Forest <span aria-hidden="true">✦</span> 數讀房市</span></footer>
-</main>`;
+</main>
+<dialog id="kart-dialog" aria-labelledby="kart-title"><div class="workshop-top"><span>Echo Forest Garage</span><button id="close-kart" aria-label="關閉賽車工坊">✕</button></div><div class="workshop-body"><p class="chapter">賽車工坊</p><h2 id="kart-title">Anbo 的苔綠號</h2><p>森林綠車身、黃銅細節，還有熟悉的橘色耳朵。<br>點選角度，看看小車的模樣。</p><div class="kart-turntable"><div class="kart-large" id="kart-large" role="img" aria-label="Anbo 賽車正面" style="background-image:url('${kartSheet}')"></div><span id="direction-label">正面</span></div><div class="direction-list">${directions.map((name, i) => `<button class="direction ${i === 0 ? "active" : ""}" data-direction="${i}" aria-pressed="${i === 0}"><span class="kart-thumb" style="background-image:url('${kartSheet}');background-position:${kartFrame(i)}"></span>${name}</button>`).join("")}</div><div class="workshop-note"><span>八方向美術樣張</span><p>看完了？回到賽道，帶著 Anbo 衝線吧。</p><a href="${kartSheet}" download="anbo-kart-eight-directions.png">下載完整樣張 ↓</a></div></div></dialog>`;
 const start = el<HTMLButtonElement>("race-start"),
   pause = el<HTMLButtonElement>("race-pause"),
   restart = el<HTMLButtonElement>("race-restart");
@@ -301,3 +305,33 @@ fullscreen.onclick = async () => {
   }
 };
 window.addEventListener("pagehide", () => race.setPaused(true));
+const garage = el<HTMLDialogElement>("kart-dialog");
+let garagePaused = false;
+el("open-kart").onclick = () => {
+  garagePaused = race.active && !race.paused;
+  if (garagePaused) race.setPaused(true);
+  garage.showModal();
+};
+el("close-kart").onclick = () => garage.close();
+garage.addEventListener("close", () => {
+  if (garagePaused) race.setPaused(false);
+  garagePaused = false;
+});
+garage.addEventListener("click", (e) => {
+  if (e.target !== garage) return;
+  const b = garage.getBoundingClientRect();
+  if (e.clientX < b.left || e.clientX > b.right || e.clientY < b.top || e.clientY > b.bottom) garage.close();
+});
+// Keep race keys (Escape pause toggle, steering) away from the engine while the garage is open.
+for (const type of ["keydown", "keyup"] as const)
+  window.addEventListener(type, (e) => { if (garage.open) e.stopImmediatePropagation(); }, true);
+document.querySelectorAll<HTMLButtonElement>("[data-direction]").forEach((button) => (button.onclick = () => {
+  const index = Number(button.dataset.direction);
+  el("kart-large").style.backgroundPosition = kartFrame(index);
+  el("kart-large").setAttribute("aria-label", `Anbo 賽車${directions[index]}`);
+  el("direction-label").textContent = directions[index];
+  document.querySelectorAll("[data-direction]").forEach((b) => {
+    b.classList.toggle("active", b === button);
+    b.setAttribute("aria-pressed", String(b === button));
+  });
+}));

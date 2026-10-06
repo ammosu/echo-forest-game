@@ -15,12 +15,10 @@ const side = (id: string, kind: 'run_a' | 'run_b' | 'stand') => sideAssets[`../a
 const cast = characters.characters.filter(c => playableIds.includes(c.id));
 const byId = (id: string) => cast.find(c => c.id === id) ?? cast.find(c => c.id === 'anbo')!;
 let hero = byId(new URLSearchParams(location.search).get('hero') ?? (() => { try { return localStorage.getItem('echo-adventure-hero') ?? 'anbo'; } catch { return 'anbo'; } })());
-const kartSheet = new URL('../assets/generated/anbo-kart-eight-directions.png', import.meta.url).href;
-const directions = ['正面', '右前', '右側', '右後', '背面', '左後', '左側', '左前'];
 app.innerHTML = `
   <header class="site-header">
     <a class="brand" href="./forest.html" aria-label="Echo Forest 森林地圖"><span class="brand-tree" aria-hidden="true"></span><span>echo forest<small>回聲森林遊樂場</small></span></a>
-    <nav aria-label="遊戲選單"><a class="nav-button" href="./forest.html">森林地圖</a><span class="nav-current">森林冒險</span><a class="nav-button" href="./race.html">森林賽車</a><button class="nav-button" id="open-kart">賽車工坊 <span aria-hidden="true">↗</span></button><a class="nav-button" href="./defense.html">爆破保衛戰</a><a class="nav-button" href="./echo.html">森林回音</a><a class="nav-button" href="./catch.html">音符接接樂</a></nav>
+    <nav aria-label="遊戲選單"><a class="nav-button" href="./forest.html">森林地圖</a><span class="nav-current">森林冒險</span><a class="nav-button" href="./race.html">森林賽車</a><a class="nav-button" href="./defense.html">爆破保衛戰</a><a class="nav-button" href="./echo.html">森林回音</a><a class="nav-button" href="./catch.html">音符接接樂</a></nav>
     <span class="edition">一段小小的森林旅程</span>
   </header>
   <main>
@@ -42,7 +40,6 @@ app.innerHTML = `
     <section class="forest-friends" aria-label="森林夥伴"><div class="friends-heading"><h2>森林裡的朋友們</h2><p>點選朋友，就能換他帶路。</p></div><div class="friend-list">${cast.map(c => `<button class="friend" data-hero="${c.id}" aria-pressed="false"><img src="${front(c.id)}" alt="${c.species} ${c.name}"/><span>${c.name}</span><small>本次主角</small></button>`).join('')}</div></section>
     <footer><span>小小像素，大大冒險。</span><span>Echo Forest <span aria-hidden="true">✦</span> 數讀房市</span></footer>
   </main>
-  <dialog id="kart-dialog" aria-labelledby="kart-title"><div class="workshop-top"><span>Echo Forest Garage</span><button id="close-kart" aria-label="關閉賽車工坊">✕</button></div><div class="workshop-body"><p class="chapter">下一段旅程</p><h2 id="kart-title">Anbo 的森林小車</h2><p>森林綠車身、黃銅細節，還有熟悉的橘色耳朵。<br>點選角度，看看第一台小車的模樣。</p><div class="kart-turntable"><div class="kart-large" id="kart-large" role="img" aria-label="Anbo 賽車正面"></div><span id="direction-label">正面</span></div><div class="direction-list">${directions.map((name, i) => `<button class="direction ${i === 0 ? 'active' : ''}" data-direction="${i}" aria-pressed="${i === 0}"><span class="kart-thumb" style="background-image:url('${kartSheet}');background-position:${(i % 4) * 100 / 3}% ${Math.floor(i / 4) * 100}%"></span>${name}</button>`).join('')}</div><div class="workshop-note"><span>八方向美術樣張</span><p>三圈晨光盃已開賽，帶著 Anbo 上賽道吧。</p><a href="./race.html" class="race-workshop-link">前往森林賽車 →</a><br><br><a href="${kartSheet}" download="anbo-kart-eight-directions.png">下載完整樣張 ↓</a></div></div></dialog>
 `;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const start = el<HTMLButtonElement>('start');
@@ -50,9 +47,7 @@ const overlay = el('overlay');
 const result = el('result');
 const pauseButton = el<HTMLButtonElement>('pause');
 const restartButton = el<HTMLButtonElement>('restart');
-const dialog = el<HTMLDialogElement>('kart-dialog');
 let toastTimer: ReturnType<typeof setTimeout>;
-let modalPaused = false;
 const formatTime = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`;
 function showToast(message: string) { el('toast').textContent = message; el('toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el('toast').classList.remove('visible'), 2600); }
 function focusGame() { el('game').focus({ preventScroll: true }); }
@@ -80,8 +75,8 @@ function handleEvent(event: GameEvent) {
     el('hud').hidden = true;
     shell.classList.add('is-locked');
     const won = event.won;
-    result.innerHTML = `${won ? `<img class="result-badge" src="${winBadge}" alt="">` : `<img class="result-mascot" src="${front(hero.id)}" alt="${hero.name}"/>`}<p class="chapter">${won ? '晨光小徑・完成' : '冒險還沒結束'}</p><h2>${won ? '森林聽見你了！' : '再試一次吧。'}</h2><p>${won ? `你和 ${hero.name} 把旋律帶回了森林，${hostName()} 為你們歡呼！` : '慢慢來，留意腳下的空隙與小刺球。'}</p><div class="result-stats"><span>收集音符<strong>${event.notes} / ${event.total}</strong></span><span>冒險時間<strong>${formatTime(event.seconds)}</strong></span></div>${won && event.best ? `<p class="best">本機最佳：${event.best.notes} 音符 · ${formatTime(event.best.seconds)}</p>` : ''}<button class="primary" id="play-again">${won ? '再冒險一次' : '重新出發'} →</button><button class="text-button" id="change-hero">換個夥伴冒險</button><button class="text-button" id="result-kart">去看看 Anbo 的小車 ↗</button>`;
-    result.hidden = false; overlay.hidden = false; el('play-again').onclick = begin; el('result-kart').onclick = openKart; el('change-hero').onclick = showPicker; el('play-again').focus({ preventScroll: true });
+    result.innerHTML = `${won ? `<img class="result-badge" src="${winBadge}" alt="">` : `<img class="result-mascot" src="${front(hero.id)}" alt="${hero.name}"/>`}<p class="chapter">${won ? '晨光小徑・完成' : '冒險還沒結束'}</p><h2>${won ? '森林聽見你了！' : '再試一次吧。'}</h2><p>${won ? `你和 ${hero.name} 把旋律帶回了森林，${hostName()} 為你們歡呼！` : '慢慢來，留意腳下的空隙與小刺球。'}</p><div class="result-stats"><span>收集音符<strong>${event.notes} / ${event.total}</strong></span><span>冒險時間<strong>${formatTime(event.seconds)}</strong></span></div>${won && event.best ? `<p class="best">本機最佳：${event.best.notes} 音符 · ${formatTime(event.best.seconds)}</p>` : ''}<button class="primary" id="play-again">${won ? '再冒險一次' : '重新出發'} →</button><button class="text-button" id="change-hero">換個夥伴冒險</button><a class="text-button" href="./race.html">去森林賽車看看 Anbo 的小車 ↗</a>`;
+    result.hidden = false; overlay.hidden = false; el('play-again').onclick = begin; el('change-hero').onclick = showPicker; el('play-again').focus({ preventScroll: true });
   }
 }
 const game = new ForestGame(el('game'), handleEvent);
@@ -132,18 +127,6 @@ start.onclick = begin;
 pauseButton.onclick = () => { game.setPaused(!game.paused); if (!game.paused) focusGame(); };
 restartButton.onclick = begin;
 el('sound').onclick = () => { const on = game.toggleSound(); el('sound').innerHTML = `♫ <span>音效${on ? '開' : '關'}</span>`; el('sound').setAttribute('aria-pressed', String(on)); el('sound').setAttribute('aria-label', on ? '關閉音效' : '開啟音效'); };
-function openKart() { modalPaused = game.running && !game.paused; if (modalPaused) game.setPaused(true); game.releaseControls(); dialog.showModal(); }
-el('open-kart').onclick = openKart;
-el('close-kart').onclick = () => dialog.close();
-dialog.addEventListener('close', () => { if (modalPaused) { game.setPaused(false); focusGame(); } modalPaused = false; });
-dialog.addEventListener('click', e => { if (e.target === dialog) { const b = dialog.getBoundingClientRect(); if (e.clientX < b.left || e.clientX > b.right || e.clientY < b.top || e.clientY > b.bottom) dialog.close(); } });
-el('kart-large').style.backgroundImage = `url('${kartSheet}')`;
-document.querySelectorAll<HTMLButtonElement>('[data-direction]').forEach(button => button.onclick = () => {
-  const index = Number(button.dataset.direction);
-  el('kart-large').style.backgroundPosition = `${(index % 4) * 100 / 3}% ${Math.floor(index / 4) * 100}%`;
-  el('kart-large').setAttribute('aria-label', `Anbo 賽車${directions[index]}`); el('direction-label').textContent = directions[index];
-  document.querySelectorAll('[data-direction]').forEach(b => { b.classList.toggle('active', b === button); b.setAttribute('aria-pressed', String(b === button)); });
-});
 document.querySelectorAll<HTMLButtonElement>('[data-control]').forEach(button => {
   const control = button.dataset.control as 'left' | 'right' | 'jump';
   button.onpointerdown = e => { e.preventDefault(); button.setPointerCapture(e.pointerId); game.setControl(control, true); button.classList.add('held'); };
@@ -154,7 +137,6 @@ mountJoystick(el('adventure-stick'), x => game.setStick(x), '移動搖桿');
 window.addEventListener('blur', () => { game.releaseControls(); if (game.running) game.setPaused(true); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { game.releaseControls(); if (game.running) game.setPaused(true); } });
 window.addEventListener('keydown', e => {
-  if (dialog.open) return;
   if (e.key === 'Escape' && game.running) { e.preventDefault(); game.setPaused(!game.paused); if (!game.paused) focusGame(); }
   if (e.code === 'KeyR' && game.running && !e.repeat) begin();
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyA', 'KeyD', 'KeyW'].includes(e.code) && game.running && !game.paused && document.activeElement?.tagName !== 'BUTTON') e.preventDefault();

@@ -96,14 +96,6 @@ test('character select swaps the hero sprite, host and labels, and is remembered
   await page.getByRole('button',{name:'開始冒險'}).click();await expect.poll(async()=> (await snapshot(page)).grounded).toBe(true);
   expect(await page.evaluate(()=>(window as any).__forest.hero())).toEqual({player:'owl_stand',host:'anboHost'});
 });
-test('eight kart views are selectable and workshop pauses then resumes play',async({page})=>{
-  await start(page);await page.getByRole('button',{name:'賽車工坊'}).click();expect((await snapshot(page)).paused).toBe(true);
-  const views=['正面','右前','右側','右後','背面','左後','左側','左前'];
-  for(const view of views){await page.getByRole('button',{name:view,exact:true}).click();await expect(page.locator('#direction-label')).toHaveText(view);await expect(page.getByRole('button',{name:view,exact:true})).toHaveAttribute('aria-pressed','true');await expect(page.locator('#kart-large')).toHaveAttribute('aria-label',`Anbo 賽車${view}`);}
-  const imageUrl=await page.locator('.workshop-note a[download]').getAttribute('href');expect((await page.request.get(imageUrl!)).ok()).toBe(true);
-  await page.screenshot({path:'tests/evidence/kart-eight-directions.png',fullPage:true});
-  await page.keyboard.press('Escape');await expect(page.locator('#kart-dialog')).not.toBeVisible();await expect.poll(async()=> (await snapshot(page)).paused).toBe(false);
-});
 test('mobile touch controls move, jump and release without layout overflow',async({browser,baseURL})=>{
   const context=await browser.newContext({baseURL,viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2});const page=await context.newPage();await page.goto('/');
   await page.getByRole('button',{name:'開始冒險'}).click();await expect(page.getByRole('slider',{name:'移動搖桿'})).toBeVisible();
@@ -124,6 +116,6 @@ test('mobile touch controls move, jump and release without layout overflow',asyn
   await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});await page.waitForTimeout(400);expect(Math.abs((await snapshot(page)).vx)).toBeLessThan(2);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:'tests/evidence/mobile-playing.png',fullPage:true});
-  await page.getByRole('button',{name:'賽車工坊'}).click();await expect(page.getByRole('button',{name:'左前',exact:true})).toBeVisible();await page.getByRole('button',{name:'關閉賽車工坊'}).click();
+  await expect(page.getByRole('button',{name:'賽車工坊'})).toHaveCount(0);
   await context.close();
 });

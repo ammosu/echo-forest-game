@@ -1247,7 +1247,8 @@ img.seed-art {
 .defense-toolbar button {
   white-space: nowrap;
 }
-#look[aria-pressed="true"] {
+#look[aria-pressed="true"],
+#speed[aria-pressed="true"] {
   border-color: #c9b06a;
   color: #f4e3a8;
   background: #3d5a3c;
