@@ -133,6 +133,7 @@ test('all existing games link to the new game without mobile page overflow', asy
   for (const path of ['/', '/race.html', '/defense.html', '/echo.html']) {
     await page.goto(path);
     const link = page.getByRole('link', { name: '音符接接樂', exact: true });
+    await page.locator('.topbar-menu').click();
     await expect(link).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
     await link.click(); await expect(page.locator('#start')).toBeVisible();

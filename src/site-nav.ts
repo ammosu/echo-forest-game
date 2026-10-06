@@ -19,22 +19,37 @@ const item = (current: NavPage, id: NavPage, href: string, inner: string, cls: s
     : `<a class="${cls}" href="${href}">${inner}</a>`;
 
 export function siteHeader(current: NavPage) {
-  // Keep the active game visible in the phone's sideways strip once the markup is in the page.
-  queueMicrotask(() => {
-    const strip = document.querySelector<HTMLElement>('.topbar-games');
-    const active = strip?.querySelector<HTMLElement>('.is-current');
-    if (strip && active && strip.scrollWidth > strip.clientWidth) strip.scrollLeft = active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2;
-  });
+  const game = games.find(g => g.id === current);
+  // Phones fold the page links into a dropdown; the button names the page you are on.
+  const menuLabel = game
+    ? `<img src="${sprites[`../assets/sprites/1x/${game.hero}.png`]}" alt="">${game.label}`
+    : `<span class="topbar-map-icon" aria-hidden="true">⌂</span>${tr('森林地圖', 'Forest map')}`;
   return `<header class="topbar"><div class="topbar-inner">
 <a class="topbar-brand" href="./" aria-label="${tr('Echo Forest 回到森林地圖', 'Echo Forest, back to the forest map')}"><span class="topbar-tree" aria-hidden="true"></span><span>echo forest<small>${tr('回聲森林遊樂場', 'forest playground')}</small></span></a>
-<nav class="topbar-nav" aria-label="${tr('遊戲選單', 'Games')}">
+<button class="topbar-menu" type="button" aria-expanded="false" aria-controls="topbar-nav" aria-label="${tr('切換頁面', 'Switch page')}">${menuLabel}<span class="topbar-caret" aria-hidden="true">▾</span></button>
+<nav class="topbar-nav" id="topbar-nav" aria-label="${tr('遊戲選單', 'Games')}">
 ${item(current, 'map', './', `<span class="topbar-map-icon" aria-hidden="true">⌂</span>${tr('森林地圖', 'Forest map')}`, 'topbar-map')}
 <div class="topbar-games">${games.map(g => item(current, g.id, g.href, `<img src="${sprites[`../assets/sprites/1x/${g.hero}.png`]}" alt="">${g.label}`, 'topbar-game')).join('')}</div>
+</nav>
 <button class="topbar-lang" type="button" lang="${tr('en', 'zh-Hant')}" aria-label="${tr('Switch to English', '切換成中文')}">${tr('EN', '中文')}</button>
-</nav></div></header>`;
+</div></header>`;
 }
 
 // Delegated so pages can render the header however they like.
+const setMenu = (open: boolean) => {
+  const bar = document.querySelector('.topbar');
+  bar?.classList.toggle('menu-open', open);
+  bar?.querySelector('.topbar-menu')?.setAttribute('aria-expanded', String(open));
+};
 document.addEventListener('click', e => {
-  if ((e.target as Element).closest?.('.topbar-lang')) setLang(isEn ? 'zh' : 'en');
+  const target = e.target as Element;
+  if (target.closest?.('.topbar-lang')) setLang(isEn ? 'zh' : 'en');
+  if (target.closest?.('.topbar-menu')) setMenu(!document.querySelector('.topbar.menu-open'));
+  else if (!target.closest?.('.topbar-nav')) setMenu(false);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.querySelector('.topbar.menu-open')) {
+    setMenu(false);
+    document.querySelector<HTMLElement>('.topbar-menu')?.focus();
+  }
 });

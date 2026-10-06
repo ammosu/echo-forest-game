@@ -45,7 +45,8 @@ test('phone map has reachable touch targets with storage blocked and no page ove
   for (const path of ['/adventure.html', '/race.html', '/defense.html', '/echo.html', '/catch.html']) {
     await page.setViewportSize({width:390,height:844}); await page.goto(`http://127.0.0.1:5173${path}`);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
-    await page.getByRole('link',{name:'森林地圖',exact:true}).click();
+    await page.locator('.topbar-menu').tap();
+    await page.getByRole('link',{name:'森林地圖',exact:true}).tap();
     await expect(page.locator('h1')).toHaveText('今天，想去哪裡玩？');
   }
   await context.close();
@@ -80,6 +81,16 @@ test('every page shares the same top bar on desktop and phone, and the old map U
       const b = await page.locator('.topbar').boundingBox();
       boxes.push(`${Math.round(b!.height)}`);
       if (mobile) await page.screenshot({ path: `tests/evidence/nav-mobile-${label}.png`, clip: { x: 0, y: 0, width: w, height: 140 } });
+      if (mobile) {
+        // Phones fold the page links into one dropdown named after the current page.
+        await expect(page.locator('.topbar-menu')).toContainText(label);
+        await expect(page.locator('.topbar-game').first()).toBeHidden();
+        await page.locator('.topbar-menu').click();
+        await expect(page.locator('.topbar-game')).toHaveCount(5);
+        await expect(page.locator('.topbar-game').first()).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(page.locator('.topbar-game').first()).toBeHidden();
+      }
     }
     expect(new Set(boxes).size, `${w}px header heights ${boxes}`).toBe(1);
     await context.close();

@@ -21,16 +21,23 @@
 .topbar-lang:hover{background:#1f3d34;color:#ffe7a1}
 .topbar-lang:focus-visible{outline:3px solid #f4d480;outline-offset:3px}
 @media(max-width:1100px){.topbar-inner{padding:12px 20px;gap:18px}.topbar-map,.topbar-game{padding:0 9px;font-size:12px}.topbar-game img{display:none}}
-/* Phones: brand + map on one row, the five games in a sideways strip below. */
+.topbar-menu{display:none}
+/* Phones: one row (brand, page dropdown, language); the page links open as a dropdown panel. */
 @media(max-width:760px){
-  .topbar-inner{flex-wrap:wrap;min-height:0;padding:10px 14px 0;gap:8px 12px}
+  .topbar-inner{min-height:0;padding:8px 14px;gap:8px}
   .topbar-brand{font-size:19px;gap:9px}.topbar-tree{width:20px;height:25px}.topbar-brand small{font-size:8px;letter-spacing:2px;margin-top:3px}
-  .topbar-nav{display:contents}
-  .topbar-map{margin:0 0 0 auto;height:36px;font-size:12px;padding:0 12px}
-  .topbar-lang{order:2;height:36px;min-width:44px;margin:0;font-size:12px}
-  .topbar-games{order:3;width:calc(100% + 28px);margin:0 -14px;padding:2px 14px 10px;overflow-x:auto;scrollbar-width:none;gap:6px;scroll-padding:0 14px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
-  .topbar-games::-webkit-scrollbar{display:none}
-  .topbar-game{height:36px;padding:0 12px 0 5px;font-size:12px;background:#1b3a31;border-color:#2f4f43}
-  .topbar-game img{display:block;width:26px;height:26px}
+  .topbar-menu{display:flex;align-items:center;gap:7px;margin-left:auto;height:36px;max-width:52vw;padding:0 10px 0 5px;border-radius:18px;border:1px solid #4d6a58;background:#1b3a31;color:#ffe7a1;font:600 12px 'Outfit','Noto Sans TC',sans-serif;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+  .topbar-menu img{width:26px;height:26px;object-fit:cover;object-position:50% 12%;image-rendering:pixelated;border-radius:50%;background:#fff1c6;flex-shrink:0}
+  .topbar-menu>.topbar-map-icon{width:26px;text-align:center}
+  .topbar-caret{font-size:11px;color:#acc6ad;transition:transform .15s}
+  .topbar.menu-open .topbar-caret{transform:rotate(180deg)}
+  .topbar-menu:focus-visible{outline:3px solid #f4d480;outline-offset:2px}
+  .topbar-nav{display:none;position:absolute;top:calc(100% - 4px);right:14px;width:min(260px,calc(100vw - 28px));flex-direction:column;align-items:stretch;gap:4px;margin:0;padding:8px;border:1px solid #355048;border-radius:14px;background:#132d29;box-shadow:0 14px 30px #0a1d1699}
+  .topbar.menu-open .topbar-nav{display:flex}
+  .topbar-games{flex-direction:column;gap:4px}
+  .topbar-map,.topbar-game{height:44px;margin:0;padding:0 12px 0 8px;font-size:14px;border-radius:10px}
+  .topbar-map{padding-left:12px}
+  .topbar-game img{display:block;width:28px;height:28px}
+  .topbar-lang{height:36px;min-width:44px;margin:0;font-size:12px}
 }
 @media(prefers-reduced-motion:reduce){.topbar a{transition:none}}
