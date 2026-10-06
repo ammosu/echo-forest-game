@@ -16,8 +16,20 @@ export type GameEvent =
   | { type: 'end'; won: boolean; notes: number; total: number; seconds: number; best?: Best };
 const WIDTH = 3264, FLOOR = 304;
 export const groundSpans = [[0, 700], [815, 1500], [1640, 2290], [2440, WIDTH]];
-/** Bramble patches on the ground: touching them hurts, so they must be jumped. */
-export const thornSpans = [[1165, 1215], [2735, 2785]];
+/** Thorn patches: `up` spikes sit on a surface at `y`; `down` spikes hang on a vine with their tips at `y`. Touching either hurts. */
+export type Thorn = { a:number; b:number; y:number; dir:'up'|'down' };
+export const thorns: Thorn[] = [
+  { a:880, b:915, y:FLOOR, dir:'up' },
+  { a:1150, b:1240, y:FLOOR, dir:'up' },
+  { a:1975, b:2015, y:150, dir:'down' },
+  { a:1960, b:2030, y:FLOOR, dir:'up' },
+  { a:2534, b:2584, y:276, dir:'up' },
+  { a:2725, b:2795, y:FLOOR, dir:'up' },
+  { a:2745, b:2780, y:172, dir:'down' },
+  { a:2990, b:3035, y:FLOOR, dir:'up' },
+];
+/** Ground-level patches, the ones that must be jumped from the floor. */
+export const thornSpans = thorns.filter(t=>t.dir==='up'&&t.y===FLOOR).map(t=>[t.a,t.b]);
 const enemyPatrols = [[1255,1340],[1380,1450],[2035,2230],[2610,2670],[2820,2940]];
 const growerPositions = [[360,290],[1765,290]];
 const notePositions = [
@@ -88,7 +100,7 @@ class ForestScene extends Phaser.Scene {
     const movingBody = this.moving.body as Phaser.Physics.Arcade.Body;
     movingBody.setAllowGravity(false); movingBody.setSize(76,14); movingBody.setFriction(1,0); movingBody.setVelocityX(46);
     Object.assign(movingBody.checkCollision,{down:false,left:false,right:false});
-    thornSpans.forEach(([a,b])=>{for(let x=a;x<b;x+=17)this.add.image(x+8,FLOOR-9,'thorn').setDepth(1);});
+    this.drawThorns();
     this.drawDecor();
     this.notes = this.physics.add.staticGroup();
     notePositions.forEach(([x,y],i) => { const n=this.notes.create(x,y,'note') as Phaser.Physics.Arcade.Image; n.setData('baseY',y); n.setData('index',i); n.setDepth(2); });
@@ -152,7 +164,14 @@ class ForestScene extends Phaser.Scene {
     const texture=(name:string,w:number,h:number,draw:(g:Phaser.GameObjects.Graphics)=>void)=>{const g=this.make.graphics({x:0,y:0});draw(g);g.generateTexture(name,w,h);g.destroy();};
     texture('note',18,22,g=>{g.fillStyle(0x4b5234);g.fillRect(10,1,4,17);g.fillRect(2,14,10,7);g.fillStyle(0xffde7a);g.fillRect(10,1,3,15);g.fillRect(3,14,9,5);g.fillRect(13,2,4,4);g.fillStyle(0xfff1b8);g.fillRect(4,14,4,2);});
     texture('acorn',16,18,g=>{g.fillStyle(0x3d2c1b);g.fillRect(7,0,2,3);g.fillRect(2,3,12,6);g.fillRect(3,8,10,8);g.fillRect(5,15,6,3);g.fillStyle(0x8a5a2b);g.fillRect(3,4,10,4);g.fillStyle(0xc28a4a);g.fillRect(4,4,3,2);g.fillStyle(0xffc94a);g.fillRect(4,9,8,6);g.fillRect(6,15,4,2);g.fillStyle(0xfff0a8);g.fillRect(5,10,2,3);});
-    texture('thorn',17,18,g=>{g.fillStyle(0x2a2531);g.fillRect(1,8,15,10);g.fillTriangle(0,10,4,0,7,10);g.fillTriangle(6,10,10,2,13,10);g.fillTriangle(11,10,16,1,17,10);g.fillStyle(0x6b4a7a);g.fillRect(2,10,13,6);g.fillTriangle(2,10,4,3,6,10);g.fillTriangle(8,10,10,5,12,10);g.fillStyle(0xd88ad0);g.fillRect(4,3,1,2);g.fillRect(10,5,1,2);g.fillRect(15,3,1,2);g.fillStyle(0x58743f);g.fillRect(0,16,17,2);});
+    // Bone-white spikes with a dark outline and red tips, so they read clearly against grass and backdrop.
+    texture('thorn',14,20,g=>{
+      g.fillStyle(0x15101a);g.fillTriangle(-1,17,4,0,9,17);g.fillTriangle(5,17,10,3,15,17);
+      g.fillStyle(0xf2eee6);g.fillTriangle(1,16,4,3,7,16);g.fillTriangle(7,16,10,6,13,16);
+      g.fillStyle(0xa79fb4);g.fillTriangle(4,16,4,3,7,16);g.fillTriangle(10,16,10,6,13,16);
+      g.fillStyle(0xff3d4f);g.fillTriangle(3,6,4,1,5,6);g.fillTriangle(9,9,10,4,11,9);
+      g.fillStyle(0x15101a);g.fillRect(0,15,14,5);g.fillStyle(0x6e2236);g.fillRect(0,16,14,3);g.fillStyle(0xa93a4c);g.fillRect(1,16,5,1);g.fillRect(8,17,4,1);
+    });
     texture('solid',8,8,g=>{g.fillStyle(0xffffff);g.fillRect(0,0,8,8);});
     texture('branch',76,14,g=>{g.fillStyle(0x342e23);g.fillRect(0,3,76,11);g.fillStyle(0x826448);g.fillRect(2,4,72,6);g.fillStyle(0xad8954);g.fillRect(3,4,69,2);g.fillStyle(0x8cac58);g.fillRect(0,0,76,4);g.fillStyle(0xc1d278);g.fillRect(3,0,70,2);});
     texture('mushroom',32,25,g=>{g.fillStyle(0x29372c);g.fillRect(10,11,14,14);g.fillStyle(0xf4d9a0);g.fillRect(13,10,8,15);g.fillStyle(0x722f30);g.fillRect(0,9,32,7);g.fillRect(4,4,24,7);g.fillRect(9,0,14,5);g.fillStyle(0xd7735d);g.fillRect(2,8,28,6);g.fillRect(7,3,18,7);g.fillStyle(0xffdc9f);g.fillRect(8,5,5,4);g.fillRect(21,9,5,3);});
@@ -174,6 +193,16 @@ class ForestScene extends Phaser.Scene {
     } else {
       g.fillStyle(0x302f24);g.fillRect(x-2,y+4,w+4,h-4);g.fillStyle(0x896a43);g.fillRect(x,y+4,w,6);g.fillStyle(0xc39e62);g.fillRect(x+2,y+4,w-4,2);g.fillStyle(0x90ad5b);g.fillRect(x-2,y,w+4,4);g.fillStyle(0xc5d781);g.fillRect(x+2,y,w-4,2);
       for(let bx=x+6;bx<x+w;bx+=25){g.fillStyle(0x607c43);g.fillRect(bx,y+h,3,16);g.fillRect(bx-3,y+h+6,6,3);}
+    }
+  }
+  /** Spike rows plus a pulsing red warning glow; hanging rows get a vine up to the canopy. */
+  drawThorns() {
+    for(const t of thorns){
+      const down=t.dir==='down',w=t.b-t.a;
+      if(down){const g=this.worldArt;for(let x=t.a+6;x<t.b;x+=14){g.fillStyle(0x1d2b22);g.fillRect(x-1,0,4,t.y-16);g.fillStyle(0x4f6e3a);g.fillRect(x,0,2,t.y-16);g.fillStyle(0x7d9a4c);for(let y=18;y<t.y-20;y+=22)g.fillRect(x-3,y,3,2);}}
+      const glow=this.add.graphics().setDepth(0);glow.fillStyle(0xff3346,.35);glow.fillEllipse(t.a+w/2,down?t.y-6:t.y-4,w+18,16);
+      if(!this.owner.reducedMotion)this.tweens.add({targets:glow,alpha:.35,duration:700,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+      for(let x=t.a;x<t.b;x+=12)this.add.image(x+7,down?t.y+10-20:t.y-10,'thorn').setFlipY(down).setDepth(1);
     }
   }
   drawDecor() {
@@ -295,7 +324,7 @@ class ForestScene extends Phaser.Scene {
     this.tweens.add({targets:node,alpha:0,delay:650,duration:350,onComplete:()=>node.destroy()});
   }
   burst(x:number,y:number,color:number,count:number){if(this.owner.reducedMotion)return;for(let i=0;i<count;i++)this.particles.push({x,y,vx:Math.cos(i/count*Math.PI*2)*45,vy:Math.sin(i/count*Math.PI*2)*45-20,life:.5,color});}
-  snapshot(){const b=this.player.body as Phaser.Physics.Arcade.Body;return {ready:this.ready,running:this.owner.running,paused:this.owner.paused,x:this.player.x,y:this.player.y,vx:b.velocity.x,vy:b.velocity.y,grounded:b.blocked.down||b.touching.down,seconds:this.seconds,notes:this.notesCollected,lives:this.lives,big:this.big,scale:this.player.scaleY,checkpoint:this.checkpoint,thornSpans,groundSpans,notePositions,enemies:this.enemyRanges.map(e=>({x:e.obj.x,active:e.obj.active})),movingX:this.moving.x};}
+  snapshot(){const b=this.player.body as Phaser.Physics.Arcade.Body;return {ready:this.ready,running:this.owner.running,paused:this.owner.paused,x:this.player.x,y:this.player.y,vx:b.velocity.x,vy:b.velocity.y,grounded:b.blocked.down||b.touching.down,seconds:this.seconds,notes:this.notesCollected,lives:this.lives,big:this.big,scale:this.player.scaleY,checkpoint:this.checkpoint,thornSpans,thorns,groundSpans,notePositions,enemies:this.enemyRanges.map(e=>({x:e.obj.x,active:e.obj.active})),movingX:this.moving.x};}
   update(_time:number,delta:number) {
     if(!this.ready)return;
     const dt=Math.min(delta,40)/1000;
@@ -327,7 +356,7 @@ class ForestScene extends Phaser.Scene {
     this.collectNotes();
     if(this.player.x<14){this.player.x=14;body.setVelocityX(0);}
     if(this.player.y>396){this.invulnerableUntil=0;this.hurt(true);}
-    if(body.bottom>FLOOR-14&&thornSpans.some(([a,b])=>body.right>a+3&&body.left<b-3))this.hurt();
+    if(thorns.some(t=>body.right>t.a+3&&body.left<t.b-3&&(t.dir==='up'?body.bottom>t.y-14&&body.top<t.y:body.top<t.y-2&&body.bottom>t.y-20)))this.hurt();
     this.growers.forEach((a,i)=>{if(a.active)a.y=a.getData('baseY')+Math.round(Math.sin(this.simTime*.005+i)*2);});
     if(this.player.x>1715 && !this.checkpoint){this.checkpoint=true;this.drawFlags();this.owner.emit({type:'checkpoint'});this.owner.tone('checkpoint');this.burst(1720,266,0xffda70,16);}
     if(this.player.x>3105 && this.player.y>246){this.finish(true);return;}
